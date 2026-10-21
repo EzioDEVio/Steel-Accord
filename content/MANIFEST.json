@@ -275,7 +275,7 @@
   },
   {
    "path": "maps/PZ_HarborDivide/PZ_HarborDivide.map",
-   "sha256": "d804959320b1d135caf085422a8b2b26100d029e7d250b19b894b5e6ca49d9d3",
+   "sha256": "438eae2d0318854c45699c12e9c63ea54ddd0ad9ac061e7402964ffa9187bce3",
    "origin": "procedurally generated",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
    "tool": "python3 tools/gen_harbor_divide.py (numpy, Pillow)",
@@ -335,7 +335,7 @@
   },
   {
    "path": "maps/PZ_TestRange/PZ_TestRange.map",
-   "sha256": "c2ba89dec7a15ada45ff197faee8a33a5a8db3a5318c73283a8c2bffe4c4795f",
+   "sha256": "4eb43fd48602e269f606609aecd353a25f4b98cf7d693bc0a37c210ec55eb656",
    "origin": "procedurally generated",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
    "tool": "python3 tools/gen_testrange_map.py (numpy, Pillow)",

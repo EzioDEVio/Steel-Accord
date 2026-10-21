@@ -117,6 +117,26 @@ def max_slope_deg(h):
     return math.degrees(math.atan(dz.max() * HSCALE / XY))
 
 
+# Skirmish AI player slots. The engine attaches SkirmishScripts.scb only to AI players whose side
+# already exists in the map (SidesList::prepareForMP_or_Skirmish -> curSide == -1 deletes the
+# scripts). WorldBuilder adds these when saving multiplayer maps; without them the AI is idle
+# (observed by client 2026-10-21). Base-game faction names: B1 prototype only.
+SKIRMISH_FACTIONS = ["America", "China", "GLA", "AmericaAirForceGeneral", "AmericaLaserGeneral",
+                     "AmericaSuperWeaponGeneral", "ChinaTankGeneral", "ChinaNukeGeneral",
+                     "ChinaInfantryGeneral", "GLADemolitionGeneral", "GLAToxinGeneral", "GLAStealthGeneral"]
+
+
+def skirmish_sides_and_teams():
+    sides, teams = [], []
+    for f in SKIRMISH_FACTIONS:
+        n = "Skirmish" + f
+        sides.append(dict(dict=[("playerName", DICT_ASCII, n), ("playerIsHuman", DICT_BOOL, False),
+                                ("playerDisplayName", DICT_UNICODE, n), ("playerFaction", DICT_ASCII, "Faction" + f),
+                                ("playerAllies", DICT_ASCII, ""), ("playerEnemies", DICT_ASCII, "")], build=[]))
+        teams.append([("teamName", DICT_ASCII, "team" + n), ("teamOwner", DICT_ASCII, n), ("teamIsSingleton", DICT_BOOL, True)])
+    return sides, teams
+
+
 def dict_obj(name, owner, extra=()):
     base = [("objectInitialHealth", DICT_INT, 100), ("objectEnabled", DICT_BOOL, True),
             ("objectIndestructible", DICT_BOOL, False), ("objectUnsellable", DICT_BOOL, False),
@@ -179,10 +199,10 @@ def build():
             dict(dict=[("playerName", DICT_ASCII, "PlyrCivilian"), ("playerIsHuman", DICT_BOOL, False),
                        ("playerDisplayName", DICT_UNICODE, "Civilian"), ("playerFaction", DICT_ASCII, "FactionCivilian"),
                        ("playerAllies", DICT_ASCII, ""), ("playerEnemies", DICT_ASCII, "")], build=[]),
-        ],
+        ] + skirmish_sides_and_teams()[0],
         teams=[[("teamName", DICT_ASCII, "team"), ("teamOwner", DICT_ASCII, ""), ("teamIsSingleton", DICT_BOOL, True)],
                [("teamName", DICT_ASCII, "teamPlyrCivilian"), ("teamOwner", DICT_ASCII, "PlyrCivilian"),
-                ("teamIsSingleton", DICT_BOOL, True)]],
+                ("teamIsSingleton", DICT_BOOL, True)]] + skirmish_sides_and_teams()[1],
         objects=objects, triggers=[], lighting=lighting, waypointLinks=[],
     )
     data = M.encode(m)

@@ -167,10 +167,10 @@ def build():
                                ("playerAllies", DICT_ASCII, ""), ("playerEnemies", DICT_ASCII, "")], build=[]),
                     dict(dict=[("playerName", DICT_ASCII, "PlyrCivilian"), ("playerIsHuman", DICT_BOOL, False),
                                ("playerDisplayName", DICT_UNICODE, "Civilian"), ("playerFaction", DICT_ASCII, "FactionCivilian"),
-                               ("playerAllies", DICT_ASCII, ""), ("playerEnemies", DICT_ASCII, "")], build=[])],
+                               ("playerAllies", DICT_ASCII, ""), ("playerEnemies", DICT_ASCII, "")], build=[])] + TR.skirmish_sides_and_teams()[0],
              teams=[[("teamName", DICT_ASCII, "team"), ("teamOwner", DICT_ASCII, ""), ("teamIsSingleton", DICT_BOOL, True)],
                     [("teamName", DICT_ASCII, "teamPlyrCivilian"), ("teamOwner", DICT_ASCII, "PlyrCivilian"),
-                     ("teamIsSingleton", DICT_BOOL, True)]],
+                     ("teamIsSingleton", DICT_BOOL, True)]] + TR.skirmish_sides_and_teams()[1],
              objects=objs, triggers=[water], lighting=lighting, waypointLinks=[])
     data = M.encode(m)
     open(os.path.join(MAPDIR, NAME + ".map"), "wb").write(data)

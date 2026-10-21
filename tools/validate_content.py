@@ -28,7 +28,7 @@ MAPS = os.path.join(ROOT, "maps")
 BASE_GAME_REFS = {
     "commandset": {"AmericaCommandCenterCommandSet", "ChinaCommandCenterCommandSet"},
     "side": {"America"},
-    "faction": {"FactionCivilian"},
+    "faction": {"FactionCivilian"} | {"Faction" + f for f in ("America China GLA AmericaAirForceGeneral AmericaLaserGeneral AmericaSuperWeaponGeneral ChinaTankGeneral ChinaNukeGeneral ChinaInfantryGeneral GLADemolitionGeneral GLAToxinGeneral GLAStealthGeneral".split())},
     "object": {"SupplyDock", "SupplyWarehouse", "TechOilDerrick"},
 }
 
@@ -323,6 +323,9 @@ def check_map(path, strings):
         if t in BASE_GAME_REFS["object"]: external.append(f"object '{t}' <- {rel(path)}")
         else: err(f"{rel(path)}: map object '{t}' unresolved")
         if not (0 < o["x"] < pw * 10 and 0 < o["y"] < ph * 10): err(f"{rel(path)}: object {t} outside playable area")
+    names = {dict((k, v) for k, t, v in s["dict"]).get("playerName") for s in m["sides"]}
+    for f in ("SkirmishAmerica", "SkirmishChina"):
+        if f not in names: err(f"{rel(path)}: side '{f}' missing - skirmish AI would be idle")
     for s in m["sides"]:
         fac = dict((k, v) for k, t, v in s["dict"]).get("playerFaction")
         if fac:
