@@ -1,0 +1,19 @@
+LIBRARY d3dx8d.dll
+EXPORTS
+D3DXAssembleShader=D3DXAssembleShader@24
+D3DXCreateCubeTexture=D3DXCreateCubeTexture@28
+D3DXCreateTexture=D3DXCreateTexture@32
+D3DXCreateTextureFromFileExA=D3DXCreateTextureFromFileExA@56
+D3DXCreateVolumeTexture=D3DXCreateVolumeTexture@36
+D3DXFilterTexture=D3DXFilterTexture@16
+D3DXGetErrorStringA=D3DXGetErrorStringA@12
+D3DXGetFVFVertexSize=D3DXGetFVFVertexSize@4
+D3DXLoadSurfaceFromSurface=D3DXLoadSurfaceFromSurface@32
+D3DXMatrixInverse=D3DXMatrixInverse@12
+D3DXMatrixMultiply=D3DXMatrixMultiply@12
+D3DXMatrixRotationZ=D3DXMatrixRotationZ@8
+D3DXMatrixScaling=D3DXMatrixScaling@16
+D3DXMatrixTranslation=D3DXMatrixTranslation@16
+D3DXMatrixTranspose=D3DXMatrixTranspose@8
+D3DXVec3Transform=D3DXVec3Transform@12
+D3DXVec4Transform=D3DXVec4Transform@12
