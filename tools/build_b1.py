@@ -33,7 +33,7 @@ def manifest():
                 assets.append(dict(
                     path=rp, sha256=sha(os.path.join(ROOT, rp)),
                     origin="procedurally generated" if gen else "hand-authored text",
-                    creator="Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
+                    creator="Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
                     tool=f"python3 {gen} (numpy, Pillow)" if gen else "text editor",
                     source=gen or rp,
                     prompt_or_inputs="deterministic script, fixed RNG seeds; no external images, models or samples",
@@ -42,7 +42,7 @@ def manifest():
                     ship_status="dev-only (B1 private prototype; references licensed base game data)",
                     history=[f"{datetime.date.today().isoformat()} created for B1.1"],
                 ))
-    out = dict(project="Project Zero Hour (working title)", milestone="B1.1",
+    out = dict(project="Steel Accord", milestone="B1.1",
                note="Every file under content/ and maps/ must be listed here; enforced by tools/validate_content.py",
                assets=assets)
     json.dump(out, open(os.path.join(ROOT, "content", "MANIFEST.json"), "w"), indent=1)

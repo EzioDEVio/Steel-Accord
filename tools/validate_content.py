@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Project Zero Hour content validator (QA/build agent deliverable).
+"""Steel Accord content validator (QA/build agent deliverable).
 
 Checks the dev content tree + test map against the *pinned engine source*:
   * INI syntax/nesting, block types, field names, module names, enum tokens

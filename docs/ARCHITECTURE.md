@@ -1,4 +1,4 @@
-# ARCHITECTURE — Project Zero Hour (working title)
+# ARCHITECTURE — Steel Accord
 
 Status: draft v1 (B1.1). Decisions are recorded in `docs/adr/`. Engine change requires client approval.
 

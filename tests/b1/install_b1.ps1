@@ -1,5 +1,5 @@
 <#
-  Project Zero Hour - B1.1 test kit installer (private prototype).
+  Steel Accord - B1.1 test kit installer (private prototype).
   Touches ONLY:
     1) <TestCopy>\PZ\PZDev_B1.big                     (new folder inside your isolated test copy)
     2) <Documents>\Command and Conquer Generals Zero Hour Data\Maps\PZ_TestRange\   (new map folder)

@@ -1,4 +1,4 @@
-# RECON — Project Zero Hour (working title)
+# RECON — Steel Accord
 
 Date: 2026-10-21 · Author: Claude (technical lead) · Status: B1.1 recon complete
 

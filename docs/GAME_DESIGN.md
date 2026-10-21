@@ -1,4 +1,4 @@
-# GAME DESIGN — Project Zero Hour (working title) · draft v0.1
+# GAME DESIGN — Steel Accord · draft v0.1
 
 Fictional, skirmish-first modern RTS. Factions are playable armies with invented equipment and doctrine; nothing here describes or judges real forces or governments. No faction is the villain; any side can be player, ally or AI. No campaign story in scope.
 

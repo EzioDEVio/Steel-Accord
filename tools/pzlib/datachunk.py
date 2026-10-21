@@ -11,7 +11,7 @@ Format mirrors GeneralsMD/Code/GameEngine/Source/Common/System/DataChunk.cpp
            type 0 bool(u8) 1 int(i32) 2 real(f32) 3 ascii(u16 len + bytes)
                 4 unicode(u16 len + len*2 bytes UTF-16LE)
 
-Original code for Project Zero Hour tooling. License: see repository LICENSE.
+Original code for Steel Accord tooling. License: see repository LICENSE.
 """
 import struct
 

@@ -3,7 +3,7 @@
 Layout: "BIGF" | u32le archiveSize | u32be fileCount | u32be headerEnd |
         { u32be offset, u32be size, path\\0 }* | file data
 Paths use backslashes (e.g. Art\\W3D\\PZKESTREL.W3D). The engine lowercases names on load.
-Original Project Zero Hour tooling.
+Original Steel Accord tooling.
 """
 import os, struct
 

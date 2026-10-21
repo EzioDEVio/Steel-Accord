@@ -10,7 +10,7 @@ Mirrors (pinned fork):
   GlobalLighting v3  - WHeightMapEdit.cpp (MAX_GLOBAL_LIGHTS = 3)
   WaypointsList v1   - WorldBuilderDoc.cpp (link list)
 
-Original Project Zero Hour tooling.
+Original Steel Accord tooling.
 """
 import struct
 from .datachunk import Reader, Writer, split_chunks, parse_file

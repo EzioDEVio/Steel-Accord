@@ -1,4 +1,4 @@
-"""Minimal W3D writer/reader for Project Zero Hour original assets.
+"""Minimal W3D writer/reader for Steel Accord original assets.
 
 Chunk layout and struct sizes follow Generals/Code/Libraries/Source/WWVegas/WW3D2/w3d_file.h
 in the pinned TheSuperHackers fork:
@@ -14,7 +14,7 @@ one-pivot hierarchy, wrapped in an HLOD named after the model — the same
 container structure the engine's W3DModelDraw resolves via
 WW3DAssetManager::Create_Render_Obj(<model name>).
 
-Original Project Zero Hour tooling.
+Original Steel Accord tooling.
 """
 import struct
 
