@@ -49,6 +49,36 @@
    ]
   },
   {
+   "path": "content/dev/Art/Textures/pzdepot.tga",
+   "sha256": "58a6b311600bc08653b2fb934b999e43362ba4de76e25c8a1f124f271a8fa595",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
+   "tool": "python3 tools/gen_fielddepot.py (numpy, Pillow)",
+   "source": "tools/gen_fielddepot.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "content/dev/Art/Textures/pzdepotd.tga",
+   "sha256": "c0c55ae869873ac86e88a59389b6d8ed7af0c3f7681018071d6b407c2388392f",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
+   "tool": "python3 tools/gen_fielddepot.py (numpy, Pillow)",
+   "source": "tools/gen_fielddepot.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
    "path": "content/dev/Art/Textures/pzkestrel.tga",
    "sha256": "14dd379628ae5a74a9284118d0fe453fc3fdf051cd860bde6557099976b61964",
    "origin": "procedurally generated",
@@ -79,12 +109,57 @@
    ]
   },
   {
-   "path": "content/dev/Art/Textures/pzui_kestrel.tga",
-   "sha256": "9167c4e2eff49169da62ae02d1532f93f87dc830f3fb71a8e7e968278ca3c2cc",
+   "path": "content/dev/Art/Textures/pzui_dev.tga",
+   "sha256": "31082e7cf8c74ade36bd993dc6103613b324b63702b8667f381c1cdc446de8bb",
    "origin": "procedurally generated",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
-   "tool": "python3 tools/gen_kestrel.py (numpy, Pillow)",
-   "source": "tools/gen_kestrel.py",
+   "tool": "python3 tools/gen_ui_sheet.py (numpy, Pillow)",
+   "source": "tools/gen_ui_sheet.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "content/dev/Art/W3D/PZDEPOTRUBBLE.W3D",
+   "sha256": "f879bc1cb1dff17262f607c763a8092d613a01b7f67d56290e346467e156ce8d",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
+   "tool": "python3 tools/gen_fielddepot.py (numpy, Pillow)",
+   "source": "tools/gen_fielddepot.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "content/dev/Art/W3D/PZFIELDDEPOT.W3D",
+   "sha256": "07e6c3057259f903ecac40017f4b71f1a8b62a757ae9876c8333e7502551498a",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
+   "tool": "python3 tools/gen_fielddepot.py (numpy, Pillow)",
+   "source": "tools/gen_fielddepot.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "content/dev/Art/W3D/PZFIELDDEPOTD.W3D",
+   "sha256": "34fe596a141a0597a0a46e23cda6c650131bb2c51c08e098cf8d7750f226596e",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
+   "tool": "python3 tools/gen_fielddepot.py (numpy, Pillow)",
+   "source": "tools/gen_fielddepot.py",
    "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
    "license": "Project-original; all rights reserved pending project license decision",
    "third_party_inputs": "none",
@@ -125,7 +200,7 @@
   },
   {
    "path": "content/dev/Data/INI/Armor/PZDev_Armor.ini",
-   "sha256": "528147607a7c10d7dc076e39de279d04b158aaf5c7d88d346a389124d541850e",
+   "sha256": "866b1cf8927f9fbfc8fd095dfa74f80c36b8d8f0672128d84f8b17ebb0237368",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",
@@ -140,7 +215,7 @@
   },
   {
    "path": "content/dev/Data/INI/CommandButton/PZDev_CommandButtons.ini",
-   "sha256": "e08de8de2b662f3ca05cd6b81ec0ad8ed92ee704e5de81c16e06e4010385ee9f",
+   "sha256": "ecf38fc2326e33064ccc43f5cb2372f27df9736bd29a3ef6a8e22e7fc80650bb",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",
@@ -155,7 +230,7 @@
   },
   {
    "path": "content/dev/Data/INI/CommandSet/PZDev_CommandSets.ini",
-   "sha256": "b7272c2a773c7064ab7ba945de134eda7c99c477d8f34f3ce9372c1d33e972dd",
+   "sha256": "58304f7a5dd89e6a9010c0106d33630a2d19650b77ec2b68b713e14b4e58ac0e",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",
@@ -170,7 +245,7 @@
   },
   {
    "path": "content/dev/Data/INI/FXList/PZDev_FX.ini",
-   "sha256": "7fd9483a1e52a845998a2950d1514fbf90fa4e13439b09944d8afb4725ab97cb",
+   "sha256": "13abb57f2d20eaf4305a65c34cfd42032c58ccd9d64282c508f5ffc6556f6255",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",
@@ -200,11 +275,26 @@
   },
   {
    "path": "content/dev/Data/INI/MappedImages/HandCreated/PZDev_Images.ini",
-   "sha256": "50f6921c0457bf6a49bfa17f5730e6fd08c9751087b163c7c01bc39d2e12d3a5",
+   "sha256": "17ec469cf92a6bfdaf91008e5a2e465a5ab393ad81200abe458e0962c03f89db",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",
    "source": "content/dev/Data/INI/MappedImages/HandCreated/PZDev_Images.ini",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "content/dev/Data/INI/Object/PZDev_FieldDepot.ini",
+   "sha256": "5d5f0280b12b976b99299dc9be396d53ed8e7c9d77ca8cd8bf5ef84a13c88411",
+   "origin": "hand-authored text",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
+   "tool": "text editor",
+   "source": "content/dev/Data/INI/Object/PZDev_FieldDepot.ini",
    "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
    "license": "Project-original; all rights reserved pending project license decision",
    "third_party_inputs": "none",
@@ -230,7 +320,7 @@
   },
   {
    "path": "content/dev/Data/INI/ObjectCreationList/PZDev_OCL.ini",
-   "sha256": "d8e808e8927e225da50d239a214cb4afec74ff8bf9d222e2c76778052e47adeb",
+   "sha256": "f5e7455174bda3df3924d40ea81f0daa16acb0f3ffda60de560d86c0c3b73b74",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",
@@ -305,7 +395,7 @@
   },
   {
    "path": "maps/PZ_HarborDivide/map.ini",
-   "sha256": "5912a5f5ef3fa7e7978d46471322826bac4f6dd6727e92f199b83979291033a8",
+   "sha256": "ed8a4fe5fd3e71050c9ec8a8adc05bdcce02f59f4bb7e8ecdf66f5fb9d82e3d9",
    "origin": "procedurally generated",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "python3 tools/gen_harbor_divide.py (numpy, Pillow)",
@@ -320,7 +410,7 @@
   },
   {
    "path": "maps/PZ_HarborDivide/map.str",
-   "sha256": "3ac645efca72a5c490723b71d6cf3fff1ec44bfa953f6f7447e64ae40279ad7a",
+   "sha256": "6edc7ced5966bc98d79c90be6ffd02db1b11a5b0d2ff8a7fcde948cc812c9003",
    "origin": "procedurally generated",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "python3 tools/gen_harbor_divide.py (numpy, Pillow)",
@@ -365,7 +455,7 @@
   },
   {
    "path": "maps/PZ_TestRange/map.ini",
-   "sha256": "5912a5f5ef3fa7e7978d46471322826bac4f6dd6727e92f199b83979291033a8",
+   "sha256": "ed8a4fe5fd3e71050c9ec8a8adc05bdcce02f59f4bb7e8ecdf66f5fb9d82e3d9",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",
@@ -380,7 +470,7 @@
   },
   {
    "path": "maps/PZ_TestRange/map.str",
-   "sha256": "3ac645efca72a5c490723b71d6cf3fff1ec44bfa953f6f7447e64ae40279ad7a",
+   "sha256": "6edc7ced5966bc98d79c90be6ffd02db1b11a5b0d2ff8a7fcde948cc812c9003",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Steel Accord",
    "tool": "text editor",

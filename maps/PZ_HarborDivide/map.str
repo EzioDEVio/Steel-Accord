@@ -39,3 +39,35 @@ END
 CONTROLBAR:PZDevToolTipStop
 "Cancel current orders."
 END
+
+OBJECT:PZDevFieldDepot
+"Field Depot (DEV)"
+END
+
+OBJECT:PZDevDepotRubble
+"Depot Rubble"
+END
+
+CONTROLBAR:PZDevConstructFieldDepot
+"&Field Depot"
+END
+
+CONTROLBAR:PZDevToolTipFieldDepot
+"Forward vehicle depot. Builds Kestrel scouts.\nUses 1 power."
+END
+
+CONTROLBAR:PZDevRallyPoint
+"&Rally Point"
+END
+
+CONTROLBAR:PZDevToolTipRallyPoint
+"Set where new units go after production."
+END
+
+CONTROLBAR:PZDevSell
+"S&ell"
+END
+
+CONTROLBAR:PZDevToolTipSell
+"Sell this structure for part of its cost."
+END

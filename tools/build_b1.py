@@ -11,6 +11,10 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 from pzlib import big
 
 GEN = {
+    "content/dev/Art/W3D/PZFIELDDEPOT": "tools/gen_fielddepot.py",
+    "content/dev/Art/W3D/PZDEPOT": "tools/gen_fielddepot.py",
+    "content/dev/Art/Textures/pzdepot": "tools/gen_fielddepot.py",
+    "content/dev/Art/Textures/pzui_dev": "tools/gen_ui_sheet.py",
     "content/dev/Art/W3D/": "tools/gen_kestrel.py",
     "content/dev/Art/Textures/": "tools/gen_kestrel.py",
     "content/dev/Art/Terrain/": "tools/gen_testrange_map.py",
@@ -52,7 +56,8 @@ def manifest():
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--engine", required=True); a = ap.parse_args()
     py = sys.executable
-    for g in ("tools/gen_kestrel.py", "tools/gen_testrange_map.py", "tools/gen_harbor_divide.py"):
+    for g in ("tools/gen_kestrel.py", "tools/gen_fielddepot.py", "tools/gen_ui_sheet.py",
+              "tools/gen_testrange_map.py", "tools/gen_harbor_divide.py"):
         subprocess.check_call([py, os.path.join(ROOT, g)])
     assets = manifest()
     bigp = os.path.join(ROOT, "build", "PZDev_B1.big")

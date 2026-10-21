@@ -1,4 +1,4 @@
-# B1.1 runtime test - Kestrel scout on PZ Test Range
+# B1 runtime test - Kestrel scout + Field Depot (Harbor Divide or PZ Test Range)
 
 Private prototype. Runs on the fork executable with your licensed Zero Hour data;
 the Kestrel, its icon/glyphs, weapon, FX, wreck, terrain textures and the map are project-original.
@@ -22,7 +22,11 @@ the Kestrel, its icon/glyphs, weapon, FX, wreck, terrain textures and the map ar
 | 7 | **Ctrl + right-click** one Kestrel with the other selected (force-fire) | Yellow tracers + muzzle light; target health bar drops (~8 dmg/shot after 60% small-arms armour) | S6 |
 | 8 | Keep firing until it dies | Flash + light camera shake; burnt wreck stays ~12 s then disappears | S7 |
 | 9 | Drive Kestrels to the enemy base / let AI units arrive | Auto-acquires and fights enemies; can be destroyed by them | S8 |
-| 10 | Exit | No crash on exit | - |
+| 10 | Select your **builder (dozer)** | New "Field Depot" button (USA slot 12 / China slot 13) with the depot icon | S9 |
+| 11 | Place the depot on open ground | $800 deducted; structure rises from the ground over ~12 s; power usage +1 | S10 |
+| 12 | Select the depot | Panel: Kestrel (slot 1), Rally Point, Sell; produce a Kestrel from it | S11 |
+| 13 | Force-fire the depot with Kestrels (Ctrl+right-click) until destroyed | Burnt look when heavily damaged, flash + shake, rubble remains ~20 s | S12 |
+| 14 | Exit | No crash on exit | - |
 
 ## Report back
 - Screenshots S1-S8 (or a short video).

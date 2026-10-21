@@ -5,7 +5,6 @@ All output is procedurally authored by this script (no external source images).
 Outputs (relative to repo root):
   content/dev/Art/Textures/pzkestrel.tga        256x256 atlas (body + housecolor panels)
   content/dev/Art/Textures/pzkestrelhk.tga      256x256 burnt-hulk variant
-  content/dev/Art/Textures/pzui_kestrel.tga     256x128 unit icon + command glyph sheet
   content/dev/Art/W3D/PZKESTREL.W3D             HLOD + hierarchy + 2 meshes
   content/dev/Art/W3D/PZKESTRELHK.W3D           wreck model
   build/previews/*.png                          review renders (not shipped)
@@ -203,32 +202,11 @@ def main():
     sheet = np.concatenate([np.concatenate(views[:2], 1), np.concatenate(views[2:], 1)], 0)
     Image.fromarray(sheet).save(os.path.join(PREV, "kestrel_orthos.png"))
 
-    # ---- UI icon sheet 128x128: button image in (0,0)-(119,95)
+    # ---- unit icon render (composited into the UI sheet by tools/gen_ui_sheet.py)
     icon = render(os.path.join(ART, "W3D", "PZKESTREL.W3D"), atlas, 240, 192, yaw=-40, pitch=28,
                   team=(0.85, 0.55, 0.15), bg=((16, 30, 44), (40, 70, 92)), zoom=1.25)
-    ic = Image.fromarray(icon).resize((120, 96), Image.LANCZOS)
-    dr = ImageDraw.Draw(ic)
-    dr.rectangle([0, 0, 119, 95], outline=(120, 190, 220), width=2)
-    dr.rectangle([3, 3, 22, 12], fill=(120, 190, 220))  # role tag block: scout
-    sheet = Image.new("RGBA", (256, 128), (0, 0, 0, 0)); sheet.paste(ic, (0, 0))
-    # command glyphs, 60x48 each (original vector marks): attack-move, guard, stop
-    for (gx, gy), kind in (((128, 0), "attackmove"), ((192, 0), "guard"), ((128, 48), "stop")):
-        g = Image.new("RGBA", (60, 48), (24, 40, 52, 255)); gd = ImageDraw.Draw(g)
-        gd.rectangle([0, 0, 59, 47], outline=(120, 190, 220), width=2)
-        if kind == "attackmove":
-            gd.polygon([(50, 22), (32, 7), (32, 16), (12, 16), (12, 28), (32, 28), (32, 37)], fill=(235, 120, 60))
-            gd.line([(8, 40), (20, 40)], fill=(235, 235, 235), width=3)
-        elif kind == "guard":
-            gd.polygon([(30, 8), (46, 14), (44, 30), (30, 41), (16, 30), (14, 14)], outline=(235, 235, 235), fill=(60, 120, 170))
-            gd.line([(30, 14), (30, 34)], fill=(235, 235, 235), width=3)
-        else:
-            gd.regular_polygon((30, 24, 16), 8, rotation=22.5, fill=(200, 60, 50), outline=(235, 235, 235))
-            gd.rectangle([20, 21, 40, 27], fill=(235, 235, 235))
-        sheet.paste(g, (gx, gy))
-    tga.save(os.path.join(ART, "Textures", "pzui_kestrel.tga"), np.asarray(sheet))
-    ic.resize((240, 192), Image.NEAREST).save(os.path.join(PREV, "kestrel_icon_2x.png"))
+    np.save(os.path.join(ROOT, "build", "kestrel_icon.npy"), icon)
     Image.fromarray(atlas).save(os.path.join(PREV, "pzkestrel_atlas.png"))
-    sheet.resize((512, 256), Image.NEAREST).save(os.path.join(PREV, "pzui_sheet_2x.png"))
 
 
 if __name__ == "__main__":

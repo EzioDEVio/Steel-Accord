@@ -26,7 +26,8 @@ MAPS = os.path.join(ROOT, "maps")
 
 # Symbols we intentionally take from the licensed base game during B1 (private prototype).
 BASE_GAME_REFS = {
-    "commandset": {"AmericaCommandCenterCommandSet", "ChinaCommandCenterCommandSet"},
+    "commandset": {"AmericaCommandCenterCommandSet", "ChinaCommandCenterCommandSet",
+                   "AmericaDozerCommandSet", "ChinaDozerCommandSet"},
     "side": {"America"},
     "faction": {"FactionCivilian"} | {"Faction" + f for f in ("America China GLA AmericaAirForceGeneral AmericaLaserGeneral AmericaSuperWeaponGeneral ChinaTankGeneral ChinaNukeGeneral ChinaInfantryGeneral GLADemolitionGeneral GLAToxinGeneral GLAStealthGeneral".split())},
     "object": {"SupplyDock", "SupplyWarehouse", "TechOilDerrick"},
@@ -96,6 +97,8 @@ def parse_ini(path):
             cur["lines"].append((len(stack), ctx, k, v, no))
             if k in MODULE_KEYS and cur["type"] == "Object":
                 stack.append(f"{k}:{v.split()[0]}")
+            elif k in ("ConditionState", "TransitionState"):   # 'Key = flags' that opens a sub-block
+                stack.append(k)
             continue
         # bare word opens a sub-block (WeaponSet, DefaultConditionState, Tracer, CreateObject, ...)
         cur["lines"].append((len(stack), stack[-1], line.split()[0], None, no))
@@ -211,7 +214,7 @@ def main():
             if k in ("DisplayName", "TextLabel", "DescriptLabel"): need_str(v, where)
             if k == "Side":
                 if v in BASE_GAME_REFS["side"]: external.append(f"side '{v}' <- {where}")
-            if k == "Model":
+            if k == "Model" and v.upper() != "NONE":
                 p = os.path.join(DEV, "Art", "W3D", v + ".W3D")
                 if not os.path.exists(p): err(f"{where}: model file Art/W3D/{v}.W3D missing")
                 else: check_w3d(p, v)
