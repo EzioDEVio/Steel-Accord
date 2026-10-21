@@ -1,0 +1,45 @@
+// PZ Test Range - map string table (original text, English)
+
+MAP:PZTestRange
+"PZ Test Range [DEV]"
+END
+
+OBJECT:PZDevKestrel
+"Kestrel Scout (DEV)"
+END
+
+OBJECT:PZDevKestrelWreck
+"Kestrel Wreck"
+END
+
+CONTROLBAR:PZDevConstructKestrel
+"&Kestrel Scout"
+END
+
+CONTROLBAR:PZDevToolTipKestrel
+"Fast wheeled scout with a chain gun.\nStrong vs: infantry, light vehicles\nWeak vs: tanks, structures"
+END
+
+CONTROLBAR:PZDevAttackMove
+"&Attack Move"
+END
+
+CONTROLBAR:PZDevToolTipAttackMove
+"Move to a location, engaging enemies on the way."
+END
+
+CONTROLBAR:PZDevGuard
+"&Guard"
+END
+
+CONTROLBAR:PZDevToolTipGuard
+"Hold and defend an area."
+END
+
+CONTROLBAR:PZDevStop
+"&Stop"
+END
+
+CONTROLBAR:PZDevToolTipStop
+"Cancel current orders."
+END

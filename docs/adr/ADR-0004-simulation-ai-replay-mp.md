@@ -1,0 +1,3 @@
+# ADR-0004 Fixed-step lockstep simulation, deterministic AI, replays, MP
+Status: Accepted
+**Decision.** Keep the engine's fixed logic rate and lockstep command model. No ECS rewrite, placement snap grid, flow-field pathfinding or rollback netcode unless measured need (each would need its own ADR). Skirmish AI is deterministic (engine AI + per-faction scripts/build orders). An optional local LLM director is single-player only, off the frame path, emits bounded high-level goals as normal commands, and is disabled in MP. Replays/saves embed the content-manifest hash. Regression: engine `-headless -replay` over recorded fixtures. MP proof requires ≥2 separate clients, matching content hashes, desync/CRC diagnostics.
