@@ -15,6 +15,8 @@ GEN = {
     "content/dev/Art/Textures/": "tools/gen_kestrel.py",
     "content/dev/Art/Terrain/": "tools/gen_testrange_map.py",
     "maps/PZ_TestRange/PZ_TestRange.": "tools/gen_testrange_map.py",
+    "maps/PZ_HarborDivide/": "tools/gen_harbor_divide.py",
+    "content/dev/Art/Terrain/pzdev_mud": "tools/gen_harbor_divide.py",
 }
 
 
@@ -50,7 +52,7 @@ def manifest():
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--engine", required=True); a = ap.parse_args()
     py = sys.executable
-    for g in ("tools/gen_kestrel.py", "tools/gen_testrange_map.py"):
+    for g in ("tools/gen_kestrel.py", "tools/gen_testrange_map.py", "tools/gen_harbor_divide.py"):
         subprocess.check_call([py, os.path.join(ROOT, g)])
     assets = manifest()
     bigp = os.path.join(ROOT, "build", "PZDev_B1.big")
@@ -64,7 +66,8 @@ def main():
     shutil.rmtree(st, ignore_errors=True)
     os.makedirs(os.path.join(st, "Maps"))
     shutil.copy(bigp, st)
-    shutil.copytree(os.path.join(ROOT, "maps", "PZ_TestRange"), os.path.join(st, "Maps", "PZ_TestRange"))
+    for mname in sorted(os.listdir(os.path.join(ROOT, "maps"))):
+        shutil.copytree(os.path.join(ROOT, "maps", mname), os.path.join(st, "Maps", mname))
     for f in ("install_b1.ps1", "TEST_B1_1.md"):
         shutil.copy(os.path.join(ROOT, "tests", "b1", f), st)
     sums = []

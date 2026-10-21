@@ -39,7 +39,7 @@ Each gets a full sheet (tech tree, roster, cost/time, counter matrix row) before
 
 ## 5. Maps
 Five fictional biomes: coastal industrial crossing, dense city, mountain pass, island coast, open terrain.
-**Harbor Divide (first full map, B2)** — 2 players, 1 600 × 1 600 ft playable. A harbour channel splits the map; two bridges (centre heavy, north light) plus a southern ford. Mirrored (180°) starts on raised quays; 2 safe supply sites per base, 2 contested at the centre docks, 1 secondary-income site per flank. Cranes/warehouses give garrison/vision fights. Acceptance: equal path length start→centre ±3 %, equal resource value per side, no unbreakable chokes, AI can path all routes.
+**Harbor Divide (B1 map, built 2026-10-21)** — 2 players, 3 000 × 3 000 ft playable (300 × 300 cells), point-symmetric. A north–south tidal channel (engine water polygon, surface 34 ft) splits the map; ground units cross on a wide centre causeway (contested) and narrow north/south causeways. Raised quays hold the starts (P1 west, P2 east). Per base: 2 safe supply docks (600 / 720 ft from start); per bank: 1 forward supply warehouse (1 230 ft); 2 contested oil derricks beside the north/south crossings. Measured by `tools/gen_harbor_divide.py` BFS on 10 ft cells: start-to-start 3 480 ft both ways; each crossing usable alone (3 480 / 4 140 / 4 160 ft); all resources reachable; report `build/reports/harbordivide_fairness.txt`. Bridges as destructible objects: B2 (needs our own bridge object + pathfinding layer test). Engine path check in-game still required.
 **PZ Test Range (B1.1, built)** — 1 280 ft square, mirrored, raised start pads, central basin with berm and three crossings. See `build/previews/testrange_blockout.png`.
 
 ## 6. UI flow (target)

@@ -150,9 +150,11 @@ def main():
         if not is_override:
             defs[key] = b
     names = lambda t: {n for (tt, n) in defs if tt == t}
-    strings = {}
-    for s in glob.glob(os.path.join(MAPS, "*", "map.str")):
-        strings.update(parse_str(s))
+    # Strings resolve from the map.str of whichever map is being played, so every label used by
+    # global content must exist in EVERY map's map.str (intersection), until B2 ships a global table.
+    per_map = {s: parse_str(s) for s in glob.glob(os.path.join(MAPS, "*", "map.str"))}
+    common = set.intersection(*(set(v) for v in per_map.values())) if per_map else set()
+    strings = {k: v for d in per_map.values() for k, v in d.items() if k in common}
 
     def need(kind, name, where, base_kind=None):
         if name in names(kind):

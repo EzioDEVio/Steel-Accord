@@ -34,6 +34,21 @@
    ]
   },
   {
+   "path": "content/dev/Art/Terrain/pzdev_mud.tga",
+   "sha256": "afee9eefe9521ee03e12e364f30e6fc86ff8836ec1704c3ad05ac6d4310892b3",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
+   "tool": "python3 tools/gen_testrange_map.py (numpy, Pillow)",
+   "source": "tools/gen_testrange_map.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
    "path": "content/dev/Art/Textures/pzkestrel.tga",
    "sha256": "14dd379628ae5a74a9284118d0fe453fc3fdf051cd860bde6557099976b61964",
    "origin": "procedurally generated",
@@ -230,7 +245,7 @@
   },
   {
    "path": "content/dev/Data/INI/Terrain/PZDev_Terrain.ini",
-   "sha256": "92f14cd5818be2e0943821ccf1100aa5407e94f93467b56f780e659f4209a912",
+   "sha256": "bb092d2a6d4a777c330af03f6c8070bd453aca6101696223cb644b51c6882d90",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
    "tool": "text editor",
@@ -250,6 +265,66 @@
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
    "tool": "text editor",
    "source": "content/dev/Data/INI/Weapon/PZDev_Weapons.ini",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "maps/PZ_HarborDivide/PZ_HarborDivide.map",
+   "sha256": "d804959320b1d135caf085422a8b2b26100d029e7d250b19b894b5e6ca49d9d3",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
+   "tool": "python3 tools/gen_harbor_divide.py (numpy, Pillow)",
+   "source": "tools/gen_harbor_divide.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "maps/PZ_HarborDivide/PZ_HarborDivide.tga",
+   "sha256": "d19e3ebf947b8d65fd6a69d728a8fb5c075ca95d83cb0f4c634fa00943dacf94",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
+   "tool": "python3 tools/gen_harbor_divide.py (numpy, Pillow)",
+   "source": "tools/gen_harbor_divide.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "maps/PZ_HarborDivide/map.ini",
+   "sha256": "5912a5f5ef3fa7e7978d46471322826bac4f6dd6727e92f199b83979291033a8",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
+   "tool": "python3 tools/gen_harbor_divide.py (numpy, Pillow)",
+   "source": "tools/gen_harbor_divide.py",
+   "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
+   "license": "Project-original; all rights reserved pending project license decision",
+   "third_party_inputs": "none",
+   "ship_status": "dev-only (B1 private prototype; references licensed base game data)",
+   "history": [
+    "2026-10-21 created for B1.1"
+   ]
+  },
+  {
+   "path": "maps/PZ_HarborDivide/map.str",
+   "sha256": "3ac645efca72a5c490723b71d6cf3fff1ec44bfa953f6f7447e64ae40279ad7a",
+   "origin": "procedurally generated",
+   "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
+   "tool": "python3 tools/gen_harbor_divide.py (numpy, Pillow)",
+   "source": "tools/gen_harbor_divide.py",
    "prompt_or_inputs": "deterministic script, fixed RNG seeds; no external images, models or samples",
    "license": "Project-original; all rights reserved pending project license decision",
    "third_party_inputs": "none",

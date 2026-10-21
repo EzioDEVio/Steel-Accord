@@ -36,18 +36,19 @@ Copy-Item (Join-Path $kit "PZDev_B1.big") $pzDir -Force
 # Same folder the game uses (CSIDL_PERSONAL; follows OneDrive redirection).
 $docs = [Environment]::GetFolderPath("MyDocuments")
 $maps = Join-Path $docs "Command and Conquer Generals Zero Hour Data\Maps"
-$dst  = Join-Path $maps "PZ_TestRange"
-$src  = Join-Path $kit "Maps\PZ_TestRange"
-$mapOk = $false
-try {
-  New-Item -ItemType Directory -Force -Path $dst -ErrorAction Stop | Out-Null
-  Copy-Item (Join-Path $src "*") $dst -Force -ErrorAction Stop
-  $mapOk = (Get-ChildItem $dst -File -ErrorAction Stop).Count -ge 4
-} catch { $mapOk = $false }
+$mapOk = $true
+foreach ($m in Get-ChildItem (Join-Path $kit "Maps") -Directory) {
+  $dst = Join-Path $maps $m.Name
+  try {
+    New-Item -ItemType Directory -Force -Path $dst -ErrorAction Stop | Out-Null
+    Copy-Item (Join-Path $m.FullName "*") $dst -Force -ErrorAction Stop
+    if ((Get-ChildItem $dst -File -ErrorAction Stop).Count -lt 4) { $mapOk = $false }
+  } catch { $mapOk = $false }
+}
 if (-not $mapOk) {
   Write-Warning "Windows blocked PowerShell from writing to $maps"
   Write-Warning "(usually Controlled Folder Access on a OneDrive Documents folder)."
-  Write-Host "Opening both folders: drag the PZ_TestRange folder into the Maps window (replace if asked)."
+  Write-Host "Opening both folders: drag every folder from the kit Maps window into the game Maps window (replace if asked)."
   New-Item -ItemType Directory -Force -Path $maps -ErrorAction SilentlyContinue | Out-Null
   Start-Process explorer.exe (Join-Path $kit "Maps")
   Start-Process explorer.exe $maps
@@ -57,9 +58,9 @@ $big = Join-Path $pzDir "PZDev_B1.big"
 Write-Host ""
 Write-Host "Installed:"
 Write-Host "  $big"
-Write-Host "  $dst"
+Write-Host "  $maps\PZ_TestRange, $maps\PZ_HarborDivide"
 Write-Host ""
 Write-Host "Launch (windowed, mod archive loaded with override priority):"
 if ($exe) { Write-Host "  & `"$($exe.FullName)`" -win -mod `"$big`"" } else { Write-Host "  <TestCopy>\generalszh.exe -win -mod `"$big`"" }
 Write-Host ""
-Write-Host "Uninstall: delete $pzDir and $dst"
+Write-Host "Uninstall: delete $pzDir and the PZ_* folders in $maps"
