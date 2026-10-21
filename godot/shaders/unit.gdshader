@@ -1,42 +1,58 @@
-// Steel Accord unit material: PBR paint with baked AO, triplanar mud/grime toward the lower hull, team colour, emissive optics.
+// Steel Accord unit material v2.
+// kind: 0 metal, 1 camouflaged paint, 2 team marking, 3 track/rubber, 4 decal/canvas, 5 glass
 shader_type spatial;
+#include "res://shaders/noise.gdshaderinc"
 uniform vec3 base_color : source_color = vec3(0.2);
 uniform float roughness_v = 0.6;
 uniform float metallic_v = 0.0;
-uniform vec3 emission_c : source_color = vec3(0.0);
-uniform bool is_team = false;
-uniform bool is_paint = false;
-uniform vec3 camo_a : source_color = vec3(0.30, 0.32, 0.20);
-uniform vec3 camo_b : source_color = vec3(0.20, 0.21, 0.14);
-uniform vec3 camo_c : source_color = vec3(0.40, 0.36, 0.26);
-uniform vec3 team_color : source_color = vec3(0.15, 0.45, 0.95);
+uniform int kind = 0;
+uniform vec3 team_color : source_color = vec3(0.1, 0.3, 0.75);
+uniform vec3 camo_offset = vec3(0.0);
+uniform vec3 camo_green : source_color = vec3(0.26, 0.30, 0.17);
+uniform vec3 camo_brown : source_color = vec3(0.27, 0.21, 0.14);
+uniform vec3 camo_black : source_color = vec3(0.08, 0.08, 0.07);
+uniform vec3 dust_color : source_color = vec3(0.50, 0.43, 0.32);
 uniform sampler2D ao_tex : hint_default_white, filter_linear_mipmap;
-uniform sampler2D grime : filter_linear_mipmap, repeat_enable;
 varying vec3 lp;
 varying vec3 ln;
 void vertex() { lp = VERTEX; ln = NORMAL; }
+
+float band(float v, float t) { float w = max(fwidth(v) * 1.2, 0.004); return smoothstep(t - w, t + w, v); }
+
 void fragment() {
-	vec3 bw = abs(ln); bw /= (bw.x + bw.y + bw.z);
-	float g = texture(grime, lp.zy * 0.45).r * bw.x + texture(grime, lp.xz * 0.45).r * bw.y + texture(grime, lp.xy * 0.45).r * bw.z;
-	float fine = texture(grime, lp.zy * 3.1 + lp.xx * 2.7).r;
 	float ao = texture(ao_tex, UV).r;
-	vec3 c = is_team ? team_color : base_color;
-	if (is_paint) {
-		// three-tone disruptive camouflage, projected in model space so it wraps panels consistently
-		float k = texture(grime, lp.xz * 0.07 + lp.yy * 0.03).r;
-		float k2 = texture(grime, lp.zx * 0.09 + vec2(0.37, 0.11)).r;
-		c = camo_a;
-		c = mix(c, camo_b, smoothstep(0.52, 0.56, k));
-		c = mix(c, camo_c, smoothstep(0.58, 0.62, k2) * (1.0 - smoothstep(0.52, 0.56, k)));
+	vec3 c = base_color;
+	float rough = roughness_v;
+	if (kind == 1) {
+		// three-tone disruptive pattern: large domain-warped 3D noise, crisp edges, no UV stretching
+		vec3 q = lp * 0.36 + camo_offset;
+		q += vec3(sa_fbm(q * 1.6), sa_fbm(q * 1.6 + 3.1), sa_fbm(q * 1.6 + 6.7)) * 0.9;
+		float n1 = sa_fbm(q);
+		float n2 = sa_fbm(q * 1.25 + vec3(11.3));
+		c = camo_green;
+		c = mix(c, camo_brown, band(n1, 0.57));
+		c = mix(c, camo_black, band(n2, 0.60) * (1.0 - band(n1, 0.57) * 0.6));
+		// paint chips exposing dark primer on edges of the pattern noise
+		float chip = band(sa_fbm(lp * 14.0), 0.74);
+		c = mix(c, vec3(0.012), chip * 0.7);
+		rough = mix(rough, 0.45, chip);
+	} else if (kind == 2) {
+		c = team_color * 0.7;
+		rough = 0.7;
 	}
-	c *= 0.9 + 0.2 * fine;                                   // paint variation
-	float mud = clamp((1.3 - lp.y) * 0.9, 0.0, 1.0) * smoothstep(0.3, 0.7, g);
-	float dust = smoothstep(0.55, 0.85, g) * 0.35;
-	c = mix(c, vec3(0.29, 0.24, 0.17), clamp(max(mud * 0.85, dust) * float(metallic_v < 0.5), 0.0, 0.85));
-	ALBEDO = c * mix(0.45, 1.0, ao);
-	ROUGHNESS = clamp(roughness_v + mud * 0.25 - fine * 0.08, 0.05, 1.0);
-	METALLIC = metallic_v;
+	if (kind != 5) {
+		// dust: heavy toward the running gear, light film on upward faces
+		float low = 1.0 - smoothstep(0.05, 0.95, lp.y + (sa_fbm(lp * 2.5) - 0.5) * 0.6);
+		float top = smoothstep(0.65, 0.95, ln.y) * smoothstep(0.45, 0.75, sa_fbm(lp * 1.8 + 4.0));
+		float amt = kind == 3 ? 0.3 + low * 0.35 : low * 0.45 + top * 0.25;
+		amt *= 0.75 + 0.5 * sa_noise(lp * 9.0);
+		c = mix(c, dust_color, clamp(amt, 0.0, 0.85));
+		rough = mix(rough, 0.95, clamp(amt, 0.0, 1.0));
+	}
+	ALBEDO = c * mix(0.4, 1.0, ao);
+	ROUGHNESS = rough;
+	METALLIC = kind == 5 ? 0.3 : metallic_v;
+	SPECULAR = kind == 5 ? 0.8 : 0.45;
 	AO = ao;
-	AO_LIGHT_AFFECT = 0.4;
-	EMISSION = emission_c;
+	AO_LIGHT_AFFECT = 0.5;
 }
