@@ -33,12 +33,25 @@ $pzDir = Join-Path $tc "PZ"
 New-Item -ItemType Directory -Force -Path $pzDir | Out-Null
 Copy-Item (Join-Path $kit "PZDev_B1.big") $pzDir -Force
 
+# Same folder the game uses (CSIDL_PERSONAL; follows OneDrive redirection).
 $docs = [Environment]::GetFolderPath("MyDocuments")
 $maps = Join-Path $docs "Command and Conquer Generals Zero Hour Data\Maps"
-New-Item -ItemType Directory -Force -Path $maps | Out-Null
-$dst = Join-Path $maps "PZ_TestRange"
-if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
-Copy-Item -Recurse (Join-Path $kit "Maps\PZ_TestRange") $dst
+$dst  = Join-Path $maps "PZ_TestRange"
+$src  = Join-Path $kit "Maps\PZ_TestRange"
+$mapOk = $false
+try {
+  New-Item -ItemType Directory -Force -Path $dst -ErrorAction Stop | Out-Null
+  Copy-Item (Join-Path $src "*") $dst -Force -ErrorAction Stop
+  $mapOk = (Get-ChildItem $dst -File -ErrorAction Stop).Count -ge 4
+} catch { $mapOk = $false }
+if (-not $mapOk) {
+  Write-Warning "Windows blocked PowerShell from writing to $maps"
+  Write-Warning "(usually Controlled Folder Access on a OneDrive Documents folder)."
+  Write-Host "Opening both folders: drag the PZ_TestRange folder into the Maps window (replace if asked)."
+  New-Item -ItemType Directory -Force -Path $maps -ErrorAction SilentlyContinue | Out-Null
+  Start-Process explorer.exe (Join-Path $kit "Maps")
+  Start-Process explorer.exe $maps
+}
 
 $big = Join-Path $pzDir "PZDev_B1.big"
 Write-Host ""

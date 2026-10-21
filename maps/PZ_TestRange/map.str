@@ -1,9 +1,5 @@
 // PZ Test Range - map string table (original text, English)
 
-MAP:PZTestRange
-"PZ Test Range [DEV]"
-END
-
 OBJECT:PZDevKestrel
 "Kestrel Scout (DEV)"
 END

@@ -13,9 +13,9 @@ the Kestrel, its icon/glyphs, weapon, FX, wreck, terrain textures and the map ar
 ## Test script (record result for each step; screenshot = PrintScreen / Win+Shift+S)
 | # | Action | Expected | Shot |
 |---|--------|----------|------|
-| 1 | Skirmish -> map list | "PZ Test Range [DEV] (2)" listed with preview | S1 |
-| 2 | You: **USA** (or **China**, not a sub-general). AI: any, Easy. Start | Map loads: concrete pads, gravel basin, ramps; no crash | S2 |
-| 3 | Select your Command Center | Slot 11 shows the Kestrel button (vehicle icon); tooltip "Kestrel Scout (DEV)" | S3 |
+| 1 | Skirmish -> Unofficial Maps | "PZ_TestRange.map (2)" listed with preview | S1 |
+| 2 | You: **USA** (or **China**, not a sub-general). AI: any, Easy. Start | Map loads: concrete pads, gravel basin, ramps, supply docks beside each base; no crash | S2 |
+| 3 | **Left-click your Command Center** so its build panel opens | Slot 11 (bottom row of the CC panel) shows the Kestrel button (vehicle icon); tooltip "Kestrel Scout (DEV)" | S3 |
 | 4 | Click it twice | $450 deducted each; ~5 s build bar; Kestrel rolls out, tinted in your team colour | S4 |
 | 5 | Left-click / box-select the Kestrels | Selection ring + health bar; portrait = Kestrel icon; panel shows Attack Move / Guard / Stop glyphs | S5 |
 | 6 | Right-click ground across the map | Drives there (wheels don't spin - expected), climbs the ramps | - |

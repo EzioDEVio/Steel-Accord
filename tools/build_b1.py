@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""B1.1 build: regenerate original assets, write manifest, pack dev BIG, validate, stage a Windows test kit.
+"""B1.1 build (rev b): regenerate original assets, write manifest, pack dev BIG, validate, stage a Windows test kit.
 
 usage: python3 tools/build_b1.py --engine /path/to/GeneralsGameCode
 Output: build/PZDev_B1.big, build/stage_b1/ (+ build/PZ_B1_1_testkit.zip)

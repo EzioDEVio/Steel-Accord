@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Generate the original B1.1 test map 'PZ Test Range' (2 players) and its terrain textures.
 
-Layout (playable 128x128 cells = 1280 ft, 16-cell border):
+Layout (playable 256x256 cells = 2560 ft, 20-cell border):
   * two raised concrete start pads in opposite corners (Player_1_Start SW, Player_2_Start NE)
   * a low gravel basin across the centre with a raised berm, crossed by two ramps
   * a concrete causeway through the middle (contested lane) and two flank lanes
   * symmetric under 180-degree rotation, so both starts are equidistant from every feature
-No supplies yet (B1.1 only proves the unit loop; skirmish starting cash funds it).
+Neutral supplies: 4 safe SupplyDocks, 2 contested SupplyWarehouses, 2 flank TechOilDerricks (base-game objects, B1 only).
 
 Outputs:
   content/dev/Art/Terrain/pzdev_concrete.tga, pzdev_gravel.tga   (128x128, 2x2 tiles)
@@ -29,7 +29,22 @@ PREV = os.path.join(ROOT, "build", "previews")
 for d in (TERR, MAPDIR, PREV):
     os.makedirs(d, exist_ok=True)
 
-PLAY, BORDER = 128, 16
+PLAY, BORDER = 256, 20
+STARTS = ((0.15, 0.15), (0.85, 0.85))
+
+
+def ad(a, d):
+    """(along-basin, across-basin) -> normalized (px, py)."""
+    return (0.5 + (a + d) / math.sqrt(2), 0.5 + (d - a) / math.sqrt(2))
+
+
+# Neutral economy (base-game objects in B1; replaced by our own in B2). 180-degree symmetric.
+SUPPLIES = [  # (template, normalized x, y)
+    ("SupplyDock", 0.29, 0.11), ("SupplyDock", 0.11, 0.29),          # P1 safe
+    ("SupplyDock", 0.71, 0.89), ("SupplyDock", 0.89, 0.71),          # P2 safe
+    ("SupplyWarehouse",) + ad(-0.24, -0.10), ("SupplyWarehouse",) + ad(0.24, 0.10),   # contested
+    ("TechOilDerrick",) + ad(-0.40, 0.0), ("TechOilDerrick",) + ad(0.40, 0.0),        # flank gaps
+]
 W = H = PLAY + 2 * BORDER          # height-map vertices per side
 XY = 10.0                          # MAP_XY_FACTOR (ft per cell)
 HSCALE = 0.625                     # MAP_HEIGHT_SCALE (ft per height unit)
@@ -72,17 +87,25 @@ def heightfield():
         gaps = np.maximum(gaps, np.exp(-((along - c0) / wdt) ** 2))
     hgt += berm * (1 - gaps)
     # start pads: raise and flatten around both starts
-    for sx, sy in ((0.17, 0.17), (0.83, 0.83)):
+    for sx, sy in STARTS:
         r = np.hypot(px - sx, py - sy)
-        pad = np.clip(1 - (r - 0.12) / 0.08, 0, 1)
+        pad = np.clip(1 - (r - 0.09) / 0.05, 0, 1)
         hgt = hgt * (1 - pad) + 72 * pad
     # gentle rolling detail away from pads/causeway
     hgt += 3.0 * (noise(H, W, 5, seed=51) - 0.5) * (1 - np.exp(-(along / 0.1) ** 2))
+    # flatten a small apron under every supply/tech object
+    for _, sx, sy in SUPPLIES:
+        r = np.hypot(px - sx, py - sy)
+        w = np.clip(1 - (r - 0.025) / 0.03, 0, 1)
+        cx, cy = int(round(BORDER + sx * PLAY)), int(round(BORDER + sy * PLAY))
+        hgt = hgt * (1 - w) + hgt[cy, cx] * w
     hgt = np.clip(hgt, 2, 250)
     # concrete mask (per cell): pads, causeway band, flank lanes
     conc = np.zeros((H, W), bool)
-    for sx, sy in ((0.17, 0.17), (0.83, 0.83)):
-        conc |= np.hypot(px - sx, py - sy) < 0.13
+    for sx, sy in STARTS:
+        conc |= np.hypot(px - sx, py - sy) < 0.10
+    for _, sx, sy in SUPPLIES:
+        conc |= np.hypot(px - sx, py - sy) < 0.025
     conc |= (np.abs(along) < 0.045) & (np.abs(d_diag) < 0.40)
     for c0 in (-0.42, 0.42):
         conc |= (np.abs(along - c0) < 0.03) & (np.abs(d_diag) < 0.22)
@@ -137,14 +160,18 @@ def build():
 
     S = lambda v: BORDER * 0 + v * PLAY * XY                 # playable-relative feet
     objects = [
-        waypoint(1, "Player_1_Start", S(0.17), S(0.17)),
-        waypoint(2, "Player_2_Start", S(0.83), S(0.83)),
-        waypoint(3, "InitialCameraPosition", S(0.17), S(0.17)),
+        waypoint(1, "Player_1_Start", S(STARTS[0][0]), S(STARTS[0][1])),
+        waypoint(2, "Player_2_Start", S(STARTS[1][0]), S(STARTS[1][1])),
+        waypoint(3, "InitialCameraPosition", S(STARTS[0][0]), S(STARTS[0][1])),
     ]
+    for i, (tmpl, sx, sy) in enumerate(SUPPLIES):
+        ang = math.atan2(0.5 - sy, 0.5 - sx)   # face the map centre
+        objects.append(dict(x=S(sx), y=S(sy), z=0.0, angle=ang, flags=0, tmpl=tmpl,
+                            props=dict_obj(f"{tmpl} {i + 1}", "team")))
     m = dict(
         height=dict(width=W, height=H, border=BORDER, boundaries=[(PLAY, PLAY)], data=hgt.tobytes()),
         blend=blend,
-        world=[("weather", DICT_INT, 0), ("mapName", DICT_ASCII, "MAP:PZTestRange")],
+        world=[("weather", DICT_INT, 0)],
         sides=[
             dict(dict=[("playerName", DICT_ASCII, ""), ("playerIsHuman", DICT_BOOL, False),
                        ("playerDisplayName", DICT_UNICODE, "Neutral"), ("playerFaction", DICT_ASCII, ""),
@@ -177,7 +204,10 @@ def build():
     d = ImageDraw.Draw(img)
     k = 480 / W
     d.rectangle([BORDER * k, BORDER * k, (W - BORDER) * k, (H - BORDER) * k], outline=(255, 255, 255), width=1)
-    for i, (sx, sy) in enumerate(((0.17, 0.17), (0.83, 0.83))):
+    for _, sx, sy in SUPPLIES:
+        cx, cy = (BORDER + sx * PLAY) * k, 480 - (BORDER + sy * PLAY) * k
+        d.rectangle([cx - 5, cy - 5, cx + 5, cy + 5], fill=(90, 200, 255), outline=(10, 30, 40))
+    for i, (sx, sy) in enumerate(STARTS):
         cx, cy = (BORDER + sx * PLAY) * k, 480 - (BORDER + sy * PLAY) * k
         d.ellipse([cx - 9, cy - 9, cx + 9, cy + 9], outline=(255, 210, 60), width=3)
         d.text((cx + 12, cy - 6), f"P{i + 1}", fill=(255, 230, 120))

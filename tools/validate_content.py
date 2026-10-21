@@ -29,6 +29,7 @@ BASE_GAME_REFS = {
     "commandset": {"AmericaCommandCenterCommandSet", "ChinaCommandCenterCommandSet"},
     "side": {"America"},
     "faction": {"FactionCivilian"},
+    "object": {"SupplyDock", "SupplyWarehouse", "TechOilDerrick"},
 }
 
 MODULE_KEYS = ("Draw", "Body", "Behavior", "ClientUpdate")
@@ -308,7 +309,18 @@ def check_map(path, strings):
         if not o: err(f"{rel(path)}: missing waypoint {need}"); continue
         if not (0 < o["x"] < pw * 10 and 0 < o["y"] < ph * 10): err(f"{rel(path)}: {need} outside playable area")
     world = {k: v for k, t, v in m["world"]}
-    if world.get("mapName") not in strings: err(f"{rel(path)}: mapName '{world.get('mapName')}' missing from map.str")
+    # User (non-official) maps must NOT carry a mapName tag: MapCache::addMap resolves it against the
+    # global string table only and the list shows "MISSING: ..." (observed in client test, 2026-10-21).
+    if "mapName" in world: err(f"{rel(path)}: remove WorldInfo mapName for user maps (shows MISSING in map list)")
+    our_objects = set()
+    for f in glob.glob(os.path.join(DEV, "Data", "INI", "Object", "*.ini")):
+        our_objects |= {b["name"] for b in parse_ini(f) if b["type"] == "Object"}
+    for o in m["objects"]:
+        t = o["tmpl"]
+        if t.startswith("*Waypoints/") or t in our_objects: continue
+        if t in BASE_GAME_REFS["object"]: external.append(f"object '{t}' <- {rel(path)}")
+        else: err(f"{rel(path)}: map object '{t}' unresolved")
+        if not (0 < o["x"] < pw * 10 and 0 < o["y"] < ph * 10): err(f"{rel(path)}: object {t} outside playable area")
     for s in m["sides"]:
         fac = dict((k, v) for k, t, v in s["dict"]).get("playerFaction")
         if fac:

@@ -260,7 +260,7 @@
   },
   {
    "path": "maps/PZ_TestRange/PZ_TestRange.map",
-   "sha256": "ed2ab241ce1caab103937b987555d9a62920f6df886afff3fdc633c569d379e1",
+   "sha256": "c2ba89dec7a15ada45ff197faee8a33a5a8db3a5318c73283a8c2bffe4c4795f",
    "origin": "procedurally generated",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
    "tool": "python3 tools/gen_testrange_map.py (numpy, Pillow)",
@@ -275,7 +275,7 @@
   },
   {
    "path": "maps/PZ_TestRange/PZ_TestRange.tga",
-   "sha256": "75b2de29c76daeaf15d7cc4691db17a430a2ded76910ade5f7620224a9bb6f39",
+   "sha256": "46267ad484217924cb5733cb26b8ad6ea4b5edd96a5b085ad1bc8d5c22be484b",
    "origin": "procedurally generated",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
    "tool": "python3 tools/gen_testrange_map.py (numpy, Pillow)",
@@ -305,7 +305,7 @@
   },
   {
    "path": "maps/PZ_TestRange/map.str",
-   "sha256": "9133d4040a22568e9201e2bc1365d68045a6c28b6e134bdb343c5723765ed546",
+   "sha256": "3ac645efca72a5c490723b71d6cf3fff1ec44bfa953f6f7447e64ae40279ad7a",
    "origin": "hand-authored text",
    "creator": "Claude (AI technical lead) for Mohammed Aldaraji / Project Zero Hour",
    "tool": "text editor",
