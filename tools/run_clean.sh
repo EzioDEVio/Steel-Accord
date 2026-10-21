@@ -11,6 +11,7 @@ ENGINE_EXE="${ENGINE_EXE:-/home/claude/engine/build/mingw-w64-i686/GeneralsMD/ge
 mkdir -p "$C"
 cp "$ENGINE_EXE" "$C/generalszh.exe"
 cp "$ROOT/tools/winshim/d3dx8d.dll" "$C/"
+python3 -c "import sys; sys.path.insert(0, \"$ROOT/tools\"); from pzlib import big; big.pack(\"$ROOT/content/base\", \"$C/SABase.big\")"
 rm -f "$C/files.log" "$C/DebugLogFile.txt" "$C/screenshot.png"
 pgrep -x Xvfb >/dev/null || (Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &) ; sleep 1
 export WINEDEBUG=-all DISPLAY=:99 WINEPREFIX=/root/.wine32
