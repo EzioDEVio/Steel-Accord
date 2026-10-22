@@ -274,8 +274,18 @@ func _bake_roads() -> void:
 						var x := cx + dx; var z := cz + dz
 						if x < 0 or z < 0 or x >= n or z >= n: continue
 						var dist := Vector2(dx, dz).length() * step
-						var v := int(clampf(1.0 - (dist - wd * 0.35) / (wd * 0.25), 0.0, 1.0) * 255.0)
+						var v := int(clampf(1.0 - (dist - wd * 0.3) / (wd * 0.4), 0.0, 1.0) * 255.0)
 						if v > buf[z * n + x]: buf[z * n + x] = v
+	# two box-blur passes soften the 2 m raster so road edges are not stair-stepped
+	for pass_i in 2:
+		var src := buf.duplicate()
+		for z in range(1, n - 1):
+			for x in range(1, n - 1):
+				var acc := 0
+				for dz in [-1, 0, 1]:
+					var row: int = (z + dz) * n
+					acc += src[row + x - 1] + src[row + x] + src[row + x + 1]
+				buf[z * n + x] = acc / 9
 	road_mask = Image.create_from_data(n, n, false, Image.FORMAT_L8, buf)
 
 

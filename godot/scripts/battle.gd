@@ -927,11 +927,12 @@ func _update_visibility() -> void:
 		_update_fog()
 	for z in reveal_zones.duplicate():
 		if sim_time > z.until: reveal_zones.erase(z)
+	var reveal_all := "reveal" in args     # review screenshots: show both sides
 	for u in units:
 		if u.team == 0 or u.dead:
 			if u.dead and not seen.get(u.uid, false): u.visible = false
 			continue
-		var vis := _cell_visible(u.position)
+		var vis := reveal_all or _cell_visible(u.position)
 		if not vis:
 			for z in reveal_zones:
 				if z.team == 0 and _dist_to_segment(u.position, z.a, z.b) < z.w * 0.5:

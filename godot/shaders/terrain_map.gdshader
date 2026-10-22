@@ -39,8 +39,8 @@ void fragment() {
 	vec3 scrub = mix(vec3(0.33, 0.33, 0.19), vec3(0.45, 0.43, 0.26), d2);
 	scrub = mix(sand, scrub, smoothstep(0.38, 0.62, d1 * 0.6 + d3 * 0.6));
 	vec3 river = mix(vec3(0.66, 0.62, 0.54), vec3(0.76, 0.72, 0.64), d2) * (0.92 + 0.1 * d1);
-	vec3 dirt = mix(vec3(0.42, 0.37, 0.29), vec3(0.50, 0.45, 0.36), d1);
-	vec3 ruts = vec3(0.30, 0.26, 0.20);
+	vec3 dirt = mix(vec3(0.53, 0.48, 0.40), vec3(0.60, 0.55, 0.46), d1);   // compacted gravel track, lighter than shadow
+	vec3 ruts = vec3(0.42, 0.37, 0.30);
 
 	float rock_w = clamp(sp.r + smoothstep(0.22, 0.42, slope + (d1 - 0.5) * 0.08), 0.0, 1.0);
 	vec3 c = sand;
@@ -48,7 +48,7 @@ void fragment() {
 	c = mix(c, scrub, sp.b);
 	c = mix(c, river, sp.a);
 	c = mix(c, rock, rock_w);
-	float rd = smoothstep(0.15, 0.7, road + (d1 - 0.5) * 0.15);
+	float rd = smoothstep(0.2, 0.75, road + (d1 - 0.5) * 0.12);
 	c = mix(c, dirt, rd);
 	c = mix(c, ruts, smoothstep(0.85, 1.0, road) * smoothstep(0.45, 0.6, d1) * 0.5);
 
