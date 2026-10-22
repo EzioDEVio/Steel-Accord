@@ -552,14 +552,21 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 	var dir := Vector3(target.x - start.x, 0, target.z - start.z).normalized()
 	var node := Node3D.new()
 	add_child(node)
-	var s := Sprite3D.new()
-	var tex: Texture2D = load(p.sprite)
-	s.texture = tex; s.axis = Vector3.AXIS_Y; s.shaded = true; s.double_sided = true
-	s.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
-	s.pixel_size = float(p.length) / float(tex.get_height()) * 1.08
-	s.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	s.position.y = p.altitude
-	node.add_child(s)
+	if ResourceLoader.exists(str(p.get("model3d", "_"))):
+		var m3: Node3D = (load(p.model3d) as PackedScene).instantiate()
+		m3.scale = Vector3.ONE * UnitDefs.SCALE.aircraft
+		m3.position.y = p.altitude
+		node.add_child(m3)
+		for pr in m3.find_children("Prop*", "Node3D", true, false): node.set_meta("props", true)
+	else:
+		var s := Sprite3D.new()
+		var tex: Texture2D = load(p.sprite)
+		s.texture = tex; s.axis = Vector3.AXIS_Y; s.shaded = true; s.double_sided = true
+		s.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		s.pixel_size = float(p.length) / float(tex.get_height()) * 1.08
+		s.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		s.position.y = p.altitude
+		node.add_child(s)
 	var span: float = float(p.length) * (0.4 if id == "carpet" or id == "supersonic" else 0.3)
 	for side in [-1.0, 1.0]:
 		FX.exhaust_trail(node, Vector3(side * span * 0.5, float(p.altitude), float(p.length) * 0.35), 1.6, true)
@@ -576,6 +583,7 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 func _update_flights(dt: float) -> void:
 	for f in flights.duplicate():
 		var p: Dictionary = f.def
+		for pr in f.node.find_children("Prop*", "Node3D", true, false): (pr as Node3D).rotate_object_local(Vector3.BACK, dt * 30.0)
 		f.pos += f.dir * float(p.speed) * dt
 		f.node.position = f.pos
 		var along: float = (f.pos - f.target).dot(f.dir)   # <0 before the target, >0 after
@@ -1175,6 +1183,7 @@ func launch_supply_drop(b: Building) -> void:
 
 func _update_supply_drops(dt: float) -> void:
 	for f in drop_flights.duplicate():
+		for pr in f.node.find_children("Prop*", "Node3D", true, false): (pr as Node3D).rotate_object_local(Vector3.BACK, dt * 30.0)
 		f.pos += f.dir * 55.0 * dt
 		f.node.position = f.pos
 		var along: float = (f.pos - f.target).dot(f.dir)

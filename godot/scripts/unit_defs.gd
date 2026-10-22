@@ -23,7 +23,7 @@ const DEFS := {
 	# ---------------- aircraft (sprite-based; PROVISIONAL values) ----------------
 	"f16": {
 		"name": "F-16 (multirole fighter)", "role": "Multirole jet - missile strikes; rearms at its pad", "domain": "jet",
-		"sprite": "res://assets/aircraft/f16/f16_top.png", "icon": "res://assets/aircraft/f16/f16_icon.png", "length": 15.1,
+		"sprite": "res://assets/aircraft/f16/f16_top.png", "model3d": "res://assets/units3d/f16/f16.glb", "icon": "res://assets/aircraft/f16/f16_icon.png", "length": 15.1,
 		"hp": 320.0, "speed": 52.0, "min_speed": 30.0, "accel": 20.0, "turn_deg": 72.0, "altitude": 16.0,
 		"radius": 4.0, "height": 1.0, "sight": 95.0, "cost": 1400, "provisional": true,
 		"weapons": [{"id": "agm", "range": 115.0, "reload": 1.2, "damage": 240.0, "splash": 4.0, "proj": "missile",
@@ -31,15 +31,26 @@ const DEFS := {
 	},
 	"fa18": {
 		"name": "F/A-18 (strike fighter)", "role": "Strike jet - heavier missile load, slower", "domain": "jet",
-		"sprite": "res://assets/aircraft/fa18/fa18_top.png", "icon": "res://assets/aircraft/fa18/fa18_icon.png", "length": 17.1,
+		"sprite": "res://assets/aircraft/fa18/fa18_top.png", "model3d": "res://assets/units3d/fa18/fa18.glb", "icon": "res://assets/aircraft/fa18/fa18_icon.png", "length": 17.1,
 		"hp": 380.0, "speed": 48.0, "min_speed": 28.0, "accel": 18.0, "turn_deg": 66.0, "altitude": 16.0,
 		"radius": 4.4, "height": 1.0, "sight": 95.0, "cost": 1600, "provisional": true,
 		"weapons": [{"id": "agm_heavy", "range": 110.0, "reload": 1.0, "damage": 220.0, "splash": 5.0, "proj": "missile",
 			"speed": 140.0, "spread": 0.6, "targets": ["ground", "heli"], "ammo": 6, "facing_deg": 22.0}],
 	},
+	"f35": {
+		"name": "F-35 (stealth multirole)", "role": "Stealth multirole jet - precision strikes, hard to intercept", "domain": "jet",
+		"sprite": "res://assets/aircraft/f16/f16_top.png", "model3d": "res://assets/units3d/f35/f35.glb",
+		"icon": "res://assets/aircraft/f16/f16_icon.png", "length": 15.7,
+		"hp": 360.0, "speed": 55.0, "min_speed": 30.0, "accel": 22.0, "turn_deg": 75.0, "altitude": 17.0,
+		"radius": 4.2, "height": 1.0, "sight": 110.0, "cost": 2000, "provisional": true,
+		"weapons": [{"id": "jdam", "range": 120.0, "reload": 1.4, "damage": 280.0, "splash": 5.0, "proj": "missile",
+			"speed": 150.0, "spread": 0.4, "targets": ["ground"], "ammo": 4, "facing_deg": 24.0},
+			{"id": "aim120", "range": 130.0, "reload": 1.0, "damage": 240.0, "splash": 2.0, "proj": "missile",
+			"speed": 190.0, "spread": 0.3, "targets": ["heli", "jet"], "ammo": 2, "facing_deg": 30.0}],
+	},
 	"f22": {
 		"name": "F-22 (air superiority)", "role": "Air-superiority jet - hunts aircraft, weak vs ground", "domain": "jet",
-		"sprite": "res://assets/aircraft/f22/f22_top.png", "icon": "res://assets/aircraft/f22/f22_icon.png", "length": 18.9,
+		"sprite": "res://assets/aircraft/f22/f22_top.png", "model3d": "res://assets/units3d/f22/f22.glb", "icon": "res://assets/aircraft/f22/f22_icon.png", "length": 18.9,
 		"hp": 420.0, "speed": 60.0, "min_speed": 34.0, "accel": 24.0, "turn_deg": 85.0, "altitude": 18.0,
 		"radius": 4.6, "height": 1.0, "sight": 120.0, "cost": 2200, "provisional": true,
 		"weapons": [{"id": "aam", "range": 130.0, "reload": 0.9, "damage": 260.0, "splash": 2.0, "proj": "missile",
@@ -49,7 +60,7 @@ const DEFS := {
 	},
 	"a10": {
 		"name": "A-10 (ground attack)", "role": "Close air support - cannon strafing runs, tough airframe", "domain": "jet",
-		"sprite": "res://assets/aircraft/a10/a10_top.png", "icon": "res://assets/aircraft/a10/a10_icon.png", "length": 16.3,
+		"sprite": "res://assets/aircraft/a10/a10_top.png", "model3d": "res://assets/units3d/a10/a10.glb", "icon": "res://assets/aircraft/a10/a10_icon.png", "length": 16.3,
 		"hp": 650.0, "speed": 38.0, "min_speed": 22.0, "accel": 14.0, "turn_deg": 60.0, "altitude": 12.0,
 		"radius": 4.6, "height": 1.0, "sight": 85.0, "cost": 1700, "provisional": true,
 		"weapons": [{"id": "gau_cannon", "range": 90.0, "reload": 0.1, "damage": 20.0, "splash": 1.5, "proj": "bullet",
@@ -57,7 +68,7 @@ const DEFS := {
 	},
 	"ah64": {
 		"name": "AH-64 (attack helicopter)", "role": "Attack helicopter - rockets and guided missiles vs armour", "domain": "heli",
-		"sprite": "res://assets/aircraft/ah64/ah64_top.png", "icon": "res://assets/aircraft/ah64/ah64_icon.png", "length": 17.7,
+		"sprite": "res://assets/aircraft/ah64/ah64_top.png", "model3d": "res://assets/units3d/ah64/ah64.glb", "icon": "res://assets/aircraft/ah64/ah64_icon.png", "length": 17.7,
 		"hp": 520.0, "speed": 20.0, "accel": 10.0, "turn_deg": 110.0, "altitude": 9.0, "rotor": 7.3,
 		"radius": 3.5, "height": 1.0, "sight": 85.0, "cost": 1500, "provisional": true,
 		"weapons": [{"id": "atgm", "range": 70.0, "reload": 2.2, "damage": 200.0, "splash": 2.0, "proj": "missile",
@@ -67,7 +78,7 @@ const DEFS := {
 	},
 	"uh60": {
 		"name": "UH-60 (utility helicopter)", "role": "Air-assault transport - carries 8 infantry, door guns; hover low to load / unload", "transport": {"capacity": 8, "accepts": ["infantry"]}, "domain": "heli",
-		"sprite": "res://assets/aircraft/uh60/uh60_top.png", "icon": "res://assets/aircraft/uh60/uh60_icon.png", "length": 19.8,
+		"sprite": "res://assets/aircraft/uh60/uh60_top.png", "model3d": "res://assets/units3d/uh60/uh60.glb", "icon": "res://assets/aircraft/uh60/uh60_icon.png", "length": 19.8,
 		"hp": 450.0, "speed": 24.0, "accel": 11.0, "turn_deg": 100.0, "altitude": 8.0, "rotor": 8.2,
 		"radius": 3.8, "height": 1.0, "sight": 75.0, "cost": 900, "provisional": true,
 		"weapons": [{"id": "door_guns", "range": 40.0, "reload": 0.25, "damage": 7.0, "splash": 0.0, "proj": "bullet",
@@ -279,19 +290,19 @@ const BASE_UNITS := {
 # (kept below the closest camera height so aircraft stay visible), not real flight levels. In the full game these are
 # unlocked by rank (experience) - see docs/MECHANICS_REFERENCE_AUDIT.md; here they are available on cooldown.
 const POWERS := {
-	"carpet": {"name": "Carpet Bombing", "aircraft": "b52", "sprite": "res://assets/aircraft/b52/b52_top.png",
+	"carpet": {"name": "Carpet Bombing", "model3d": "res://assets/units3d/b52/b52.glb", "aircraft": "b52", "sprite": "res://assets/aircraft/b52/b52_top.png",
 		"icon": "res://assets/aircraft/b52/b52_icon.png", "length": 48.5, "cooldown": 90.0, "speed": 70.0, "altitude": 30.0,
 		"bombs": 10, "spacing": 7.0, "damage": 150.0, "splash": 9.0},
-	"supersonic": {"name": "Supersonic Strike", "aircraft": "b1", "sprite": "res://assets/aircraft/b1/b1_top.png",
+	"supersonic": {"name": "Supersonic Strike", "model3d": "res://assets/units3d/b1/b1.glb", "aircraft": "b1", "sprite": "res://assets/aircraft/b1/b1_top.png",
 		"icon": "res://assets/aircraft/b1/b1_icon.png", "length": 44.5, "cooldown": 75.0, "speed": 120.0, "altitude": 26.0,
 		"bombs": 6, "spacing": 8.0, "damage": 180.0, "splash": 8.0},
-	"stealth": {"name": "Stealth Precision Strike", "aircraft": "b2", "sprite": "res://assets/aircraft/b2/b2_top.png",
+	"stealth": {"name": "Stealth Precision Strike", "model3d": "res://assets/units3d/b2/b2.glb", "aircraft": "b2", "sprite": "res://assets/aircraft/b2/b2_top.png",
 		"icon": "res://assets/aircraft/b2/b2_icon.png", "length": 21.0, "cooldown": 120.0, "speed": 80.0, "altitude": 32.0,
 		"bombs": 1, "spacing": 0.0, "damage": 1100.0, "splash": 13.0},
-	"paradrop": {"name": "Paratroopers", "aircraft": "c130", "sprite": "res://assets/aircraft/c130/c130_top.png",
+	"paradrop": {"name": "Paratroopers", "model3d": "res://assets/units3d/c130/c130.glb", "aircraft": "c130", "sprite": "res://assets/aircraft/c130/c130_top.png",
 		"icon": "res://assets/aircraft/c130/c130_top.png", "length": 40.4, "cooldown": 150.0, "speed": 60.0, "altitude": 36.0,
 		"troops": 6, "unit": "paratrooper", "requires": "airfield"},
-	"recon": {"name": "Recon Overflight", "aircraft": "sr71", "sprite": "res://assets/aircraft/sr71/sr71_top.png",
+	"recon": {"name": "Recon Overflight", "model3d": "res://assets/units3d/sr71/sr71.glb", "aircraft": "sr71", "sprite": "res://assets/aircraft/sr71/sr71_top.png",
 		"icon": "res://assets/aircraft/sr71/sr71_icon.png", "length": 32.7, "cooldown": 60.0, "speed": 160.0, "altitude": 36.0,
 		"reveal_width": 70.0, "reveal_time": 25.0},
 }

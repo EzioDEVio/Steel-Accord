@@ -26,6 +26,34 @@ python3 -I tools/art/prop_supply_crate_chute.py godot/assets/units3d/props --pre
 - **Airfield memory:** the airfield peaks at about 2.7 GB RSS (4096² atlas + 2400×1760 plan). In this sandbox the build + previews in one process was **OOM-killed** twice by the cgroup. Build it alone, then run `--previews-only`.
 - **Determinism:** two builds of the crate prop are byte-identical (md5 `0d758d9f…`). The others use the same seeded code path but were not double-built, to save CPU.
 
+## Fix: invisible ground in Godot (back-face culling)
+
+The coordinator's in-game check of the first airfield export found that the slab, runway, taxiway and apron were
+invisible from the RTS camera.
+
+**Cause**
+- `Part.build()` ran `bmesh.ops.recalc_face_normals` over every face of every part. On *open* pieces Blender has to guess which side is outside, and here it guessed wrong.
+- The single painted ground quad came out with its normal pointing **down**. The re-imported airfield GLB showed both halves of the 60×44 quad with normal (0, 0, −1).
+- Godot culls back faces, so the ground vanished. The Cycles previews render both sides, which hid the problem.
+
+**More open pieces the blanket recalc had turned inward.** I found them by diffing recalc against construction winding over every open island, with no bake:
+- Airfield: the control-tower cab collar (24 faces) and the tower roof cap.
+- Defense tower: the flared band under the cab (8 faces).
+
+**Fix in `bldkit_b.py` (`orient_islands`)**
+- Normals are now recalculated only for **closed (manifold)** islands, where Blender's recalc is reliable.
+- Open islands keep their construction winding. Every constructor builds it outward or up: `quad`, `frustum` and `loft` are counter-clockwise, and `lathe` profiles run toward the axis or upward.
+- The parachute canopy's lathe profile was reversed so its outer faces point outward. It also stays double-sided.
+
+**Check**
+- `previews()` now first writes `docs/screens/m1_<id>_cull.png`: the re-imported GLB rendered in Workbench with **back-face culling on**, textured, from the RTS, front and top angles.
+- It also prints each object's transform and the number of up- and down-facing ground-level faces.
+- Results after the fix:
+  - Every object has identity rotation and scale; parts with a pivot are offset by location only.
+  - Ground faces: airfield 2 up / 0 down, radar 6/0, drop zone 6/0, HESCO 3/0, crate 4/0. The defense tower has no surface below 0.6 m; its deck is at 2.6 m.
+  - Every pole and lamp stands upright.
+- "Long thin objects lying flat" were **not** a transform problem in the GLB. All poles round-trip upright. Most likely they were the poles' shadows falling on the terrain through the missing slab.
+
 ## Conventions (all assets)
 - Origin is the footprint centre at ground level.
 - Front is Blender −Y = **Godot +Z**. Glb positions below are Godot coordinates.
@@ -95,6 +123,7 @@ The crate is below the 3k floor. It is a prop that may appear many times at once
 
 ## Previews
 - `docs/screens/m1_{airfield,drop_zone,radar,defense_tower,hesco}_{rts,front,side,top}.png` + `m1_<id>_vs_concept.png`. Each `vs_concept` shows the RTS render beside the concept's front three-quarter view.
+- `docs/screens/m1_<id>_cull.png` (all 6 incl. crate): back-face-culled Workbench check of the exported GLB.
 - `docs/screens/m1_crate_{rts,front,side,top}.png`. Its `side` shot is from below, to show the canopy underside. There is no concept sheet for the crate.
 
 ## Known shortcomings

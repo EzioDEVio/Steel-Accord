@@ -53,7 +53,27 @@ python3 -I tools/art/air_<id>_3d.py                 # -> godot/assets/units3d/<i
 - The game must spin each node in place: every one has identity rotation and its origin at the hub.
 - Jets: `Exhaust<i>` empties sit at the nozzle exits (for glow/trails). `Gun` is at the cannon muzzle. `Hardpoint<i>` empties are at the store centres or release points.
 
-TABLE
+## Per-aircraft summary (from the final run; Blender coordinates in metres, x right, y forward, z up)
+| id | Tris (total / Body) | Body extents L × span × H | Animated nodes (pivot) | Empties | Concept fit / notes |
+|---|---|---|---|---|---|
+| a10 | 7,048 | 16.3 × 17.2 × 4.45 | — | Gun (0, 8.13, 1.37); Exhaust0/1 (±1.55, −4.85, 3.26); Hardpoint0–7 (wing stores, L outboard → R outboard) | Good. Twin engines, twin fins, GAU barrel, 2 AAM + 4 bombs |
+| ah64 | 5,928 / 5,212 | 16.3 × 7.1 × 6.06 (rotor Ø 14.6) | RotorMain hub (0, 1.71, 4.71); RotorTail hub (−0.42, −7.38, 4.05), shaft = local X | Gun (0, 7.09, 1.16); Hardpoint0–3 (stub-wing stores) | Good. Mast-top radome, nose sensor, chin gun, 2 rocket pods, 2×4 missiles |
+| f16 | 5,874 | 15.3 × 10.0 × 5.08 | — | Gun (−0.62, 3.46, 1.88); Exhaust0 (0, −7.57, 1.78); Hardpoint0–5 | Good. Tip AAMs, 2 AAMs, 2 tanks, chin intake |
+| uh60 | 4,850 / 4,134 | 15.4 × 4.5 × 3.9 (rotor Ø 16.4) | RotorMain (0, 1.89, 3.77); RotorTail (−0.42, −6.63, 4.08), shaft = local X | Gun (−1.75, 4.55, 1.53) door gun | Good. Engine hump, stabilator, tail pylon |
+| f35 | 4,298 | 16.0 × 10.8 × 5.34 | — | Gun (−1.15, 2.60, 3.02); Exhaust0 (0, −7.30, 2.11); Hardpoint0–3 (bays) | Good. Canted twin fins; deeper than the real aircraft (follows the concept) |
+| fa18 | 5,866 | 17.2 × 14.0 × 5.45 | — | Gun (0, 8.10, 2.17); Exhaust0/1 (±0.57, −8.60, 1.97); Hardpoint0–6 (5 = R tip, 6 = centre tank) | Good. LEX, canted fins, 6 AAMs + tank |
+| f22 | 4,354 | 19.8 × 13.4 × 5.6 | — | Gun (1.25, 3.16, 2.95); Exhaust0/1 (±0.67, −8.93, 1.98); Hardpoint0–3 (bays) | Good planform. 2D nozzles are simple boxes |
+| c130 | 7,800 / 6,440 | 29.5 × 38.9 × 12.8 | Prop0–3 hubs (±9.75 / ±4.83, 4.58, 4.59–4.80), shaft = local Z (Godot) | — | Good. 4-blade props, sponsons. Used by `battle.gd` supply drop |
+| b52 | 7,270 | 48.1 × 55.8 × 14.0 | — | Exhaust0–7 (pod exits); Hardpoint0/1 (bay), 2/3 (inner-wing pylons) | Good. 4 twin pods; concept fin shorter than real |
+| b1 | 6,494 | 44.7 × 41.9 × 11.7 | — | Exhaust0–3 (−12.52 aft); Hardpoint0–2 (bays, front → rear) | Good. Fixed intermediate sweep, blended glove |
+| b2 | 4,012 | 21.0 × 52.4 × 5.15 | — | Exhaust0–3 (upper-surface slots); Hardpoint0/1 (bays) | Good. Saw-tooth trailing edge, engine humps. Team panels near the wingtips |
+| sr71 | 4,742 | 31.9 × 16.9 × 8.17 | — | Exhaust0/1 (±4.28, −15.18, 2.52) | Fair. Recognisable chines, spikes and canted fins; nacelles oversized (concept), tall gear |
+| ac130 | 8,516 / 7,156 | 29.6 × 43.3 × 13.5 | Prop0–3 hubs (±13.2 / ±6.86, 6.36, 5.04–5.32), shaft = local Z (Godot) | Gun0–2 left-side muzzles (front → rear) | Good. Guns, sensor ball, under-wing tanks; airframe builder shared with the C-130 |
+| c17 | 7,330 | 52.9 × 52.7 × 18.1 | — | Exhaust0–3 (engine exits) | Good. Anhedral wing, winglets, T-tail, sponsons |
+
+The C-5 (optional) was not built.
+
+Triangle budget: all models are under the ceilings (15k for fighters and helicopters, 20k for large aircraft). The F-35, F-22, UH-60, AH-64, SR-71 and B-2 are below the lower 6k figure. That is ample for the RTS camera. If a denser look is wanted, the segment counts in the scripts (`seg=`, section counts) can be raised.
 
 ## Insignia (roundels) — not decided for the fictional setting
 The concept art carries U.S. star-and-bar roundels. Per instructions, the projected art is kept as is: no insignia was painted, removed or replaced.

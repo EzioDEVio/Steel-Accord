@@ -117,6 +117,7 @@ func setup(b: Node, unit_kind: String, t: int, id: int, pos: Vector3, yaw: float
 
 # ---- real 3D unit models (pilot set). Origin at ground contact; parts driven from movement (presentation only).
 var wheels: Array[Node3D] = []
+var exhausts: Array = []
 var wheel_r := 0.4
 var track_mats: Array = []
 var track_m_per_v := 1.0
@@ -133,9 +134,18 @@ func _build_model3d(path: String) -> void:
 		var nm := String(n.name)
 		if nm.begins_with("Wheel") or nm.begins_with("Sprocket") or nm.begins_with("Idler"):
 			wheels.append(n)
-		if nm == "RotorFront" or nm == "RotorRear":
-			n.set_meta("dir", 1.0 if nm == "RotorFront" else -1.0)
+		if nm in ["RotorFront", "RotorRear", "RotorMain"]:
+			n.set_meta("dir", -1.0 if nm == "RotorRear" else 1.0)
+			n.set_meta("axis", Vector3.UP)
 			rotors.append(n)
+		elif nm == "RotorTail":
+			n.set_meta("dir", 4.0); n.set_meta("axis", Vector3.RIGHT)
+			rotors.append(n)
+		elif nm.begins_with("Prop") and nm.substr(4).is_valid_int():
+			n.set_meta("dir", 3.0); n.set_meta("axis", Vector3.BACK)
+			rotors.append(n)
+		elif nm.begins_with("Exhaust") and domain == "jet":
+			exhausts.append(n)
 		if n is MeshInstance3D:
 			var mi := n as MeshInstance3D
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -173,6 +183,8 @@ func _build_model3d(path: String) -> void:
 		stride = def.get("stride", stride)
 		_play("idle")
 	if domain == "ground": _add_team_marker()
+	for e in exhausts:       # jet engine trails from the model's nozzle points
+		FX.exhaust_trail(model, (e as Node3D).position, 0.7, false)
 	_last_vis_pos = position
 
 
@@ -602,7 +614,9 @@ func sim_tick(dt: float) -> void:
 		recoil = move_toward(recoil, 0.0, dt * 1.6)
 		gun.position = gun_rest + Vector3(0, 0, recoil)
 	var spin := 4.0 if state == S.LANDED else 11.0
-	for r in rotors: r.rotation.y += dt * spin * float(r.get_meta("dir"))
+	for r in rotors:
+		var ax: Vector3 = r.get_meta("axis", Vector3.UP)
+		r.rotate_object_local(ax, dt * spin * float(r.get_meta("dir")))
 	_engine_audio(dt)
 	body.position.y = altitude
 	body.rotation.z = bank
@@ -720,7 +734,7 @@ func _heli_pad(dt: float) -> void:
 	target = null
 	if state == S.LANDED:
 		speed_cur = 0.0; vel = Vector3.ZERO; bank = 0.0
-		altitude = move_toward(altitude, 0.4, dt * 4.0)
+		altitude = move_toward(altitude, ground_alt(), dt * 4.0)
 		position = position.move_toward(home, dt * 2.0)
 		heading = lerp_angle(heading, 0.0, minf(1.0, dt * 2.0))
 		body.rotation.x = 0.0
@@ -734,8 +748,8 @@ func _heli_pad(dt: float) -> void:
 		speed_cur = 0.0; vel = Vector3.ZERO
 		position = position.move_toward(Vector3(home.x, 0, home.z), dt * 3.0)
 		heading = lerp_angle(heading, 0.0, minf(1.0, dt * 2.0))
-		altitude = move_toward(altitude, 0.4, dt * 3.5)
-		if altitude <= 0.45: state = S.LANDED
+		altitude = move_toward(altitude, ground_alt(), dt * 3.5)
+		if altitude <= ground_alt() + 0.05: state = S.LANDED
 	body.rotation.x = -clampf(speed_cur / def.speed, 0.0, 1.0) * 0.12
 
 
@@ -823,8 +837,9 @@ const PARA_MODEL := "res://assets/units3d/paratrooper/parachute_personnel.glb"
 
 func start_parachute(h: float) -> void:
 	para_alt = h
-	if ResourceLoader.exists(PARA_MODEL):
-		canopy = (load(PARA_MODEL) as PackedScene).instantiate()
+	var ps: PackedScene = load(PARA_MODEL) if ResourceLoader.exists(PARA_MODEL) else null
+	if ps:
+		canopy = ps.instantiate()
 		canopy.position.y = 2.0
 	else:
 		canopy = MeshInstance3D.new()

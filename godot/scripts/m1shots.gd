@@ -40,7 +40,7 @@ func _run() -> void:
 	var layout := [["power_plant", Vector3(-45, 0, -5)], ["barracks", Vector3(42, 0, -10)], ["supply_depot", Vector3(-52, 0, -40)],
 		["war_factory", Vector3(5, 0, -45)], ["radar", Vector3(48, 0, 20)], ["defense_tower", Vector3(-20, 0, -80)],
 		["hesco", Vector3(0, 0, -84)], ["hesco", Vector3(8, 0, -84)], ["drop_zone", Vector3(55, 0, -45)],
-		["airfield", Vector3(-110, 0, -20)]]
+		["airfield", Vector3(125, 0, -5)]]
 	var blds := {}
 	for e in layout:
 		blds[e[0]] = battle.add_structure(e[0], 0, c + e[1], true)
@@ -70,4 +70,25 @@ func _run() -> void:
 	_cam(c + Vector3(-25, 0, -133), 80.0, 0.0, 50.0); await _shot("m1_vehicles")
 	_cam(c + Vector3(-25, 0, -133), 60.0, 160.0, 40.0); await _shot("m1_vehicles_rear")
 	_cam(c + Vector3(35, 0, -100), 26.0, 60.0, 38.0); await _shot("m1_infantry")
+	# aircraft (M3): four on the airfield pads, others in the air, a bomber strike
+	var af: Building = blds.airfield
+	for k in ["f16", "a10", "ah64", "uh60"]:
+		battle.spawn_produced(af, k)
+	var fly: Array = []
+	var fk := ["f35", "fa18", "f22", "ch47", "ah64"]
+	for i in fk.size():
+		var u: Unit = battle._spawn(fk[i], 0, c + Vector3(-40 + i * 25.0, 0, -170), 0.0)
+		u.reset_physics_interpolation(); fly.append(u)
+	battle.issue({"type": "move", "ids": fly.map(func(u): return u.uid), "points": fly.map(func(u): return u.position + Vector3(0, 0, -200))})
+	await _wait(1.0)
+	_cam(af.position, 95.0, 15.0, 50.0); await _shot("m3_airfield_parked")
+	_cam(af.position + Vector3(0, 0, 8), 55.0, -35.0, 42.0); await _shot("m3_airfield_close")
+	await _wait(1.5)
+	_cam(fly[0].position + Vector3(0, 0, -12), 60.0, 0.0, 50.0); await _shot("m3_jets_flying")
+	_cam(fly[3].position + Vector3(0, 0, -6), 45.0, 30.0, 45.0); await _shot("m3_helis_flying")
+	battle.launch_power(0, "carpet", c + Vector3(0, 0, -240))
+	await _wait(6.0)
+	if not battle.flights.is_empty():
+		var fp: Vector3 = battle.flights[0].pos
+		_cam(fp, 90.0, 0.0, 55.0); await _shot("m3_b52_strike")
 	get_tree().quit()

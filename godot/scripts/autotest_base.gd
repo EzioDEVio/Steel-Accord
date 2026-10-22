@@ -60,6 +60,20 @@ func _run() -> void:
 
 func _run_qa() -> void:
 	await _wait_sim(0.5)
+	# every 3D model the game references must load from this build (catches missing / skipped textures)
+	var paths: Array = []
+	for k in UnitDefs.DEFS: paths.append(str(UnitDefs.DEFS[k].get("model3d", "")))
+	for k in UnitDefs.BASE_UNITS: paths.append(str(UnitDefs.BASE_UNITS[k].get("model3d", "")))
+	for k in UnitDefs.POWERS: paths.append(str(UnitDefs.POWERS[k].get("model3d", "")))
+	for k in BuildingDefs.DEFS: paths.append(str(BuildingDefs.DEFS[k].get("model3d", "")))
+	paths += [Unit.PARA_MODEL, battle.CRATE_MODEL, battle.C130_MODEL]
+	var bad: Array = []; var ok := 0
+	for p in paths:
+		if p == "": continue
+		var r: Resource = load(p) if ResourceLoader.exists(p) else null
+		if r == null: bad.append(p)
+		else: ok += 1
+	_log("all_models_load", bad.is_empty(), "%d loaded; failed: %s" % [ok, ", ".join(bad)])
 	var ccp: Vector3 = battle.structures(0, "command_center")[0].position
 	battle.cash[0] += 20000
 	var pp := await _place("power_plant", ccp + Vector3(-40, 0, -6))

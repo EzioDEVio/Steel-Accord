@@ -41,7 +41,7 @@ const DEFS := {
 	},
 	"airfield": {
 		"name": "Airfield", "art": "airfield", "model3d": "res://assets/units3d/airfield/airfield.glb", "cost": 1200, "build_time": 25.0, "power": -2,
-		"hp": 2500.0, "size": Vector2(60, 44), "sight": 70.0, "produces": ["f16", "a10", "ah64", "uh60"],
+		"hp": 2500.0, "size": Vector2(60, 44), "sight": 70.0, "produces": ["f16", "fa18", "f35", "f22", "a10", "ah64", "uh60"],
 		"requires": ["war_factory"], "pads": 4, "desc": "Builds aircraft. Four parking pads; aircraft rearm on their pad.",
 	},
 	"defense_tower": {
@@ -79,5 +79,5 @@ const UNIT_COST := {
 	"hmmwv_50cal": [700, 9.0], "vanguard": [900, 12.0], "avenger": [800, 10.0],
 	"abrams": [1000, 13.0], "bradley": [850, 11.0], "paladin": [1200, 15.0], "m777": [900, 14.0], "m113": [600, 8.0],
 	"stryker": [800, 10.0], "mrap": [750, 9.0], "hmmwv_tow": [800, 9.0], "hmmwv_medical": [600, 8.0], "hmmwv": [400, 6.0],
-	"f16": [1400, 18.0], "a10": [1700, 20.0], "ah64": [1500, 16.0], "uh60": [1100, 14.0],
+	"f16": [1400, 18.0], "a10": [1700, 20.0], "ah64": [1500, 16.0], "uh60": [1100, 14.0], "fa18": [1600, 19.0], "f35": [2000, 22.0], "f22": [2200, 22.0],
 }
