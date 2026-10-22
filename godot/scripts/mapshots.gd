@@ -73,12 +73,27 @@ func _run() -> void:
 		u.reset_physics_interpolation(); col.append(u)
 	battle.issue({"type": "move", "team": 0, "ids": col.map(func(u): return u.uid), "points": col.map(func(u): return u.position + Vector3(0, 0, -120))})
 	await _wait(2.0)
+	if "infonly" in battle.args:
+		var inf1: Array = battle.units.filter(func(u): return u.team == 1 and u.def.get("visual") == "infantry")
+		var cc := Vector3.ZERO
+		for u in inf1: cc += u.position
+		cc /= maxf(inf1.size(), 1)
+		_cam(cc, 26.0, 200.0, 34.0); await _shot("zb_iran_infantry")
+		_cam(cc, 16.0, 160.0, 28.0); await _shot("zb_iran_infantry_close")
+		get_tree().quit()
+		return
 	var a: Vector3 = battle.start_pos[0]; var b: Vector3 = battle.start_pos[1]
 	_cam(a + Vector3(0, 0, -45), 150.0, 0.0, 52.0); await _shot("zb_base_usa")
 	_cam(a + Vector3(0, 0, -70), 70.0, 20.0, 40.0); await _shot("zb_base_usa_close")
 	_cam(b + Vector3(0, 0, 45), 150.0, 180.0, 52.0); await _shot("zb_base_iran")
-	_cam(b + Vector3(-5, 0, 72), 32.0, 200.0, 38.0); await _shot("zb_iran_infantry")
-	_cam(b + Vector3(30, 0, 80), 45.0, 160.0, 42.0); await _shot("zb_iran_vehicles")
+	var irinf: Array = battle.units.filter(func(u): return u.team == 1 and u.def.get("visual") == "infantry")
+	var cen := Vector3.ZERO
+	for u in irinf: cen += u.position
+	cen /= maxf(irinf.size(), 1)
+	_cam(cen, 26.0, 200.0, 34.0); await _shot("zb_iran_infantry")
+	var irveh: Array = battle.units.filter(func(u): return u.team == 1 and u.kind in ["abrams", "m113", "mrap"])
+	if not irveh.is_empty():
+		_cam(irveh[1].position, 45.0, 160.0, 42.0); await _shot("zb_iran_vehicles")
 	await _wait(6.0)
 	_cam(col[0].position + Vector3(0, 0, 10), 80.0, 30.0, 45.0); await _shot("zb_tanks_on_slope")
 	_cam(Vector3(0, 0, 0), 230.0, 0.0, 55.0); await _shot("zb_centre")
