@@ -158,8 +158,8 @@ S = [section(6.55, 0.06, 0.10, 0.05, 1.50, 1.56, 1.62, 1.66),
      section(-1.20, 0.52, 0.70, 0.56, 1.00, 1.42, 2.08, 2.45, 0.03),
      section(-2.50, 0.40, 0.54, 0.42, 1.22, 1.52, 2.04, 2.30),
      section(-3.30, 0.24, 0.31, 0.24, 1.55, 1.70, 1.98, 2.10),
-     section(-7.30, 0.13, 0.16, 0.12, 1.86, 1.92, 2.06, 2.12),
-     section(-7.75, 0.10, 0.12, 0.09, 1.90, 1.95, 2.06, 2.10)]
+     section(-7.75, 0.13, 0.16, 0.12, 1.86, 1.92, 2.06, 2.12),
+     section(-8.20, 0.10, 0.12, 0.09, 1.90, 1.95, 2.06, 2.10)]
 B.rings("SA_Paint", S)
 # -- stepped tandem canopy: flat armoured-glass facets over each cockpit, frame bows between them
 def canopy(y0, y1, sill, top, w_sill, w_top, nose_drop):
@@ -193,8 +193,9 @@ B.rings("SA_Paint", [section(1.35, 0.46, 0.5, 0.3, 1.95, 2.1, 2.5, 2.74), sectio
 # -- rotor pylon ("doghouse") + engine nacelles with intakes, grilles and upturned IR-suppressing exhaust shrouds
 B.rings("SA_Paint", [section(0.9, 0.42, 0.48, 0.3, 2.3, 2.5, 2.75, 2.84), section(0.2, 0.5, 0.56, 0.42, 2.3, 2.5, 2.95, 3.12),
                      section(-1.5, 0.5, 0.56, 0.42, 2.3, 2.5, 2.95, 3.1), section(-2.4, 0.3, 0.36, 0.25, 2.2, 2.35, 2.6, 2.7)])
-B.cyl("SA_Metal", (0, -0.25, 3.35), 0.2, 0.55, seg=16)                                   # mast
-B.cyl("SA_Paint", (0, -0.25, 3.14), 0.36, 0.12, seg=16, r2=0.26)                          # mast boot
+B.cyl("SA_Metal", (0, 0.35, 3.5), 0.17, 0.8, seg=16)                                       # mast
+B.cyl("SA_Paint", (0, 0.35, 3.16), 0.36, 0.14, seg=16, r2=0.24)                           # mast boot
+B.cyl("SA_Paint", (0, 0.35, 3.3), 0.24, 0.16, seg=16, r2=0.19)
 for s in (-1, 1):
     x = s * 0.92
     nac = []
@@ -217,20 +218,27 @@ B.box("SA_Paint", (0, -0.8, 3.15), (0.5, 0.9, 0.12))                            
 B.cyl("SA_Glass", (0, -1.0, 3.3), 0.13, 0.2, seg=12)
 B.cyl("SA_Metal", (0, -1.0, 3.42), 0.15, 0.04, seg=12)
 # -- tail: boom strake, canted vertical fin with tail-rotor gearbox, stabilator with end plates, tail wheel
-B.box("SA_Paint", (0.12, -5.2, 2.17), (0.04, 3.6, 0.08))                                  # dorsal strake
-fin = [(-6.55, 2.05), (-7.25, 2.05), (-7.95, 3.75), (-7.45, 3.85), (-6.9, 2.75)]
+B.box("SA_Paint", (0.0, -5.4, 2.17), (0.04, 3.6, 0.08))                                   # dorsal strake
+fin = [(-7.0, 2.05), (-7.7, 2.05), (-8.4, 3.75), (-7.9, 3.85), (-7.35, 2.75)]
 B.side("SA_Paint", fin, 0.16, 0.0)
-B.side("SA_Team", [(-7.6, 3.4), (-7.95, 3.75), (-7.45, 3.85), (-7.28, 3.47)], 0.17, 0.0)  # team-coloured fin tip
-B.cyl("SA_Paint", (-0.13, -7.5, 3.15), 0.2, 0.3, (0, PI / 2, 0), seg=12)                  # tail gearbox fairing
-B.plate("SA_Paint", [(-1.45, -6.3), (1.45, -6.3), (1.45, -6.8), (0.2, -6.95), (-0.2, -6.95), (-1.45, -6.8)], 2.0, 2.07)
+B.side("SA_Team", [(-8.05, 3.4), (-8.4, 3.75), (-7.9, 3.85), (-7.73, 3.47)], 0.17, 0.0)  # team-coloured fin tip
+B.cyl("SA_Paint", (-0.13, -7.95, 3.15), 0.2, 0.3, (0, PI / 2, 0), seg=12)                  # tail gearbox fairing
+B.plate("SA_Paint", [(-1.45, -6.75), (1.45, -6.75), (1.45, -7.25), (0.2, -7.4), (-0.2, -7.4), (-1.45, -7.25)], 2.0, 2.07)
 for s in (-1, 1):
-    B.side("SA_Paint", [(-6.25, 1.9), (-6.95, 1.85), (-6.9, 2.3), (-6.4, 2.25)], 0.05, s * 1.47)
-B.box("SA_Team", (0, -5.6, 2.11), (0.36, 0.5, 0.05))                                      # boom top band (top-down read)
+    B.side("SA_Paint", [(-6.7, 1.9), (-7.4, 1.85), (-7.35, 2.3), (-6.85, 2.25)], 0.05, s * 1.47)
+# team band: a ring slightly proud of the boom skin
+def boom_sec(y, grow):
+    t = (y - S[9][0].y) / (S[10][0].y - S[9][0].y)
+    c = V((0, y, 1.98))
+    return [c + (p - c) * grow for p in lerp_sec(S[9], S[10], t)]
+B.rings("SA_Team", [boom_sec(-5.25, 1.04), boom_sec(-5.85, 1.04)])
+# ventral fin with a short trailing tail-wheel fork (keeps the tail-wheel leg short and solid)
+B.side("SA_Paint", [(-6.2, 1.95), (-7.1, 1.95), (-7.0, 1.05), (-6.75, 0.95)], 0.12, 0.0)
+B.box("SA_Metal", (0, -6.95, 0.72), (0.09, 0.12, 0.5), (0.35, 0, 0))
 for s in (-1, 1):
-    B.box("SA_Team", (s * 0.155, -5.6, 1.99), (0.02, 0.5, 0.2))
-B.box("SA_Metal", (0, -6.75, 1.62), (0.08, 0.3, 0.5), (-0.4, 0, 0))                      # tail-wheel strut
-B.cyl("SA_Rubber", (0, -6.95, 0.22), 0.2, 0.12, (0, PI / 2, 0), seg=14)
-B.box("SA_Metal", (0, -6.88, 0.75), (0.07, 0.07, 1.1), (-0.2, 0, 0))
+    B.box("SA_Metal", (s * 0.09, -7.08, 0.42), (0.03, 0.08, 0.32), (0.35, 0, 0))
+B.cyl("SA_Rubber", (0, -7.15, 0.22), 0.22, 0.13, (0, PI / 2, 0), seg=16)
+B.cyl("SA_Metal", (0, -7.15, 0.22), 0.1, 0.2, (0, PI / 2, 0), seg=10)
 # -- fixed main gear: trailing-arm legs with fairings, wheels, hubs
 for s in (-1, 1):
     B.box("SA_Paint", (s * 0.75, 2.25, 1.05), (0.35, 0.7, 0.18), (0, 0, 0))               # sponson
@@ -302,20 +310,20 @@ for s in (-1, 1):
 B.box("SA_Metal", (0, -2.0, 2.35), (0.03, 0.4, 0.35), (0.6, 0, 0))                          # blade antenna
 B.box("SA_Metal", (0, 1.2, 0.86), (0.03, 0.35, 0.25), (-0.5, 0, 0))                         # belly antenna
 B.cyl("SA_Metal", (0.0, -4.2, 2.45), 0.01, 0.65, seg=5)                                     # whip
-B.box("SA_Glass", (0, -7.82, 2.0), (0.06, 0.02, 0.06))                                     # tail light
-B.extra.append(text_mesh("31", 0.42, (0.158, -4.6, 1.99), (PI / 2, 0, PI / 2)))
-B.extra.append(text_mesh("31", 0.42, (-0.158, -4.6, 1.99), (PI / 2, 0, -PI / 2)))
-B.extra.append(text_mesh("31", 0.3, (0.465, 4.6, 1.5), (PI / 2, 0, PI / 2)))
-B.extra.append(text_mesh("31", 0.3, (-0.465, 4.6, 1.5), (PI / 2, 0, -PI / 2)))
+B.box("SA_Glass", (0, -8.27, 2.0), (0.06, 0.02, 0.06))                                     # tail light
+B.extra.append(text_mesh("31", 0.22, (0.268, -4.6, 1.89), (PI / 2, 0, PI / 2)))
+B.extra.append(text_mesh("31", 0.22, (-0.268, -4.6, 1.89), (PI / 2, 0, -PI / 2)))
+B.extra.append(text_mesh("31", 0.3, (0.555, 4.4, 1.56), (PI / 2, 0, PI / 2)))
+B.extra.append(text_mesh("31", 0.3, (-0.555, 4.4, 1.56), (PI / 2, 0, -PI / 2)))
 body = B.build(bevel=0.02)
 
 # ================================================================== MAIN ROTOR (origin at hub)
-HUB = V((0, -0.25, 3.72))
+HUB = V((0, 0.35, 3.98))
 MR = Part("MainRotor")
 MR.cyl("SA_Metal", (0, 0, 0), 0.34, 0.16, seg=16)                     # hub plate
 MR.cyl("SA_Metal", (0, 0, 0.14), 0.18, 0.18, seg=12, r2=0.1)          # hub cap
 MR.cyl("SA_Paint", (0, 0, -0.16), 0.24, 0.16, seg=12)                 # swashplate
-R_TIP = 7.5
+R_TIP = 7.25
 for k in range(4):
     a = k * PI / 2 + PI / 4
     Rz = Matrix.Rotation(a, 4, "Z")
@@ -324,7 +332,7 @@ for k in range(4):
     MR.boxm("SA_Metal", Rz @ Matrix.Translation((0.32, 0.17, -0.12)), (0.04, 0.04, 0.3))
     # blade: flattened lofted aerofoil, slight twist, swept tip, droop
     rings = []
-    for i, (r, chord, sweep) in enumerate([(0.75, 0.38, 0), (1.3, 0.55, 0), (6.6, 0.55, 0), (7.15, 0.5, -0.08), (R_TIP, 0.3, -0.28)]):
+    for i, (r, chord, sweep) in enumerate([(0.75, 0.38, 0), (1.3, 0.55, 0), (6.4, 0.55, 0), (6.9, 0.5, -0.08), (R_TIP, 0.3, -0.28)]):
         tw = math.radians(8 - 8 * r / R_TIP)
         th = 0.07 * chord / 0.55
         ring = []
@@ -334,13 +342,13 @@ for k in range(4):
             z = cy * math.sin(tw) + cz * math.cos(tw) - 0.012 * r
             ring.append((Rz @ V((r, y + 0.04, z, 1))).xyz)
         rings.append(ring)
-    MR.rings("SA_Paint", rings)
-    MR.boxm("SA_Team", Rz @ Matrix.Translation((6.85, 0.04, 0.0)), (0.35, 0.56, 0.06))      # blade tip band
+    MR.rings("SA_Metal", rings)
+    MR.boxm("SA_Team", Rz @ Matrix.Translation((6.62, 0.04, -0.08)), (0.35, 0.58, 0.1))      # blade tip band
 main_rotor = MR.build(bevel=0.0)
 main_rotor.location = HUB
 
 # ================================================================== TAIL ROTOR (origin at hub, left side of fin)
-TH = V((-0.38, -7.5, 3.15))
+TH = V((-0.38, -7.95, 3.15))
 TR = Part("TailRotor")
 TR.cyl("SA_Metal", (0, 0, 0), 0.13, 0.22, (0, PI / 2, 0), seg=12)
 TR.cyl("SA_Metal", (-0.14, 0, 0), 0.08, 0.12, (0, PI / 2, 0), seg=10, r2=0.03)
@@ -350,7 +358,7 @@ for k in range(4):
     rings = []
     for r, chord in ((0.12, 0.2), (0.3, 0.26), (1.15, 0.24), (1.25, 0.16)):
         rings.append([(Rx @ V((-0.02 + 0.02 * math.sin(j * PI / 3), chord * 0.5 * math.cos(j * PI / 3), r, 1))).xyz for j in range(6)])
-    TR.rings("SA_Paint", rings)
+    TR.rings("SA_Metal", rings)
     TR.boxm("SA_Team", Rx @ Matrix.Translation((-0.02, 0, 1.08)), (0.05, 0.25, 0.12))
 tail_rotor = TR.build(bevel=0.0)
 tail_rotor.location = TH
