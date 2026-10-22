@@ -108,6 +108,15 @@ func _process(_dt: float) -> void:
 			buttons[k].tooltip_text = "%s - $%d, %d s\n%s%s" % [d.name, BuildingDefs.UNIT_COST[k][0], int(BuildingDefs.UNIT_COST[k][1]),
 				d.get("role", ""), ("\n" + why) if why != "" else ""]
 		if buttons.has("sell"): buttons["sell"].disabled = not b.built or b.bkind == "command_center"
+		if buttons.has("repair"):
+			var rb: Button = buttons["repair"]
+			var full: bool = b.hp >= b.bdef.hp
+			rb.disabled = full and not b.repairing
+			rb.text = "Stop repair" if b.repairing else ("Full health" if full else "Repair")
+			rb.tooltip_text = "Restores %d%% health per second for $%.0f per second (half the build cost for a full repair).%s" % [
+				int(Building.REPAIR_RATE * 100.0), b.repair_cost_per_s(), ("\nPaused: " + b.repair_blocked) if b.repair_blocked != "" else ""]
+			if b.repairing:
+				info.text += "   REPAIRING" + ((" - paused: " + b.repair_blocked) if b.repair_blocked != "" else "")
 		_draw_queue(b.prod_queue)
 
 
@@ -143,6 +152,11 @@ func _build_structure_menu(b: Building) -> void:
 	sb.tooltip_text = "Sell this structure for half its cost (scaled by damage)"
 	add_child(sb)
 	buttons["sell"] = sb
+	var rep := func(): battle.issue({"type": "repair", "team": team, "id": b.uid, "on": not b.repairing})
+	var rb: Button = hud._button("Repair", rep, Vector2(BTN.x, 30))
+	rb.position = Vector2(3 * (BTN.x + 4), BTN.y + 4)
+	add_child(rb)
+	buttons["repair"] = rb
 
 
 ## Production queue: one small tile per queued unit; the first shows progress. Click a tile: cancel the last (refund).

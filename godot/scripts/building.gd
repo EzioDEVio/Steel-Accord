@@ -22,6 +22,10 @@ var pads: Array = []         # airfield: [{"pos": Vector3, "uid": int}]
 var build_snd: AudioStreamPlayer3D
 var builder_seen_t := 0.0    # sim time when a dozer last worked on it
 var ever_seen := false
+var repairing := false
+var repair_debt := 0.0        # cash owed for repairs, charged in whole dollars
+var repair_blocked := ""      # why repair is paused ("" = running)
+var sold := false
 var _depth_px := 0.0
 
 const STRUCTURE_SHADER := preload("res://shaders/structure.gdshader")
@@ -46,7 +50,7 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 	add_child(body)
 	position = pos
 	home = pos
-	rally = pos + Vector3(0, 0, half.y + 10.0) * (1.0 if team == 0 else -1.0)
+	rally = pos + front_dir() * (half.y + 10.0)
 	art = UsArt.building(bdef.art)
 	if not art.is_empty():
 		def.icon = art.get("icon", "")
@@ -55,11 +59,58 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 	ring = _make_ring()
 	add_child(ring)
 	if bdef.has("pads"):
-		for i in int(bdef.pads):
-			var px := (float(i) - (int(bdef.pads) - 1) * 0.5) * 30.0
-			var dz := (half.y + 18.0) * (1.0 if team == 0 else -1.0)
-			pads.append({"pos": pos + Vector3(px, 0, dz), "uid": -1})
+		for p in pad_positions(pos, bdef):
+			pads.append({"pos": p, "uid": -1})
+		_build_pads()
 	battle.gnav.set_structure(position, half + Vector2(1.0, 1.0), true)
+
+
+## Structures face the map centre (their doors, exits and the airfield apron are on that side).
+func front_dir() -> Vector3:
+	return Vector3(0, 0, -1) if position.z > 0.0 else Vector3(0, 0, 1)
+
+
+const PAD_SIZE := 16.0
+const PAD_STEP := 18.0
+
+
+## Airfield parking pads: a 2 x 2 apron directly in front of the structure (local space -> world).
+static func pad_positions(pos: Vector3, d: Dictionary) -> Array:
+	var fwd := Vector3(0, 0, -1) if pos.z > 0.0 else Vector3(0, 0, 1)
+	var right := Vector3(-fwd.z, 0, fwd.x)
+	var h: Vector2 = d.size * 0.5
+	var out: Array = []
+	for i in int(d.get("pads", 0)):
+		var row := i / 2
+		var col := i % 2
+		out.append(pos + fwd * (h.y + 2.0 + PAD_SIZE * 0.5 + row * PAD_STEP) + right * ((col - 0.5) * PAD_STEP))
+	return out
+
+
+## Rectangle (centre, half size) covered by the apron, for placement checks.
+static func apron_rect(pos: Vector3, d: Dictionary) -> Array:
+	var ps := pad_positions(pos, d)
+	if ps.is_empty(): return []
+	var c := Vector3.ZERO
+	for p in ps: c += p
+	c /= ps.size()
+	return [c, Vector2(PAD_STEP * 0.5 + PAD_SIZE * 0.5, PAD_STEP * 0.5 + PAD_SIZE * 0.5)]
+
+
+func _build_pads() -> void:
+	var con := StandardMaterial3D.new(); con.albedo_color = Color(0.46, 0.46, 0.44); con.roughness = 0.85
+	var mark := StandardMaterial3D.new(); mark.albedo_color = Color(0.85, 0.8, 0.45); mark.roughness = 0.8
+	for p in pads:
+		var slab := MeshInstance3D.new()
+		var b := BoxMesh.new(); b.size = Vector3(PAD_SIZE, 0.25, PAD_SIZE); b.material = con
+		slab.mesh = b
+		slab.position = p.pos - position + Vector3(0, 0.08, 0)
+		add_child(slab)
+		var ring_m := MeshInstance3D.new()
+		var t := TorusMesh.new(); t.inner_radius = 5.2; t.outer_radius = 5.7; t.material = mark
+		ring_m.mesh = t; ring_m.scale = Vector3(1, 0.02, 1)
+		ring_m.position = p.pos - position + Vector3(0, 0.22, 0)
+		add_child(ring_m)
 
 
 func _build_card() -> void:
@@ -180,6 +231,7 @@ func sim_tick(dt: float) -> void:
 		if target == null:
 			target = battle.find_enemy_near(self, def.weapons[0].range)
 		_fire_weapons()
+	_repair_tick(dt)
 	# production
 	if not prod_queue.is_empty():
 		prod_left -= dt * (1.0 if powered else BuildingDefs.LOW_POWER_RATE)
@@ -192,6 +244,36 @@ func sim_tick(dt: float) -> void:
 
 func weapons_ready() -> bool:
 	return built
+
+
+## Repair: restores REPAIR_RATE of max health per second at REPAIR_COST_FRACTION of the build cost for a full repair,
+## paid as it goes. Pauses (and says why) when the owner runs out of cash; stops when full.
+const REPAIR_RATE := 0.04
+const REPAIR_COST_FRACTION := 0.5
+
+
+func repair_cost_per_s() -> float:
+	return float(bdef.cost) * REPAIR_COST_FRACTION * REPAIR_RATE
+
+
+func _repair_tick(dt: float) -> void:
+	if not repairing: return
+	if hp >= bdef.hp:
+		hp = bdef.hp; repairing = false; repair_blocked = ""
+		return
+	var heal: float = minf(bdef.hp * REPAIR_RATE * dt, bdef.hp - hp)
+	var cost: float = heal / bdef.hp * float(bdef.cost) * REPAIR_COST_FRACTION
+	if float(battle.cash[team]) < repair_debt + cost:
+		if repair_blocked == "" and team == 0 and battle.hud: battle.hud.flash_message("Repair paused: not enough cash")
+		repair_blocked = "Not enough cash"
+		return
+	repair_blocked = ""
+	hp += heal
+	repair_debt += cost
+	var whole := int(repair_debt)
+	if whole > 0:
+		battle.cash[team] -= whole
+		repair_debt -= whole
 
 
 ## Called by a dozer each tick it works on the site. Returns true when construction completes.
@@ -245,4 +327,9 @@ func die() -> void:
 	if build_snd: build_snd.queue_free(); build_snd = null
 	battle.gnav.set_structure(position, half + Vector2(1.0, 1.0), false)
 	outline.visible = false
+	repairing = false
 	battle.on_unit_died(self)
+	if not sold and built:
+		battle.add_rubble(self)
+		card.visible = false
+	visible = false if sold else visible

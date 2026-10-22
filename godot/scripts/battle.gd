@@ -178,7 +178,7 @@ func _build_map() -> void:
 		if _reserved(p, 6.0): continue
 		World.bush(self, props["Bush%d" % (i % 4)], p, rng.randf_range(0.8, 1.8), rng.randf() * TAU,
 			Color(0.85, 0.9, 0.8).lerp(Color(1.15, 1.1, 0.85), rng.randf()))
-	_build_pads()
+	if scenario == "army": _build_pads()
 	var tries := 70000 if "lite" in args else 260000
 	World.grass(self, Rect2(-310, -310, 620, 620), tries, rng, func(p): return _in_obstacle(p, 1.0) or _on_pad(p))
 
@@ -205,6 +205,7 @@ func _build_pads() -> void:
 
 
 func _on_pad(p: Vector3) -> bool:
+	if scenario != "army": return false
 	for q: Vector3 in PAD_POSITIONS:
 		if absf(p.x - q.x) < PAD_SIZE * 0.55 and absf(p.z - q.z) < PAD_SIZE * 0.55: return true
 	return false
@@ -271,7 +272,7 @@ func _execute(cmd: Dictionary) -> void:
 	if cmd.type == "power":
 		launch_power(cmd.team, cmd.id, cmd.pos)
 		return
-	if cmd.type in ["place", "produce", "cancel_unit", "rally", "sell", "cancel_build"]:
+	if cmd.type in ["place", "produce", "cancel_unit", "rally", "sell", "cancel_build", "repair"]:
 		_execute_econ(cmd)
 		return
 	var ids: Array = cmd.get("ids", [])
@@ -629,7 +630,7 @@ func _update_debris(dt: float) -> void:
 			n.global_position.y = 0.4
 			if d.crash:
 				FX.explosion(self, n.global_position, 0.9)
-				var sp := n.get_node_or_null("Sprite") as Sprite3D
+				var sp := n.find_child("Sprite", true, false) as Sprite3D
 				if sp: sp.modulate = Color(0.12, 0.11, 0.1)
 				FX.wreck_fire(n)
 			debris.erase(d)
@@ -867,6 +868,18 @@ func placement_problem(team: int, k: String, pos: Vector3) -> String:
 	var h: Vector2 = d.size * 0.5 + Vector2(1.0, 1.0)
 	if not map_bounds.grow(-10).has_point(Vector2(pos.x, pos.z)): return "Outside the map"
 	if not gnav.box_free(pos, h): return "Blocked"
+	# airfield aprons: the new apron must be clear and on the map; nothing may be built on an existing apron
+	var ap := Building.apron_rect(pos, d)
+	if not ap.is_empty():
+		var ac: Vector3 = ap[0]; var ah: Vector2 = ap[1]
+		if not map_bounds.grow(-12).encloses(Rect2(ac.x - ah.x, ac.z - ah.y, ah.x * 2, ah.y * 2)): return "Apron off the map"
+		if not gnav.box_free(ac, ah): return "Apron blocked"
+		for b in structures(0, "", false) + structures(1, "", false):
+			if absf(b.position.x - ac.x) < b.half.x + ah.x and absf(b.position.z - ac.z) < b.half.y + ah.y: return "Apron blocked"
+	for af in structures(0, "airfield", false) + structures(1, "airfield", false):
+		var r := Building.apron_rect(af.position, af.bdef)
+		var rc: Vector3 = r[0]; var rh: Vector2 = r[1]
+		if absf(pos.x - rc.x) < rh.x + h.x and absf(pos.z - rc.z) < rh.y + h.y: return "On an airfield apron"
 	for u in units:
 		if u.dead or u.is_air() or u is Building: continue
 		if absf(u.position.x - pos.x) < h.x + u.def.radius * 0.5 and absf(u.position.z - pos.z) < h.y + u.def.radius * 0.5 \
@@ -890,6 +903,7 @@ func _execute_econ(cmd: Dictionary) -> void:
 			if placement_problem(team, k, cmd.pos) != "":
 				return
 			cash[team] -= int(BuildingDefs.DEFS[k].cost)
+			_clear_rubble(cmd.pos, BuildingDefs.DEFS[k].size * 0.5)
 			var b := add_structure(k, team, cmd.pos, false)
 			dz.order_build(b)
 		"cancel_build":
@@ -918,7 +932,13 @@ func _execute_econ(cmd: Dictionary) -> void:
 			if b and not b.dead and b.built and b.team == team and b.bkind != "command_center":
 				cash[team] += int(float(b.bdef.cost) * BuildingDefs.SELL_REFUND * b.hp / b.bdef.hp)
 				b.prod_queue.clear()
+				b.sold = true
 				b.die()
+		"repair":
+			var b: Building = by_id.get(cmd.id)
+			if b and not b.dead and b.built and b.team == team:
+				b.repairing = bool(cmd.on) and b.hp < b.bdef.hp
+				b.repair_blocked = ""
 
 
 func produce_problem(b: Building, k: String) -> String:
@@ -988,3 +1008,46 @@ func deliver(team: int, amount: int) -> void:
 ## Radar: enemy units (not structures) appear on the minimap only with a powered radar.
 func radar_online(team: int) -> bool:
 	return not structures(team, "radar").is_empty() and power_ok(team)
+
+
+# ------------------------------------------------------------------ rubble (destroyed structures)
+var rubble: Array = []   # {"pos", "kind", "team", "half", "node"}
+
+
+## A destroyed structure leaves rubble on its footprint (not an obstacle). A Dozer can rebuild the same structure
+## there through the normal construction flow (normal cost, prerequisites and build time).
+func add_rubble(b: Building) -> void:
+	var n := Node3D.new()
+	n.position = b.position
+	add_child(n)
+	var dark := StandardMaterial3D.new(); dark.albedo_color = Color(0.13, 0.12, 0.11); dark.roughness = 1.0
+	var conc := StandardMaterial3D.new(); conc.albedo_color = Color(0.36, 0.34, 0.31); conc.roughness = 0.95
+	var slab := MeshInstance3D.new()
+	var bm := BoxMesh.new(); bm.size = Vector3(b.half.x * 2.0, 0.3, b.half.y * 2.0); bm.material = dark
+	slab.mesh = bm; slab.position.y = 0.15
+	n.add_child(slab)
+	var r := RandomNumberGenerator.new(); r.seed = b.uid * 7919
+	for i in int(clampf(b.half.x * b.half.y / 6.0, 6, 40)):
+		var m := MeshInstance3D.new()
+		var cm := BoxMesh.new()
+		cm.size = Vector3(r.randf_range(0.8, 3.5), r.randf_range(0.4, 2.0), r.randf_range(0.8, 3.5))
+		cm.material = conc if i % 3 else dark
+		m.mesh = cm
+		m.position = Vector3(r.randf_range(-b.half.x, b.half.x) * 0.85, cm.size.y * 0.4, r.randf_range(-b.half.y, b.half.y) * 0.85)
+		m.rotation = Vector3(r.randf_range(-0.4, 0.4), r.randf() * TAU, r.randf_range(-0.4, 0.4))
+		n.add_child(m)
+	FX.wreck_fire(n)
+	rubble.append({"pos": b.position, "kind": b.bkind, "team": b.team, "half": b.half, "node": n})
+
+
+func _clear_rubble(pos: Vector3, h: Vector2) -> void:
+	for r in rubble.duplicate():
+		if absf(r.pos.x - pos.x) < r.half.x + h.x and absf(r.pos.z - pos.z) < r.half.y + h.y:
+			r.node.queue_free()
+			rubble.erase(r)
+
+
+func rubble_at(p: Vector3, team: int) -> Dictionary:
+	for r in rubble:
+		if r.team == team and absf(p.x - r.pos.x) < r.half.x and absf(p.z - r.pos.z) < r.half.y: return r
+	return {}

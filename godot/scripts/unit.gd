@@ -90,6 +90,7 @@ func setup(b: Node, unit_kind: String, t: int, id: int, pos: Vector3, yaw: float
 	else:
 		_build_sprite()
 		altitude = def.altitude
+	_apply_scale_guide()
 	ring = _make_ring()
 	if domain == "ground":
 		add_child(ring)
@@ -103,6 +104,26 @@ func setup(b: Node, unit_kind: String, t: int, id: int, pos: Vector3, yaw: float
 	body.position.y = altitude
 	if domain == "jet":
 		speed_cur = def.min_speed
+
+
+var vis: Node3D               # visual root under body, carries the scale-guide factor
+var vis_scale := 1.0
+
+
+## World-scale guide (docs/SCALE_GUIDE.md): art is authored at real size; the game draws each class at a fixed factor
+## so that structures stay dominant. Hit / selection radius follow the drawn size.
+func _apply_scale_guide() -> void:
+	vis_scale = UnitDefs.scale_for(def)
+	vis = Node3D.new()
+	vis.name = "Vis"
+	for c in body.get_children():
+		body.remove_child(c)
+		vis.add_child(c)
+	body.add_child(vis)
+	vis.scale = Vector3.ONE * vis_scale
+	if def.get("visual", "") != "infantry":
+		def = def.duplicate()
+		def.radius = float(def.radius) * vis_scale
 
 
 var card_sprite: Sprite3D
@@ -137,7 +158,7 @@ func _build_card_visual(visual: String) -> void:
 		var a: Dictionary = UsArt.infantry(def.art)
 		for pn in a.get("poses", {}):
 			views[pn] = [load(a.poses[pn]), true]
-		s.pixel_size = 1.5 / float(a.get("px_per_m", 280.0))     # drawn 1.5x life size so infantry read at RTS zoom
+		s.pixel_size = 1.0 / float(a.get("px_per_m", 280.0))     # life size; the scale guide enlarges infantry
 		if a.has("icon"): def = def.duplicate(); def["icon"] = a.icon
 	_add_team_marker()
 	_update_card(0.0)

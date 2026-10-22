@@ -37,7 +37,9 @@ func _place(k: String, at: Vector3) -> Building:
 	await _wait_sim(0.2)
 	battle.commander.mouse_override = Vector2(-1, -1)
 	var now: Array = battle.structures(0, k, false)
-	if now.size() <= before: return null
+	if now.size() <= before:
+		print("TESTDBG place %s at %s refused: %s" % [k, str(at), battle.placement_problem(0, k, battle.commander.ghost_pos)])
+		return null
 	return now[now.size() - 1]
 
 
@@ -50,6 +52,29 @@ func _until(cond: Callable, max_t: float) -> bool:
 
 
 func _run() -> void:
+	if "qa" in battle.args:
+		await _run_qa()
+		return
+	await _run_main()
+
+
+func _run_qa() -> void:
+	await _wait_sim(0.5)
+	var ccp: Vector3 = battle.structures(0, "command_center")[0].position
+	battle.cash[0] += 20000
+	var pp := await _place("power_plant", ccp + Vector3(-40, 0, -6))
+	await _until(func(): return pp != null and pp.built, 30.0)
+	var bk := await _place("barracks", ccp + Vector3(40, 0, -16))
+	await _until(func(): return bk != null and bk.built, 30.0)
+	var dp := await _place("supply_depot", ccp + Vector3(-50, 0, -40))
+	await _until(func(): return dp != null and dp.built, 30.0)
+	var wf := await _place("war_factory", ccp + Vector3(0, 0, -50))
+	await _until(func(): return wf != null and wf.built, 45.0)
+	await _qa_checks(ccp, bk, wf)
+	_finish()
+
+
+func _run_main() -> void:
 	await _wait_sim(0.5)
 	var cc: Array = battle.structures(0, "command_center")
 	_log("start_state", cc.size() == 1 and _dozer() != null and battle.cash[0] == BuildingDefs.START_CASH and battle.piles.size() == 5,
@@ -153,6 +178,112 @@ func _run() -> void:
 	await _wait_sim(1.0)
 	_log("victory_when_enemy_destroyed", battle.game_over and Game.last_result.get("result", "") == "Victory", "result=%s" % Game.last_result.get("result", ""))
 	_finish()
+
+
+## Checks added for the B1.2 playtest QA report: airfield parking, repair, rubble + rebuild, world scale.
+func _qa_checks(ccp: Vector3, bk: Building, wf: Building) -> void:
+	battle.cash[0] += 15000    # test funding so the checks do not wait on income
+	print("TESTDBG funded +15000 for QA checks")
+	var pp2 := await _place("power_plant", ccp + Vector3(-62, 0, 8))
+	await _until(func(): return pp2 != null and pp2.built, 40.0)
+	var pp3 := await _place("power_plant", ccp + Vector3(62, 0, 14))
+	await _until(func(): return pp3 != null and pp3.built, 40.0)
+	# --- airfield: pads in front of it and on the map; aircraft spawn on, return to and land on their own pad
+	var af := await _place("airfield", ccp + Vector3(90, 0, -20))
+	await _until(func(): return af != null and af.built, 60.0)
+	var pads_ok := af != null and af.pads.size() == 4
+	if af:
+		for p in af.pads:
+			if not battle.map_bounds.grow(-10).has_point(Vector2(p.pos.x, p.pos.z)): pads_ok = false
+			if p.pos.z > af.position.z: pads_ok = false     # apron is on the map-centre side
+	_log("airfield_pads_on_map", pads_ok, "pads=%s" % (str(af.pads.map(func(p): return p.pos)) if af else "none"))
+	if af:
+		await _sel([af]); await _frames(3)
+		for k in ["f16", "a10", "ah64"]:
+			_press_button(battle.hud.econ.buttons[k]); await _frames(2)
+		await _until(func(): return _team(["f16"]).size() >= 1 and _team(["a10"]).size() >= 1 and _team(["ah64"]).size() >= 1, 80.0)
+		var air: Array = _team(["f16", "a10", "ah64"])
+		var homes := {}
+		var on_pads := true
+		for u in air:
+			var on := false
+			for p in af.pads:
+				if u.home.distance_to(p.pos) < 0.1 and u.flat_dist(p.pos) < 1.0: on = true
+			homes[str(u.home)] = true
+			if not on: on_pads = false
+		_log("aircraft_spawn_on_own_pads", air.size() == 3 and on_pads and homes.size() == 3, "aircraft=%d distinct pads=%d" % [air.size(), homes.size()])
+		# fly out, then R (return) - every type must land inside its pad
+		await _sel(air)
+		battle.issue({"type": "move", "ids": air.map(func(u): return u.uid), "points": air.map(func(u): return u.position + Vector3(0, 0, -120))})
+		await _wait_sim(12.0)
+		await _sel(air); await _frames(2)
+		_key(KEY_R); await _frames(2)
+		await _until(func(): return air.all(func(u): return u.dead or u.state == Unit.S.LANDED), 90.0)
+		var landed := air.filter(func(u): return not u.dead and u.state == Unit.S.LANDED and u.flat_dist(u.home) < PAD_TOL(u))
+		_log("aircraft_return_land_on_pad", landed.size() == air.filter(func(u): return not u.dead).size(),
+			", ".join(air.map(func(u): return "%s %.2fm %s" % [u.kind, u.flat_dist(u.home), "LANDED" if u.state == Unit.S.LANDED else "state%d" % u.state])))
+		await _sel([])
+		battle.camera.focus(af.position + Vector3(0, 0, -20)); await _shot("airfield_parked")
+		# a fourth aircraft fills the last pad; a fifth is refused (no stacking)
+		_press_button_if(af, "f16")
+		await _until(func(): return _team(["f16"]).size() >= 2, 40.0)
+		var why: String = battle.produce_problem(af, "a10")
+		_log("full_apron_refuses_more", why == "No free pad", "reason=%s" % why)
+	# --- repair: start, stop, resume, out of cash, full
+	if wf and not wf.dead:
+		wf.take_damage(wf.bdef.hp * 0.5, null)
+		await _sel([wf]); await _frames(3)
+		var h0: float = wf.hp; var c0: int = battle.cash[0]; var i0: int = battle.income[0]
+		_press_button(battle.hud.econ.buttons["repair"]); await _wait_sim(2.0)
+		var h1: float = wf.hp; var spent: int = c0 - battle.cash[0] + (battle.income[0] - i0)
+		_log("repair_heals_and_costs", wf.repairing and h1 > h0 + wf.bdef.hp * 0.06 and spent > 0, "hp %.0f -> %.0f, spent $%d" % [h0, h1, spent])
+		_press_button(battle.hud.econ.buttons["repair"]); await _wait_sim(1.0)
+		var h2: float = wf.hp
+		await _wait_sim(1.0)
+		_log("repair_stop", not wf.repairing and absf(wf.hp - h2) < 0.01, "repairing=%s" % str(wf.repairing))
+		var keep: int = battle.cash[0]
+		battle.cash[0] = 0
+		_press_button(battle.hud.econ.buttons["repair"]); await _wait_sim(1.0)
+		var h3: float = wf.hp
+		_log("repair_pauses_without_cash", wf.repairing and wf.repair_blocked != "" and absf(h3 - h2) < 1.0, "blocked=%s" % wf.repair_blocked)
+		battle.cash[0] = keep
+		await _until(func(): return wf.hp >= wf.bdef.hp, 40.0)
+		await _frames(3)
+		_log("repair_completes_and_disables", wf.hp >= wf.bdef.hp and not wf.repairing and battle.hud.econ.buttons["repair"].disabled, "hp %.0f" % wf.hp)
+	# --- destroyed structure leaves rubble; Dozer click on the rubble rebuilds it the normal way
+	if bk and not bk.dead:
+		var bpos: Vector3 = bk.position
+		bk.take_damage(1e9, null)
+		await _wait_sim(0.5)
+		var rb: Dictionary = battle.rubble_at(bpos, 0)
+		_log("rubble_left", not rb.is_empty() and not battle.gnav.blocked_at(bpos), "rubble=%s" % str(not rb.is_empty()))
+		var cash_b: int = battle.cash[0]; var inc_b: int = battle.income[0]
+		await _sel([_dozer()])
+		battle.camera.focus(bpos); await _frames(3)
+		_click(MOUSE_BUTTON_LEFT, _screen(bpos)); await _wait_sim(0.3)
+		var nb: Array = battle.structures(0, "barracks", false).filter(func(x): return x.position.distance_to(bpos) < 0.5)
+		var paid: int = cash_b - battle.cash[0] + (battle.income[0] - inc_b)
+		_log("rebuild_from_rubble", nb.size() == 1 and not nb[0].built and paid == 500 and battle.rubble_at(bpos, 0).is_empty(), "paid $%d" % paid)
+		if nb.size() == 1:
+			var t0: float = battle.sim_time
+			await _until(func(): return nb[0].built, 60.0)
+			_log("rebuild_completes", nb[0].built, "%.0f s (build time %d s)" % [battle.sim_time - t0, int(BuildingDefs.DEFS.barracks.build_time)])
+	# --- world scale guide: a CH-47 is large but smaller than a Supply Depot; selection radius follows drawn size
+	var ch: Array = _team(["ch47"])
+	if not ch.is_empty():
+		var drawn: float = float(ch[0].def.length) * ch[0].vis_scale
+		var depot: float = BuildingDefs.DEFS.supply_depot.size.x
+		_log("scale_ch47_vs_depot", drawn < depot and drawn > depot * 0.6, "CH-47 drawn %.1f m, depot %.1f m" % [drawn, depot])
+
+
+func PAD_TOL(u: Unit) -> float:
+	return 1.0
+
+
+func _press_button_if(b: Building, k: String) -> void:
+	await _sel([b]); await _frames(3)
+	if battle.hud.econ.buttons.has(k) and not battle.hud.econ.buttons[k].disabled:
+		_press_button(battle.hud.econ.buttons[k]); await _frames(2)
 
 
 func _finish() -> void:

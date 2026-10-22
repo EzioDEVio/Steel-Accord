@@ -266,6 +266,19 @@ func _left_release(mb: InputEventMouseButton) -> void:
 		battle.issue({"type": "build", "team": team, "ids": dozers().map(func(d): return d.uid), "site": u.uid})
 		FX.order_marker(battle, u.position, Color(1, 0.8, 0.3, 0.9))
 		return
+	# dozer + click on own rubble: rebuild the same structure there (normal cost, prerequisites and build time)
+	if u == null and not dozers().is_empty() and scheme == "classic":
+		var gr: Variant = camera.ground_at(p)
+		if gr != null:
+			var rb: Dictionary = battle.rubble_at(gr, team)
+			if not rb.is_empty():
+				var why: String = battle.placement_problem(team, rb.kind, rb.pos)
+				if why == "":
+					battle.issue({"type": "place", "team": team, "id": rb.kind, "pos": rb.pos, "builder": dozers()[0].uid})
+					FX.order_marker(battle, rb.pos, Color(1, 0.8, 0.3, 0.9))
+				elif battle.hud:
+					battle.hud.flash_message("Cannot rebuild %s: %s" % [BuildingDefs.DEFS[rb.kind].name, why])
+				return
 	# selected structure: click ground (classic) sets its rally point
 	if scheme == "classic" and sel_building and live_selection().is_empty() and u == null:
 		_set_rally(p)

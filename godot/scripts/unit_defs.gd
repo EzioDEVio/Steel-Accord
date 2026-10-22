@@ -91,6 +91,17 @@ const ARMOR_MULT := {
 }
 
 
+## World-scale guide: factor applied to the drawn size of each class (art is authored at real size). See docs/SCALE_GUIDE.md.
+const SCALE := {"structure": 1.0, "vehicle": 0.8, "aircraft": 0.6, "infantry": 1.3}
+
+
+static func scale_for(d: Dictionary) -> float:
+	if d.get("visual", "") == "infantry": return SCALE.infantry
+	if d.get("visual", "") == "structure": return SCALE.structure
+	if str(d.get("domain", "ground")) in ["jet", "heli"]: return SCALE.aircraft
+	return SCALE.vehicle
+
+
 static func def_of(k: String) -> Dictionary:
 	return DEFS[k] if DEFS.has(k) else BASE_UNITS[k]
 
