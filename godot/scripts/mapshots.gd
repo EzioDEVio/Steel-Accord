@@ -78,7 +78,7 @@ func _run() -> void:
 		var cc: Vector3 = battle.grounded(Vector3(60, 0, -150))
 		var kinds := ["ir_rifleman", "ir_rpg", "ir_mg", "irgc_sf", "ir_sniper", "ir_medic", "ir_engineer", "ir_rifleman", "ir_rifleman", "irgc_sf"]
 		for i in kinds.size():
-			var u: Unit = battle._spawn(kinds[i], 1, cc + Vector3(-8 + (i % 5) * 4.0, 0, -2 + (i / 5) * 4.0), PI * 0.85)
+			var u: Unit = battle._spawn(kinds[i], 1, cc + Vector3(-8 + (i % 5) * 4.0, 0, -2 + (i / 5) * 4.0), deg_to_rad(-20.0))
 			u.reset_physics_interpolation()
 		await _wait(1.0)
 		_cam(cc, 26.0, 200.0, 34.0); await _shot("zb_iran_infantry")
