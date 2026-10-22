@@ -376,7 +376,7 @@ func _draw_status() -> void:
 		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: production and construction at half speed", 12, Color(1.0, 0.45, 0.35))
 	if msg_t > 0.0:
 		var s := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)
-		_text(Vector2((size.x - s.x) / 2, 70), msg, 16, Color(1, 0.85, 0.5, minf(1.0, msg_t)))
+		_text(Vector2((size.x - s.x) / 2, 96), msg, 16, Color(1, 0.85, 0.5, minf(1.0, msg_t)))
 
 
 func _draw_help() -> void:

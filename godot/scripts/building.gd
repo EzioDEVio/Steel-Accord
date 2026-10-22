@@ -54,7 +54,11 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 	art = UsArt.building(bdef.art)
 	if not art.is_empty():
 		def.icon = art.get("icon", "")
-	_build_card()
+	var m3: String = str(bdef.get("model3d", ""))
+	if m3 != "" and ResourceLoader.exists(m3):
+		_build_model(m3)
+	else:
+		_build_card()
 	_build_outline()
 	ring = _make_ring()
 	add_child(ring)
@@ -111,6 +115,49 @@ func _build_pads() -> void:
 		ring_m.mesh = t; ring_m.scale = Vector3(1, 0.02, 1)
 		ring_m.position = p.pos - position + Vector3(0, 0.22, 0)
 		add_child(ring_m)
+
+
+# ---- real 3D structure (pilot: Supply Depot). Origin = centre of the foundation at ground level.
+const REVEAL_SHADER := preload("res://shaders/build_reveal.gdshader")
+var model3d: Node3D
+var mesh_list: Array = []        # [MeshInstance3D, surface, original material]
+var reveal_mats: Array = []
+var model_h := 8.0
+var revealing := false
+
+
+func _build_model(path: String) -> void:
+	model3d = (load(path) as PackedScene).instantiate()
+	if front_dir().z > 0.0: model3d.rotation.y = PI   # authored facing south (+Z); north-side bases face the centre too
+	body.add_child(model3d)
+	model = model3d
+	var top := 0.0
+	for mi in model3d.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		top = maxf(top, (m.get_aabb().end.y) * m.global_transform.basis.get_scale().y if m.is_inside_tree() else m.get_aabb().end.y)
+		for si in m.mesh.get_surface_count():
+			mesh_list.append([m, si, m.get_active_material(si)])
+	model_h = maxf(top, 3.0)
+	if not built: _set_reveal(true)
+
+
+func _set_reveal(on: bool) -> void:
+	revealing = on
+	for e in mesh_list:
+		var m: MeshInstance3D = e[0]
+		if on:
+			var src: Material = e[2]
+			var sm := ShaderMaterial.new()
+			sm.shader = REVEAL_SHADER
+			if src is BaseMaterial3D:
+				sm.set_shader_parameter("albedo_tex", (src as BaseMaterial3D).albedo_texture)
+				sm.set_shader_parameter("albedo_col", (src as BaseMaterial3D).albedo_color)
+			m.set_surface_override_material(e[1], sm)
+			reveal_mats.append(sm)
+		else:
+			m.set_surface_override_material(e[1], null)
+	if not on: reveal_mats.clear()
 
 
 func _build_card() -> void:
@@ -172,6 +219,12 @@ func _build_outline() -> void:
 
 
 func _process(_dt: float) -> void:
+	if model3d:
+		if revealing:
+			if built: _set_reveal(false)
+			else:
+				for sm in reveal_mats: (sm as ShaderMaterial).set_shader_parameter("build_y", global_position.y + model_h * progress)
+		return
 	if card == null: return
 	# keep the card on the footprint edge that faces the camera
 	var cam := get_viewport().get_camera_3d()
@@ -323,7 +376,7 @@ func take_damage(amount: float, from: Unit) -> void:
 func die() -> void:
 	dead = true
 	set_selected(false)
-	card_mat.set_shader_parameter("burnt", 1.0)
+	if card_mat: card_mat.set_shader_parameter("burnt", 1.0)
 	if build_snd: build_snd.queue_free(); build_snd = null
 	battle.gnav.set_structure(position, half + Vector2(1.0, 1.0), false)
 	outline.visible = false
@@ -331,5 +384,6 @@ func die() -> void:
 	battle.on_unit_died(self)
 	if not sold and built:
 		battle.add_rubble(self)
-		card.visible = false
+		if card: card.visible = false
+		if model3d: model3d.visible = false
 	visible = false if sold else visible

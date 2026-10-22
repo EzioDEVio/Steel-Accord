@@ -115,6 +115,10 @@ func _ready() -> void:
 		var vc: Node = load("res://scripts/vischeck.gd").new()
 		vc.battle = self
 		add_child(vc)
+	elif "pilotshots" in args:
+		var ps: Node = load("res://scripts/pilotshots.gd").new()
+		ps.battle = self
+		add_child(ps)
 	elif "baseshots" in args:
 		var bs: Node = load("res://scripts/baseshots.gd").new()
 		bs.battle = self
@@ -130,7 +134,7 @@ func _ready() -> void:
 
 
 func _automated() -> bool:
-	return "test" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args
+	return "test" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).

@@ -75,7 +75,7 @@ const DEFS := {
 	},
 	"ch47": {
 		"name": "CH-47 (heavy-lift helicopter)", "role": "Heavy transport - unarmed (supply/vehicle lift arrives with the economy)", "domain": "heli",
-		"sprite": "res://assets/aircraft/ch47/ch47_top.png", "icon": "res://assets/aircraft/ch47/ch47_icon.png", "length": 30.1,
+		"sprite": "res://assets/aircraft/ch47/ch47_top.png", "model3d": "res://assets/units3d/ch47/ch47.glb", "icon": "res://assets/aircraft/ch47/ch47_icon.png", "length": 30.1,
 		"hp": 700.0, "speed": 18.0, "accel": 7.0, "turn_deg": 70.0, "altitude": 10.0, "rotor": 9.1, "rotor_twin": true, "blades": 3,
 		"radius": 5.0, "height": 1.0, "sight": 70.0, "cost": 1200, "provisional": true, "hauler": true,
 		"weapons": [],
@@ -117,12 +117,12 @@ static func armor_of(d: Dictionary) -> String:
 const BASE_UNITS := {
 	"dozer": {
 		"name": "M88 Dozer", "role": "Builder - constructs structures. Unarmed.", "domain": "ground", "visual": "vehicle_art",
-		"art": "m88", "length": 8.3, "hp": 600.0, "speed": 8.0, "accel": 6.0, "turn_deg": 90.0, "radius": 2.6,
+		"art": "m88", "model3d": "res://assets/units3d/m88/m88.glb", "track_m_per_v": 0.9573, "length": 8.3, "hp": 600.0, "speed": 8.0, "accel": 6.0, "turn_deg": 90.0, "radius": 2.6,
 		"height": 3.0, "sight": 50.0, "armor": "heavy", "builder": true, "weapons": [],
 	},
 	"rifleman": {
 		"name": "Rifleman", "role": "Infantry - effective vs infantry, weak vs armour", "domain": "ground", "visual": "infantry",
-		"art": "rifleman", "hp": 120.0, "speed": 4.5, "accel": 12.0, "turn_deg": 360.0, "radius": 0.7, "height": 1.8,
+		"art": "rifleman", "model3d": "res://assets/units3d/rifleman/rifleman.glb", "hp": 120.0, "speed": 4.5, "accel": 12.0, "turn_deg": 360.0, "radius": 0.7, "height": 1.8,
 		"sight": 55.0, "armor": "infantry",
 		"weapons": [{"id": "m4", "range": 34.0, "reload": 0.9, "damage": 12.0, "splash": 0.0, "proj": "bullet",
 			"speed": 350.0, "spread": 1.2, "targets": ["ground", "heli"], "facing_deg": 40.0}],

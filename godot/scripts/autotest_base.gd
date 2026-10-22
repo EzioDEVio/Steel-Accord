@@ -268,6 +268,27 @@ func _qa_checks(ccp: Vector3, bk: Building, wf: Building) -> void:
 			var t0: float = battle.sim_time
 			await _until(func(): return nb[0].built, 60.0)
 			_log("rebuild_completes", nb[0].built, "%.0f s (build time %d s)" % [battle.sim_time - t0, int(BuildingDefs.DEFS.barracks.build_time)])
+	# --- 3D pilot models: Dozer wheels turn and tracks scroll with movement; rifleman animation follows movement
+	var dz := _dozer()
+	if dz and not dz.wheels.is_empty() and not dz.track_mats.is_empty():
+		var w0: Basis = dz.wheels[0].transform.basis
+		var t0v: float = dz.track_mats[0].uv1_offset.y
+		battle.issue({"type": "move", "ids": [dz.uid], "points": [dz.position + Vector3(20, 0, -20)]})
+		await _wait_sim(2.0)
+		var turned: bool = not dz.wheels[0].transform.basis.is_equal_approx(w0)
+		var scrolled: bool = absf(dz.track_mats[0].uv1_offset.y - t0v) > 0.5
+		_log("dozer_wheels_and_tracks_animate", turned and scrolled, "wheels=%d turned=%s track dv=%.2f" % [dz.wheels.size(), str(turned), dz.track_mats[0].uv1_offset.y - t0v])
+	else:
+		_log("dozer_wheels_and_tracks_animate", false, "dozer has no 3D wheels/tracks")
+	var rf: Array = _team(["rifleman"])
+	if rf.is_empty() and bk and not bk.dead: pass
+	var rm: Unit = battle._spawn("rifleman", 0, ccp + Vector3(0, 0, -30), 0.0)
+	await _frames(3)
+	var idle_anim: String = rm.anim_cur
+	battle.issue({"type": "move", "ids": [rm.uid], "points": [rm.position + Vector3(0, 0, -30)]})
+	await _wait_sim(1.0)
+	var mv_anim: String = rm.anim_cur
+	_log("rifleman_animation_states", rm.anim != null and idle_anim == "idle" and mv_anim in ["walk", "run"], "idle=%s moving=%s" % [idle_anim, mv_anim])
 	# --- world scale guide: a CH-47 is large but smaller than a Supply Depot; selection radius follows drawn size
 	var ch: Array = _team(["ch47"])
 	if not ch.is_empty():

@@ -29,7 +29,7 @@ const DEFS := {
 		"desc": "Trains infantry.",
 	},
 	"supply_depot": {
-		"name": "Supply Depot", "art": "supply_depot", "cost": 1500, "build_time": 18.0, "power": -1,
+		"name": "Supply Depot", "art": "supply_depot", "model3d": "res://assets/units3d/supply_depot/supply_depot.glb", "cost": 1500, "build_time": 18.0, "power": -1,
 		"hp": 2000.0, "size": Vector2(22, 18), "sight": 60.0, "produces": ["ch47"], "requires": ["power_plant"],
 		"free_unit": "ch47", "desc": "Cash drop-off. Comes with one CH-47 that hauls supplies from the nearest pile.",
 	},

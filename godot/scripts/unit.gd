@@ -55,8 +55,8 @@ var body: Node3D              # visual root (lifted for aircraft)
 var turret: Node3D
 var gun: Node3D
 var muzzle: Node3D
-var rotor: MeshInstance3D
-var rotors: Array[MeshInstance3D] = []
+var rotor: Node3D
+var rotors: Array[Node3D] = []
 var engine_snd: AudioStreamPlayer3D
 var flyby_t := 0.0
 var takeoff_snd := false
@@ -76,7 +76,11 @@ func setup(b: Node, unit_kind: String, t: int, id: int, pos: Vector3, yaw: float
 	body = Node3D.new()
 	add_child(body)
 	var visual: String = def.get("visual", "model")
-	if visual == "vehicle_art" or visual == "infantry":
+	var m3: String = str(def.get("model3d", ""))
+	if m3 != "" and ResourceLoader.exists(m3):
+		_build_model3d(m3)
+		if domain != "ground": altitude = def.altitude
+	elif visual == "vehicle_art" or visual == "infantry":
 		_build_card_visual(visual)
 	elif domain == "ground":
 		model = load(def.model).instantiate()
@@ -104,6 +108,87 @@ func setup(b: Node, unit_kind: String, t: int, id: int, pos: Vector3, yaw: float
 	body.position.y = altitude
 	if domain == "jet":
 		speed_cur = def.min_speed
+
+
+# ---- real 3D unit models (pilot set). Origin at ground contact; parts driven from movement (presentation only).
+var wheels: Array[Node3D] = []
+var wheel_r := 0.4
+var track_mats: Array = []
+var track_m_per_v := 1.0
+var anim: AnimationPlayer
+var anim_cur := ""
+var _last_vis_pos := Vector3.ZERO
+var stride := {"walk": 1.4, "run": 4.5}
+
+
+func _build_model3d(path: String) -> void:
+	model = (load(path) as PackedScene).instantiate()
+	body.add_child(model)
+	for n in model.find_children("*", "Node3D", true, false):
+		var nm := String(n.name)
+		if nm.begins_with("Wheel") or nm.begins_with("Sprocket") or nm.begins_with("Idler"):
+			wheels.append(n)
+		if nm == "RotorFront" or nm == "RotorRear":
+			n.set_meta("dir", 1.0 if nm == "RotorFront" else -1.0)
+			rotors.append(n)
+		if n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			for si in mi.mesh.get_surface_count():
+				var mat := mi.get_active_material(si)
+				if mat and mat.resource_name.begins_with("SA_Team") and mat is BaseMaterial3D:
+					var tm := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+					tm.albedo_color = UnitDefs.TEAM_COLORS[team].lightened(0.15)
+					mi.set_surface_override_material(si, tm)
+				if mat and mat.resource_name.begins_with("SA_TrackScroll") and mat is BaseMaterial3D:
+					var dm := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+					mi.set_surface_override_material(si, dm)
+					track_mats.append(dm)
+	if not rotors.is_empty(): rotor = rotors[0]
+	track_m_per_v = float(def.get("track_m_per_v", 1.0))
+	wheel_r = float(def.get("wheel_radius", 0.0))
+	if wheel_r <= 0.0:
+		wheel_r = 0.4
+		for w in wheels:
+			if w is MeshInstance3D:
+				wheel_r = maxf(0.1, (w as MeshInstance3D).get_aabb().size.y * 0.5); break
+	var aps := model.find_children("*", "AnimationPlayer", true, false)
+	if not aps.is_empty():
+		anim = aps[0]
+		for k in ["idle", "walk", "run", "aim", "fire", "crouch_fire"]:
+			if anim.has_animation(k): anim.get_animation(k).loop_mode = Animation.LOOP_LINEAR
+		stride = def.get("stride", stride)
+		_play("idle")
+	if domain == "ground": _add_team_marker()
+	_last_vis_pos = position
+
+
+func _play(a: String, spd := 1.0) -> void:
+	if anim == null or not anim.has_animation(a): return
+	if anim_cur != a:
+		anim.play(a, 0.15)
+		anim_cur = a
+	anim.speed_scale = spd
+
+
+## Presentation for 3D models (every rendered frame): wheels turn and tracks scroll by distance travelled; infantry
+## animation follows what the soldier is doing, with walk/run playback matched to ground speed.
+func _update_model3d(dt: float) -> void:
+	var moved := (global_position - _last_vis_pos)
+	moved.y = 0.0
+	var dist := moved.length() * (1.0 if moved.dot(forward()) >= 0.0 else -1.0)
+	_last_vis_pos = global_position
+	if absf(dist) > 5.0: dist = 0.0      # teleport / spawn
+	for w in wheels: w.rotate_object_local(Vector3.RIGHT, -dist / maxf(wheel_r * vis_scale, 0.05))
+	for m in track_mats: (m as BaseMaterial3D).uv1_offset.y -= dist / (track_m_per_v * vis_scale)
+	if anim:
+		var spd := speed_cur
+		if dead: _play("die")
+		elif spd > 0.3:
+			var k := "run" if spd > def.speed * 0.6 else "walk"
+			_play(k, spd / (float(stride.get(k, 1.4)) * vis_scale))
+		elif target != null: _play("fire")
+		else: _play("idle")
 
 
 var vis: Node3D               # visual root under body, carries the scale-guide factor
@@ -166,7 +251,7 @@ func _build_card_visual(visual: String) -> void:
 
 ## Team-coloured ellipse under card units: a contact shadow with a coloured rim (readable on any terrain).
 func _add_team_marker() -> void:
-	var r: float = def.radius * (1.05 if def.get("visual") == "vehicle_art" else 1.2)
+	var r: float = def.radius * (1.2 if def.get("visual") == "infantry" else 1.05)
 	var mi := MeshInstance3D.new()
 	var q := QuadMesh.new(); q.size = Vector2(r * 2.0, r * 2.0); q.orientation = PlaneMesh.FACE_Y
 	var g := GradientTexture2D.new()
@@ -183,7 +268,7 @@ func _add_team_marker() -> void:
 	mi.mesh = q
 	mi.position.y = 0.12
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.scale = Vector3(1.0, 1.0, 1.35 if def.get("visual") == "vehicle_art" else 1.0)
+	mi.scale = Vector3(1.0, 1.0, 1.0 if def.get("visual") == "infantry" else 1.35)
 	body.add_child(mi)
 
 
@@ -232,6 +317,7 @@ func _update_card(dt: float) -> void:
 
 func _process(dt: float) -> void:
 	if card_sprite: _update_card(dt)
+	elif anim or not wheels.is_empty() or not track_mats.is_empty(): _update_model3d(dt)
 
 
 ## Aircraft visual: the supplied top-down art on a horizontal, lit, shadow-casting quad (sprite-based, not a 3D model).
