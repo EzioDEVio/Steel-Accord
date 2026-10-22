@@ -191,7 +191,8 @@ for i in range(5):
         slit("y", MY1, a, 2.3, 1, w=0.8)
 for i in range(4):
     a = MY0 + (i + 0.5) * (MY1 - MY0) / 4
-    slit("x", MX0, a, 5.4, -1)
+    if i != 1:                                   # i=1 is the upper door off the external stairs
+        slit("x", MX0, a, 5.4, -1)
     slit("x", MX1, a, 5.4, 1)
 # personnel entrance: recessed steel door, armoured awning, ID plate, team-coloured door surround
 DX = MX0 + 2.5 * (MX1 - MX0) / 5
