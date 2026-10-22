@@ -1,0 +1,5472 @@
+{
+ "packs": {
+  "US_Installation_Game_Assets": {
+   "png_files": 70,
+   "contact_sheets": 14,
+   "crops": 56,
+   "corrupt": [
+    "US_Installation_Game_Assets/contact_sheets/Barracks_4view.png",
+    "US_Installation_Game_Assets/contact_sheets/HESCO_Defense_Position_4view.png",
+    "US_Installation_Game_Assets/contact_sheets/Power_Generator_Plant_4view.png"
+   ],
+   "clipped_crops": [
+    "US_Installation_Game_Assets/individual_views/Airfield/Airfield_front_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Airfield/Airfield_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Barracks/Barracks_overhead.png",
+    "US_Installation_Game_Assets/individual_views/Barracks/Barracks_side_profile.png",
+    "US_Installation_Game_Assets/individual_views/Command_Center/Command_Center_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Command_Center/Command_Center_side_profile.png",
+    "US_Installation_Game_Assets/individual_views/Engineer_Construction_Yard/Engineer_Construction_Yard_front_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Engineer_Construction_Yard/Engineer_Construction_Yard_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/HESCO_Defense_Position/HESCO_Defense_Position_front_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/HESCO_Defense_Position/HESCO_Defense_Position_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Power_Generator_Plant/Power_Generator_Plant_front_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Power_Generator_Plant/Power_Generator_Plant_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_front_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_overhead.png",
+    "US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_side_profile.png",
+    "US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_front_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_overhead.png",
+    "US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_side_profile.png",
+    "US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_front_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_overhead.png",
+    "US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_side_profile.png"
+   ],
+   "multi_part_crops": [
+    "US_Installation_Game_Assets/individual_views/Airfield/Airfield_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Barracks/Barracks_side_profile.png",
+    "US_Installation_Game_Assets/individual_views/Power_Generator_Plant/Power_Generator_Plant_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_rear_three_quarter.png",
+    "US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_side_profile.png",
+    "US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_side_profile.png"
+   ],
+   "manifest_rows": 56,
+   "manifest_missing_files": [],
+   "files": [
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Airfield_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.495,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0008,
+     "sha256": "f0b341a89b2b10b203ee0923fd4525166aa73118e89b53506d22234e2fae14fc"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Barracks_4view.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Base_Defense_Tower_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.632,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0018,
+     "sha256": "0dd3d58da30c8d43c717f740fa74ba7d673e143cd5f02a34aa8318cd86293ee0"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Command_Center_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.59,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0006,
+     "sha256": "2c4cdf8529bfbd3b23818eccd663ad94b0cb7f012f8108ee606c366cc2bde59c"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Engineer_Construction_Yard_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.521,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0003,
+     "sha256": "f4f7ce233f4ef437a32d07fd2fdc51aac99951c1604190b20e3b193ee76b0124"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Field_Hospital_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.563,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0002,
+     "sha256": "1e37b1ae78dad15e11186e0bb7db3ced19abd81dcd0cf578af5bd2d857849746"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/HESCO_Defense_Position_4view.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Perimeter_Gatehouse_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.571,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0005,
+     "sha256": "625334bd98f41795c9e297e4f8819a251c8bb1c356d670d2ad0d468de0ae1b99"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Power_Generator_Plant_4view.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Radar_Communications_Station_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.626,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0028,
+     "sha256": "f5887a11039cf415df97146a55e1ef315c7e702f8831513a6771a46ebdbfa939"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Supply_Airdrop_Zone_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.572,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0005,
+     "sha256": "8a649dd3b7ac28762a85f4b04f82a51fe396994fdd7cb2a97035e9be7520cfec"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Supply_Depot_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.475,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0,
+     "sha256": "4b548bd0d69b5b4b246b90be3e22b85e97e347c99bc202e806e015e74cae14fb"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/Vehicle_Repair_Bay_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.432,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0,
+     "sha256": "640b1acf3b8264564d5aade05e6c1562aa4812e025cbd87f4582b65e70dd9ede"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/contact_sheets/War_Factory_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.458,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0,
+     "sha256": "bb239053897d052752293aa0fb216d5fe612ed137f38d30b18d8be98e6bd101e"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Airfield/Airfield_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.474,
+     "edge_touch": 0.1164,
+     "large_parts": 1,
+     "dark_halo": 0.0009,
+     "sha256": "04b6d6ea3ad122d2d8ae40b1a43ff4d34e35dfd2637ac20a0719fe534256e9fe"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Airfield/Airfield_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.357,
+     "edge_touch": 0.0074,
+     "large_parts": 1,
+     "dark_halo": 0.0004,
+     "sha256": "5827e643a3190d6235719a1b0c3481fcd6473437365a445123e271e873103f5a"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Airfield/Airfield_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.507,
+     "edge_touch": 0.1105,
+     "large_parts": 2,
+     "dark_halo": 0.0005,
+     "sha256": "eb0d1f07e64746511a044d49adbe2c2ac9c169b9fef219f242e6abbf5c3571b5"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Airfield/Airfield_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.644,
+     "edge_touch": 0.0027,
+     "large_parts": 1,
+     "dark_halo": 0.0018,
+     "sha256": "d7d4d4a3d48b810ad70d981f13f4dcba775c78f0e43701843fe9ace40e8df3c6"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Barracks/Barracks_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.454,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "9371faef4b18fabc6eff814d25b40d42a1f6c2911451fc4e8d298a96ffe3a2a8"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Barracks/Barracks_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.271,
+     "edge_touch": 0.1055,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "b792a96bf2e6e2793a093649a43e6531d82216a15c56fe0145f5156076a9680b"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Barracks/Barracks_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.51,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "0a2f7ccb3d637f71196151afc3554ec235c1f5cbd5238dad58c18b9b380d4db0"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Barracks/Barracks_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.554,
+     "edge_touch": 0.1055,
+     "large_parts": 2,
+     "dark_halo": 0.0001,
+     "sha256": "198596de883bf87d90cfe586862fbb148f1b8dec956c5b7e8f4fa17ff5a4ed50"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Base_Defense_Tower/Base_Defense_Tower_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.62,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0016,
+     "sha256": "d8ea7f9a86720b2e743b45bac917290eb5991f515ae9e678a001debe292aa94d"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Base_Defense_Tower/Base_Defense_Tower_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.637,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0007,
+     "sha256": "d03ffa2d9b3a026c6acbeae0666b88ec72ab54f76cbfd5ad50e58fafebd20bb8"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Base_Defense_Tower/Base_Defense_Tower_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.644,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0017,
+     "sha256": "eb664b2044c3b0c36489888bad026862eda8a71ebc13c18b3de41b12be912415"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Base_Defense_Tower/Base_Defense_Tower_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.629,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0031,
+     "sha256": "fb55146598e4c9d6338cea1d5e651e1839eb5fca25e2dcea4beb18316e386a07"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Command_Center/Command_Center_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.611,
+     "edge_touch": 0.0016,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "f56f295599e502d2d3140e1d1642475204a0d48f07373b009e4bdd6dc8da8752"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Command_Center/Command_Center_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.553,
+     "edge_touch": 0.0004,
+     "large_parts": 1,
+     "dark_halo": 0.0002,
+     "sha256": "f6e55f96a4d865c438de3ec9567482fc73a49f5908689752cdbc0af700ba6c92"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Command_Center/Command_Center_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.574,
+     "edge_touch": 0.0262,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "5f33483d44d9e0bc84a8d518f6106267f8b4304366c2b821b2f31e45b832aef9"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Command_Center/Command_Center_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.622,
+     "edge_touch": 0.0262,
+     "large_parts": 1,
+     "dark_halo": 0.0006,
+     "sha256": "b61446ef9f078827db41b7d81a7fa02bed582792c08ac1eb94eebbb5e7049f9f"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Engineer_Construction_Yard/Engineer_Construction_Yard_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.523,
+     "edge_touch": 0.0383,
+     "large_parts": 1,
+     "dark_halo": 0.0004,
+     "sha256": "a3eb2e0922db810b05ad0c3ef433978bb388a47be4f9d245a67ffc0cced6f6c2"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Engineer_Construction_Yard/Engineer_Construction_Yard_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.38,
+     "edge_touch": 0.0051,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "f7b8b20669142a62ab78b4eb25ab550dfb6a840ccfb2872913377441d17a50fc"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Engineer_Construction_Yard/Engineer_Construction_Yard_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.536,
+     "edge_touch": 0.0289,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "c8603a850ad943be856c693ae8bc5190e45d24dd6d04ee6a0170b149cdc8ce9f"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Engineer_Construction_Yard/Engineer_Construction_Yard_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.646,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0004,
+     "sha256": "26dceada95b5c6e8d1885f6eb5738473ce863e19334d2aacc953d4a811126f53"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Field_Hospital/Field_Hospital_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.562,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "8e26cf1f6d9659b81744f5e4c5d80c2186d1212238be75a12c0590193132eb12"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Field_Hospital/Field_Hospital_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.462,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0002,
+     "sha256": "ec45d1a2aee5c17f6c28519bfa33179f682c9a7f753dc93d01f104e5a63d033f"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Field_Hospital/Field_Hospital_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.573,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0002,
+     "sha256": "a572bd393c56461ec03a017280bed4a08a2a19d2d49da8c3733bf3044983931e"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Field_Hospital/Field_Hospital_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.653,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0002,
+     "sha256": "cf4cc3584a89b9db75c428764f65726872732dd94ed920cf88cc70c5cc564f85"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/HESCO_Defense_Position/HESCO_Defense_Position_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.469,
+     "edge_touch": 0.0207,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "05833400994cb3451d9a52fb94c75a0616af1e4a195086854563c59572226a64"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/HESCO_Defense_Position/HESCO_Defense_Position_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.297,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "c6ae32e10e2fbe34880ff34812eaacfbea29d0ce1b309b0e458b1b21f28839e6"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/HESCO_Defense_Position/HESCO_Defense_Position_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.471,
+     "edge_touch": 0.0191,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "c55342396f745f79e3857d5087f520f904347866490b6529bf703190bcc1118d"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/HESCO_Defense_Position/HESCO_Defense_Position_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.596,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "29f9b594bcd80dc02194e89e59b628c045882ef8a0d37873999f72ea8d6268e0"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Perimeter_Gatehouse/Perimeter_Gatehouse_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.568,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0009,
+     "sha256": "13b55e09e44ff62d8ade08fa79a2868eb2bc8c768d8723df1d126b70ffac3183"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Perimeter_Gatehouse/Perimeter_Gatehouse_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.456,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "a52b9a0f9bd17a446de092e369525e2dd02355dadc8252ea42110e7105ef9ddd"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Perimeter_Gatehouse/Perimeter_Gatehouse_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.591,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "f15be6bd7329a492455b23293c5d954cd5c2ca871a2ad1d40efef16fdc8373f1"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Perimeter_Gatehouse/Perimeter_Gatehouse_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.67,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0007,
+     "sha256": "9e9df6daac5acad216035f2c355c4248838ce5a55123b9a046e1c5e97780ec65"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Power_Generator_Plant/Power_Generator_Plant_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.451,
+     "edge_touch": 0.0355,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "81631ce68e3d3d340f0863f542a6327eeee25dfd4e4c07760b04dcc4308cfabb"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Power_Generator_Plant/Power_Generator_Plant_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.306,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "27fb18376b3ab3918eb722d30a6a7c715af133bd547085932a9d77a16fc2c6a7"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Power_Generator_Plant/Power_Generator_Plant_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.516,
+     "edge_touch": 0.0344,
+     "large_parts": 2,
+     "dark_halo": 0.0,
+     "sha256": "b5f89366d33b9022dece0fcb77b77f9d88a7ecd788386c6515753bdb9cb56674"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Power_Generator_Plant/Power_Generator_Plant_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.589,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "5401ab7aa16700e097cedf5a8cbd824ebe8087d43385964f1667a1047992b271"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.598,
+     "edge_touch": 0.0563,
+     "large_parts": 1,
+     "dark_halo": 0.0032,
+     "sha256": "71cf4d8962b89f73e4a516e1256bafd79f0db638dbb31b732c3c35c6df9a7948"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.576,
+     "edge_touch": 0.0168,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "f44e1b499466a824db66af7b1942d458ebb9b69c74a5d3c6b9796a9e249ff225"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.663,
+     "edge_touch": 0.0469,
+     "large_parts": 2,
+     "dark_halo": 0.0033,
+     "sha256": "4d993271016c495dc01a0c0fe33978fc33355dd70d92a6881bc36219b3d9ee2a"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Radar_Communications_Station/Radar_Communications_Station_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.668,
+     "edge_touch": 0.0172,
+     "large_parts": 1,
+     "dark_halo": 0.0054,
+     "sha256": "188335583af8a68e4f450ada0000eb98944ace6fe502cfa3208bf2ff6991014f"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.583,
+     "edge_touch": 0.0605,
+     "large_parts": 1,
+     "dark_halo": 0.0006,
+     "sha256": "3fa1b0df09062dde3c3f8992626cb539090727a98b7c878b091b6154f13d3118"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.46,
+     "edge_touch": 0.2059,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "96b7f50f1e7fc4dfd0f5ae61b860f00efcd247398ed320f8736b6018bb97a429"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.566,
+     "edge_touch": 0.0672,
+     "large_parts": 2,
+     "dark_halo": 0.0002,
+     "sha256": "e5fe3568c77c1f73c5636e2caaa953f4db628feafa53b7a439769c96e89f3f3c"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Airdrop_Zone/Supply_Airdrop_Zone_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.678,
+     "edge_touch": 0.2137,
+     "large_parts": 2,
+     "dark_halo": 0.0016,
+     "sha256": "91887d9fed6990103ea4bcd77f2db93657a67bba7d454b989849d2d60de5b7b3"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Depot/Supply_Depot_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.449,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "20c053b8dd6f18237199ede68fda120800bf66b167d22c3e8f23f826ca0a0873"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Depot/Supply_Depot_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.371,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "5edcd774d42f0b54758323ab95d5cef7faf1481359fabd4631b7d9d1b477d41f"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Depot/Supply_Depot_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.516,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "5200e59795a1e128b38b34ba850d9f9e5e1dae16b608180df2082c5a2bca5900"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Supply_Depot/Supply_Depot_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.563,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "148cd7ef0b73d5f357ecb66ad134f9b5557981a0c2100ce3f2bc32126673c1f0"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Vehicle_Repair_Bay/Vehicle_Repair_Bay_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.435,
+     "edge_touch": 0.0023,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "a16fddd270e47d95d5b1d0a7d3b8fea783515b88b32cab2c340ae5c8f3a633cf"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Vehicle_Repair_Bay/Vehicle_Repair_Bay_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.316,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "ba128ba5e2ca2f367f5df7f445539297e856f9337859b3091cca71c7b54deb98"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Vehicle_Repair_Bay/Vehicle_Repair_Bay_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.447,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "55348f7c484a57b6ea7671516b88735c80ffe3650dfac6dc6c8d660637a7329e"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/Vehicle_Repair_Bay/Vehicle_Repair_Bay_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.532,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "4705e17ecb5e023188129761e123cafce20b8ff0824a3533c178d0e6a73f1ab1"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.461,
+     "edge_touch": 0.0176,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "277ad258dec81327d9364427112dafe1f6bad3d83c7349e02c115ed738b4ff43"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.316,
+     "edge_touch": 0.2691,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "5edf1825e8235d40fd7dbe6162b8c9909b5690a074ca35e0e203ba135bf45630"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.53,
+     "edge_touch": 0.002,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "43ff5d3013846d480e022296480ca70a2bad2a67bf140699df09850a278de729"
+    },
+    {
+     "path": "US_Installation_Game_Assets/US_Installation_Game_Assets/individual_views/War_Factory/War_Factory_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.526,
+     "edge_touch": 0.2527,
+     "large_parts": 2,
+     "dark_halo": 0.0,
+     "sha256": "9117c8624f1dc423c45d2b9ef35c30049ea1810a5ec5792beedb859d421b0b92"
+    }
+   ]
+  },
+  "US_Armed_Forces_Personnel_Assets": {
+   "png_files": 84,
+   "contact_sheets": 12,
+   "crops": 72,
+   "corrupt": [],
+   "clipped_crops": [
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_running.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_walking.png"
+   ],
+   "multi_part_crops": [
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_standing_ready.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_walking.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_low_profile.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_crouched_movement.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_kneeling.png",
+    "US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_low_profile.png"
+   ],
+   "manifest_rows": 72,
+   "manifest_missing_files": [],
+   "files": [
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/75th_Ranger_Rifleman_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.756,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0026,
+     "sha256": "7246d0b0d428311a2ce36e50e30573f52581eeaa8ff55263c4ec3f995721df5a"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_AT4_AntiArmor_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.736,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.001,
+     "sha256": "608bb9fe28491ae5b28f07d9ae501f1ebca167c98f40fa399a717b7bbcf951b1"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_EOD_Engineer_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.72,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0062,
+     "sha256": "033d748054c25308767c4c328012a3c09deebe9af49ef9e5113a5135858ca434"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_Infantry_Rifleman_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.76,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.001,
+     "sha256": "817722fbe2e3f9ed7d9471a478935bb3a75c0e628ffc0bc30ea962400132eed3"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_M240B_Gunner_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.738,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0036,
+     "sha256": "6f42272ccbeae3363394c75a2356b256e527d77a9f4265b0fefc7cdc26b1ea5f"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_M249_SAW_Gunner_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.758,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0041,
+     "sha256": "7930bb9547a3690f367a7c964e94788dcb639320766c040b48d5598e11283778"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_Medic_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.737,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0032,
+     "sha256": "ee4921bffd6a23362bd9a777148a8f6a2e77d964fa779962d019255b354d9b5b"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_Sniper_Ghillie_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.709,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.001,
+     "sha256": "4db952689d9d637bfb3e677641849c4d9511831270f43ccec956ddee16430cff"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/Army_Special_Forces_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.758,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0025,
+     "sha256": "0965eb5063d97500b90f7f2b30d9149b4cf8b24a5f5f91a34de1bdf210e0186b"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/USAF_Flightline_Support_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.766,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.01,
+     "sha256": "08ef7d17010469db8baaf2506a2065ca92cc4f061d532a4094d28781beabcd86"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/USAF_Pilot_Helmet_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.764,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0014,
+     "sha256": "fa0a319f1e78d906af68b41021cb571b3195e2268c4087c57a9992863731e87c"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/contact_sheets/USAF_Pilot_No_Helmet_6pose_sheet.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.748,
+     "edge_touch": 0.0,
+     "large_parts": 6,
+     "dark_halo": 0.0028,
+     "sha256": "8647c23b2306a32888ac5c4a85229b276e1a6fc2e4f8923640e0ee92afbf13da"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.748,
+     "edge_touch": 0.021,
+     "large_parts": 2,
+     "dark_halo": 0.0017,
+     "sha256": "0e741b6594a6f9105a0544b77174f1be46dce1c1cee871aab9e30e892595c2d4"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.728,
+     "edge_touch": 0.0327,
+     "large_parts": 2,
+     "dark_halo": 0.0027,
+     "sha256": "621f3cb5d4a64a13a62dffb290980f1d8331741703a6d078f6e40651631e414d"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.807,
+     "edge_touch": 0.0449,
+     "large_parts": 2,
+     "dark_halo": 0.0054,
+     "sha256": "ba2020e0de7a68477a42534703754f9720f1fd3b8c6ff05a1c3146a286b868d8"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.748,
+     "edge_touch": 0.0288,
+     "large_parts": 1,
+     "dark_halo": 0.0024,
+     "sha256": "dcaceeedf19ed5462b3141130dcf60582322e61a47209c03ec023a6da4c169e5"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.744,
+     "edge_touch": 0.022,
+     "large_parts": 1,
+     "dark_halo": 0.0017,
+     "sha256": "92e72bf955a7e64ac79b1e6fc8259291d85cf80f38748322e1fbb766282cf872"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/75th_Ranger_Rifleman/75th_Ranger_Rifleman_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.759,
+     "edge_touch": 0.0166,
+     "large_parts": 1,
+     "dark_halo": 0.0025,
+     "sha256": "7bb94c5d4c6e14eb973d7b4a215fa2c45184b315f44d5bbfaa53ec8615e521f9"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.757,
+     "edge_touch": 0.0347,
+     "large_parts": 1,
+     "dark_halo": 0.0009,
+     "sha256": "afa1e4cdc892b6a7b81db865453867250581f2bd066a8c21531a3cd6ee415a54"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.747,
+     "edge_touch": 0.0278,
+     "large_parts": 1,
+     "dark_halo": 0.0013,
+     "sha256": "a3bbea1ff79f4de4028c622ae50762868e5320cd2e04e37aec7d9c2798e25564"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.724,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0011,
+     "sha256": "848fe63f495b7785f95d04957b7657be6b15d43b3e1b81238e876279e0174758"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.723,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0011,
+     "sha256": "6302961bf8a196750ae1d3c2e5fcca8b24cfabacb153264f2603825af5718f43"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.716,
+     "edge_touch": 0.0337,
+     "large_parts": 2,
+     "dark_halo": 0.001,
+     "sha256": "c7831ef027923c85f95cff7bf59fdd5157eda6de7c6850f1267d9741544dee30"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_AT4_AntiArmor/Army_AT4_AntiArmor_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.751,
+     "edge_touch": 0.0269,
+     "large_parts": 2,
+     "dark_halo": 0.0008,
+     "sha256": "b04ca5e4de8f379db3cb7adcf3d47b92b59238cc09bef54cbc8e2a61c9d8c721"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.752,
+     "edge_touch": 0.0264,
+     "large_parts": 2,
+     "dark_halo": 0.0059,
+     "sha256": "4e8892183b52ee22ab4fa20063da19f8365bcb20d3a4869b99c411ee1975c278"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.736,
+     "edge_touch": 0.0356,
+     "large_parts": 2,
+     "dark_halo": 0.0093,
+     "sha256": "fb5662074808728df338c89b31a3ddb49a9cc35a27e65ebd446044204722f26a"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.726,
+     "edge_touch": 0.0303,
+     "large_parts": 2,
+     "dark_halo": 0.0097,
+     "sha256": "551bddba773f4af0c536955c7e2405d3a4c9bdcdc6410801408a797bcb6c8776"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.733,
+     "edge_touch": 0.0303,
+     "large_parts": 1,
+     "dark_halo": 0.0045,
+     "sha256": "587133a6915b6b2c43fbf05c7720ef3002e5ef4d812087adc9c7ff4e00560dde"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.677,
+     "edge_touch": 0.0269,
+     "large_parts": 1,
+     "dark_halo": 0.0029,
+     "sha256": "f7e8466dda1529210348f633da603add5601721a63d5bd778123306baa3a5a9a"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_EOD_Engineer/Army_EOD_Engineer_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.695,
+     "edge_touch": 0.0356,
+     "large_parts": 1,
+     "dark_halo": 0.0053,
+     "sha256": "98b038122c73b09a6069d78ef6ca86b4815c03237819180e7c1437946a529758"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.753,
+     "edge_touch": 0.0469,
+     "large_parts": 3,
+     "dark_halo": 0.0009,
+     "sha256": "0b9693be67344b96490b70e48aa905e3e20b9d3044dde03b68a904df84cadcac"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.72,
+     "edge_touch": 0.0537,
+     "large_parts": 3,
+     "dark_halo": 0.0006,
+     "sha256": "c1cb437f84d558b68056aa2401cc47c225189cb7c86516ecd4596e9fd8f3ecd6"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.812,
+     "edge_touch": 0.0542,
+     "large_parts": 2,
+     "dark_halo": 0.0025,
+     "sha256": "7719c4fc559071c7724398f01a61304ca7cf7e749f4d92f5be0739c72481ff37"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.754,
+     "edge_touch": 0.0293,
+     "large_parts": 1,
+     "dark_halo": 0.0007,
+     "sha256": "e6a2fb880ed209b38d4b9a2a8a47104e1f095abafb9d6100b8adc8629bb834cb"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.749,
+     "edge_touch": 0.0527,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "5a92ff5292fbf0c21941fa0137cb463f73c349dd5105919e9ee3aec788f7d656"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Infantry_Rifleman/Army_Infantry_Rifleman_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.774,
+     "edge_touch": 0.0273,
+     "large_parts": 1,
+     "dark_halo": 0.001,
+     "sha256": "5e8f0c501e4f3b109be8a2d48abb5649081236fe309d152f7e6eb50c1b476ce3"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.71,
+     "edge_touch": 0.0586,
+     "large_parts": 3,
+     "dark_halo": 0.0032,
+     "sha256": "6e6ddf09fdc14f90260f65b907a376c897f70a22a7b9b6d8f53d8aa60e6e53fa"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.725,
+     "edge_touch": 0.0527,
+     "large_parts": 3,
+     "dark_halo": 0.0033,
+     "sha256": "64695680f5de41db305559657fbe1acae01aa0cb85c97c3782c6c3ef9ed4045c"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.803,
+     "edge_touch": 0.0542,
+     "large_parts": 2,
+     "dark_halo": 0.008,
+     "sha256": "fa2fd73d020f471b3cb7d16e9221a0e744e4bcd52423e2c0a0490a92f533f629"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.733,
+     "edge_touch": 0.0317,
+     "large_parts": 1,
+     "dark_halo": 0.0022,
+     "sha256": "09dc5a5e84b6dae6602d2214f9cc29e8f3010247d9013ad57ecbe72236ca564e"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.72,
+     "edge_touch": 0.0591,
+     "large_parts": 1,
+     "dark_halo": 0.003,
+     "sha256": "c7640e8cc33aee0926d531488cf78b12fdfd4c1de74ab5a65f366de86087ea66"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M240B_Gunner/Army_M240B_Gunner_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.738,
+     "edge_touch": 0.0293,
+     "large_parts": 1,
+     "dark_halo": 0.003,
+     "sha256": "599c3ab9f52b55ca2217b312e5e62eadf86027e7e024c9f2df39836165f7494a"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.768,
+     "edge_touch": 0.0234,
+     "large_parts": 2,
+     "dark_halo": 0.0046,
+     "sha256": "9224ee4815544e3de39e5952bc45e6bda848e82b61c89d9438697fd855d35ea1"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.739,
+     "edge_touch": 0.0298,
+     "large_parts": 2,
+     "dark_halo": 0.0045,
+     "sha256": "40b44d724c171cbbdbab6b4a3edba4f3da2866ef4ed0b010160fd311c22505d9"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.82,
+     "edge_touch": 0.0229,
+     "large_parts": 2,
+     "dark_halo": 0.0092,
+     "sha256": "112c497c6817f9c21502b103b1ecc751f591b686b033c271c3342ad5adc452d5"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.731,
+     "edge_touch": 0.0249,
+     "large_parts": 1,
+     "dark_halo": 0.0034,
+     "sha256": "1e2403d240fce7d32a1ab7f23badc06a5d44a32e3c833bccbee00f9f72ec582c"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.731,
+     "edge_touch": 0.0278,
+     "large_parts": 1,
+     "dark_halo": 0.0021,
+     "sha256": "a553c31bc59e2ddbb013e33207712730dbec5e0386e9fa0cbca7093143bddd3e"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_M249_SAW_Gunner/Army_M249_SAW_Gunner_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.756,
+     "edge_touch": 0.0298,
+     "large_parts": 1,
+     "dark_halo": 0.0028,
+     "sha256": "766bf417663fe071e2b1c10e34fbcc1f70c750f050ffa4601de94cce500800fa"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.735,
+     "edge_touch": 0.0566,
+     "large_parts": 3,
+     "dark_halo": 0.0033,
+     "sha256": "543efd7523c9c889c4aa66f824083bc6c2d8de1f3b24456999bcc4d60cb58a43"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.727,
+     "edge_touch": 0.0483,
+     "large_parts": 3,
+     "dark_halo": 0.0047,
+     "sha256": "da13410f7890d04862ba4ec6eb5122c03a65a4ae6591a1e71e232fd3979ce94e"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.77,
+     "edge_touch": 0.0396,
+     "large_parts": 1,
+     "dark_halo": 0.0047,
+     "sha256": "71ee12ee2d72a3ce84496a3820a5f34d006d5a10c2325c9c9b11d1a9dedba110"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.745,
+     "edge_touch": 0.0205,
+     "large_parts": 1,
+     "dark_halo": 0.0025,
+     "sha256": "bc42bc7ede2268a316a58f228214d84e6885b695c4c654b77ee82e20c26da862"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.719,
+     "edge_touch": 0.0566,
+     "large_parts": 1,
+     "dark_halo": 0.0023,
+     "sha256": "258b124c4d4af55bfee6674410b0719b64e4c03308e50c4bf1052d0c02ad60cf"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Medic/Army_Medic_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.727,
+     "edge_touch": 0.0283,
+     "large_parts": 1,
+     "dark_halo": 0.0021,
+     "sha256": "074cc044926e71179c2bcadf09d51a0e8f273416e55ed2d6bc7d53f4eb924d6b"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.705,
+     "edge_touch": 0.0435,
+     "large_parts": 3,
+     "dark_halo": 0.0013,
+     "sha256": "99c37fb4b560440daba5d67363ccd230f8d328a88b9237d313bb8370a84fa3f5"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.705,
+     "edge_touch": 0.0625,
+     "large_parts": 3,
+     "dark_halo": 0.0018,
+     "sha256": "d76fa4a5d2d1e6478c6e54460b8fc66d33d2eafac73e097c367001d8f6331efb"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.782,
+     "edge_touch": 0.0366,
+     "large_parts": 2,
+     "dark_halo": 0.0012,
+     "sha256": "16543f878343c17a59011f11068ff246a874a3e6e5f686046cf60e18d6018bc7"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.695,
+     "edge_touch": 0.021,
+     "large_parts": 1,
+     "dark_halo": 0.001,
+     "sha256": "1d1d71e68ffdc40f24f62c24b8e04ed69aab08574423b0d191614a015358624d"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.676,
+     "edge_touch": 0.0435,
+     "large_parts": 1,
+     "dark_halo": 0.0007,
+     "sha256": "bff518178f438812d09624e7886093f860892feb58690f8deb1bbdee2fb0b97d"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Sniper_Ghillie/Army_Sniper_Ghillie_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.69,
+     "edge_touch": 0.0479,
+     "large_parts": 1,
+     "dark_halo": 0.0003,
+     "sha256": "68f5b6c4dfea6e4f96ec8485ba66d0a7dd7fbb665001776401696b74da0d6b7b"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.743,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0016,
+     "sha256": "406727d97dd84154e5c19a01746513d6af41b9611530880f2dc1e66f750d7fe2"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.728,
+     "edge_touch": 0.0518,
+     "large_parts": 3,
+     "dark_halo": 0.0021,
+     "sha256": "5ac1bd30e83939b5e32645000182c426eed7cd2bdad1eb54d141f34906c6e7ea"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.809,
+     "edge_touch": 0.0444,
+     "large_parts": 1,
+     "dark_halo": 0.0054,
+     "sha256": "81891b9380ca9b46012287692774990a189a5d09131bd5533324ee151cf1a8ad"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.755,
+     "edge_touch": 0.0186,
+     "large_parts": 1,
+     "dark_halo": 0.0024,
+     "sha256": "357463ae49350767c2b1b8b1980310e0da4d881cbde854c9d4bcfcfb56c36e9e"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.743,
+     "edge_touch": 0.0088,
+     "large_parts": 1,
+     "dark_halo": 0.0017,
+     "sha256": "f661c18b6e871e29ea8f16bf4ef7bf3bfe23a0604ce94fdbe4b8cc8fd1798ee4"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/Army_Special_Forces/Army_Special_Forces_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.768,
+     "edge_touch": 0.0259,
+     "large_parts": 1,
+     "dark_halo": 0.0025,
+     "sha256": "73d28596e59516f35c3e9dc8aa4854857c58c024b480ff7e6f6687abfcf4fe3d"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.771,
+     "edge_touch": 0.0317,
+     "large_parts": 2,
+     "dark_halo": 0.011,
+     "sha256": "a5d1a518e92a2e68abcb72cd5e56d2f54479d9a40f9377161f6892362b171dd2"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.719,
+     "edge_touch": 0.0234,
+     "large_parts": 2,
+     "dark_halo": 0.0098,
+     "sha256": "ed143033bca30b8d764cceec4a64b52486ce975a5f1d99c035e9331af550529b"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.797,
+     "edge_touch": 0.0278,
+     "large_parts": 2,
+     "dark_halo": 0.0145,
+     "sha256": "f99d7be9774782aea5a47307c8af295c50f73912429960f94ad4458b1d38912e"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.783,
+     "edge_touch": 0.0293,
+     "large_parts": 1,
+     "dark_halo": 0.0086,
+     "sha256": "13c4a1501a459c78e34471467853943e3b085bca98c47bf60afd782ff847fe4a"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.757,
+     "edge_touch": 0.0352,
+     "large_parts": 1,
+     "dark_halo": 0.0088,
+     "sha256": "23c8c3877faeaac1d90abca5d0f992c92156591c36b1382f710b71ab527d5562"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Flightline_Support/USAF_Flightline_Support_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.767,
+     "edge_touch": 0.0254,
+     "large_parts": 1,
+     "dark_halo": 0.0077,
+     "sha256": "527d69f8d58934f9683ed66225809e13bdc7173f458314ba2de6bd84dc1ce683"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.763,
+     "edge_touch": 0.0396,
+     "large_parts": 2,
+     "dark_halo": 0.0014,
+     "sha256": "9df225f9e7be5e8f53beac9c12abc911d7838c22ca78ed33ccc1ebd834cc53a5"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.736,
+     "edge_touch": 0.0322,
+     "large_parts": 2,
+     "dark_halo": 0.0016,
+     "sha256": "d26cc644f031cf757763bb003090514e80937a79ed4c97a45cd6f78317c98b94"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.776,
+     "edge_touch": 0.0249,
+     "large_parts": 2,
+     "dark_halo": 0.0035,
+     "sha256": "43609c08d9dffc2a26243275dac4d8de4eb7dfa0c484bab241e8da7c102cb2b5"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.776,
+     "edge_touch": 0.0244,
+     "large_parts": 1,
+     "dark_halo": 0.0009,
+     "sha256": "c7d8c2b2f8e840cc52e04efe94846c76c06ad4f77cdee5092f3b42cef4769393"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.759,
+     "edge_touch": 0.041,
+     "large_parts": 1,
+     "dark_halo": 0.0006,
+     "sha256": "2e0bf651f30246ca2914e8c26e5afdfaf185896194d0a707c4afe455a447a6b8"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_Helmet/USAF_Pilot_Helmet_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.772,
+     "edge_touch": 0.0322,
+     "large_parts": 1,
+     "dark_halo": 0.0006,
+     "sha256": "61642446e76c7940a5912a125ca96a788725727e69e5fcabe30c3acb6f715b63"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_crouched_movement.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.742,
+     "edge_touch": 0.0386,
+     "large_parts": 3,
+     "dark_halo": 0.0046,
+     "sha256": "eb1de81fdfb92545b43d4e123ca4ff31f6ec7fb4fef31249baa575ceb1a8304c"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_kneeling.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.681,
+     "edge_touch": 0.083,
+     "large_parts": 4,
+     "dark_halo": 0.0034,
+     "sha256": "7906daa4c11c8aa617fd1b3e4d9cca8e38566e7ae646e20a5b9e9f1200a03c83"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_low_profile.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.788,
+     "edge_touch": 0.0542,
+     "large_parts": 2,
+     "dark_halo": 0.0052,
+     "sha256": "c25fce8cb285bd185decb2cb01f6ad7c8ecf26382604902a9cb40c9fea43f265"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_running.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.763,
+     "edge_touch": 0.0278,
+     "large_parts": 1,
+     "dark_halo": 0.0014,
+     "sha256": "9b0ecbec864b1b6859f1e3dec78dcd5fb7ba6162148b5cca6318393c34682e84"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_standing_ready.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.75,
+     "edge_touch": 0.0376,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "c71d3342c803f25e116a33e641978c38e8482c34c12e87760d4b9476cd7b272c"
+    },
+    {
+     "path": "US_Armed_Forces_Personnel_Assets/US_Armed_Forces_Personnel_Assets/individual_poses/USAF_Pilot_No_Helmet/USAF_Pilot_No_Helmet_walking.png",
+     "ok": true,
+     "size": [
+      512,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.766,
+     "edge_touch": 0.0586,
+     "large_parts": 1,
+     "dark_halo": 0.0014,
+     "sha256": "6f061a91287805b550ec7afed45be222695ed374358af56f9857372289cd0883"
+    }
+   ]
+  },
+  "US_Ground_Forces_Game_Assets__1_": {
+   "png_files": 65,
+   "contact_sheets": 13,
+   "crops": 52,
+   "corrupt": [
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_front_three_quarter.png"
+   ],
+   "clipped_crops": [
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_side_profile.png"
+   ],
+   "multi_part_crops": [
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_rear_three_quarter.png"
+   ],
+   "manifest_rows": 52,
+   "manifest_missing_files": [],
+   "files": [
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/HMMWV_50cal_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.469,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.003,
+     "sha256": "717742b45ea90d63b08ab8a584c3dfe05b2a0985d7a82b6ecddf36ccad80b1d7"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/HMMWV_Humvee_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.525,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0034,
+     "sha256": "66e775da81dccec6246dc2afb31f9df142729ccbf8eb25e5c24df0d63922e398"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/HMMWV_Medical_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.518,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0014,
+     "sha256": "119c97ebe9cf42cbd49136a1a693a19c1c007256e1e1c968b2462769c75023b5"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/HMMWV_TOW_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.49,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.003,
+     "sha256": "cbd44fe13b78d4f8d33076bdc4f4ca2734fc08c4ac46c2e67c8d1e829c195e07"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M1097_Avenger_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.526,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0026,
+     "sha256": "ca515766094679d6ca7832f6127d13fac2756346652ffce3324ba9952a09eec5"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M109A7_Paladin_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.551,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0026,
+     "sha256": "44710a9c6e6be00958ce67c15b4c07f99bef0738683b31e30a00365f12eba670"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M1126_Stryker_ICV_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.494,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0028,
+     "sha256": "86680c4a5d46b34d207502b4e2117b73c92a698069acefd4de2f18c8f6b145d9"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M113_APC_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.446,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0013,
+     "sha256": "c41fc1ea2f873ea4bb637c98ba1f2c025fb778a063d7241f3a892c2be3878fc6"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M1A2_Abrams_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.562,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0027,
+     "sha256": "1ab58f3464e953f58ab601b77f59d9e275fdd4ad9ef35e67d91ee190a5733e46"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M2A3_Bradley_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.496,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0016,
+     "sha256": "95b247c14f43940840339034ab74ace80ac715da7c3f3520343d80345e4267ff"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M777_Howitzer_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.794,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.002,
+     "sha256": "d37cce9ae1c3a3761557e8eeadb544cd849dafdc3b31ce5b15e94813968df7be"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/M88A2_Hercules_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.46,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0026,
+     "sha256": "91db1ec7b8e6be1fa5fa75f6484a37618ff8ec87209e3fb64838e2576eefb8ed"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/contact_sheets/MRAP_M-ATV_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.498,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0018,
+     "sha256": "bd2f2ec40577afceee09f2799b2106770edf819204cd5a34a94eecb420ae1ba1"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.478,
+     "edge_touch": 0.1535,
+     "large_parts": 2,
+     "dark_halo": 0.0035,
+     "sha256": "6efc5e9331dde18ce2e608b1f101440ce2d4498561626d6560f016a30221aeb1"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.372,
+     "edge_touch": 0.127,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "2c70c0984d48364d3fedf1126267563b742aeda44a3a71a9316069ce83cc42d5"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.522,
+     "edge_touch": 0.1055,
+     "large_parts": 2,
+     "dark_halo": 0.005,
+     "sha256": "845352bcfe2ef1605ce8f3d4ba0301592bbc4c2406d61f8f01fce4efdc57cec9"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_50cal/HMMWV_50cal_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.506,
+     "edge_touch": 0.0801,
+     "large_parts": 1,
+     "dark_halo": 0.0037,
+     "sha256": "b2dd8e4818960273fd0fe39bda32bcf81a4e5c95d97efbc2156d9357bb0ae8cb"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.71,
+     "edge_touch": 0.0863,
+     "large_parts": 1,
+     "dark_halo": 0.0013,
+     "sha256": "5b0ca7ec7a41ced90456ec8d0ac076b8bc448e5107b2b977728e6ae85e3d825c"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.469,
+     "edge_touch": 0.1633,
+     "large_parts": 2,
+     "dark_halo": 0.0055,
+     "sha256": "3374486fbca66ecf99147192e5af2586fecbc6dbb0656f483e4f6439d889e570"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.511,
+     "edge_touch": 0.1797,
+     "large_parts": 1,
+     "dark_halo": 0.003,
+     "sha256": "34688767f67ad853901e0fea431f55023196d26110ce1a22770ab4fe7b495172"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.439,
+     "edge_touch": 0.0379,
+     "large_parts": 1,
+     "dark_halo": 0.0017,
+     "sha256": "e2d3717d809e8b18c422189e0bf4b2a6662e6e776bd3afa9409e7fa8b9ed3528"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.645,
+     "edge_touch": 0.1133,
+     "large_parts": 1,
+     "dark_halo": 0.0002,
+     "sha256": "9439e115995e5546853d38827a02ce7a1ce9ec13ddda046ae8eb1ce8488980d3"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.508,
+     "edge_touch": 0.1465,
+     "large_parts": 3,
+     "dark_halo": 0.0019,
+     "sha256": "e36640ecfba99db4505e1e7d8091cfa58ef7490a2c302159255cd5e64c15ab92"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Medical/HMMWV_Medical_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.479,
+     "edge_touch": 0.2219,
+     "large_parts": 2,
+     "dark_halo": 0.0015,
+     "sha256": "eef7b12bc75942caede7acf87f464ca808b624e3831e7f9b13503f430d262d25"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.489,
+     "edge_touch": 0.0941,
+     "large_parts": 2,
+     "dark_halo": 0.0032,
+     "sha256": "360550b59b9cfc0c9555cd6dd3c4ebae3289398d250f080e64eff65d438afc08"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.404,
+     "edge_touch": 0.0598,
+     "large_parts": 1,
+     "dark_halo": 0.0007,
+     "sha256": "388a3d53b9b3680d279ef6db4fcb252585e24507dc5163912d573196ebd5fe06"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.527,
+     "edge_touch": 0.0953,
+     "large_parts": 3,
+     "dark_halo": 0.0049,
+     "sha256": "c0cff54488cce5159ae8d1b3a514bfab507bf7ee46ba550ec0ecd8620ac1e644"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/HMMWV_TOW/HMMWV_TOW_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.538,
+     "edge_touch": 0.0598,
+     "large_parts": 1,
+     "dark_halo": 0.0036,
+     "sha256": "fa6f92430cee6dec17cd472228d898602fd2993e4685f62895841c14587dd860"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.601,
+     "edge_touch": 0.0895,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "4200415a89b3551283e168d5b56f9c10b364fcdcd71c90d4e3b099c45e1eb414"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.503,
+     "edge_touch": 0.1078,
+     "large_parts": 2,
+     "dark_halo": 0.0039,
+     "sha256": "24516bfcdb0aa26441717bd00e4f29d7fa1b3790fbcc4dd1ee9cacdf334c20d9"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.524,
+     "edge_touch": 0.1715,
+     "large_parts": 2,
+     "dark_halo": 0.0021,
+     "sha256": "2f4f801eef54fd54febb0d2755544b8ca6c5d94fdeed8e0774f94c07fc63c467"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.539,
+     "edge_touch": 0.009,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "32a583d6b39e5e018e43beacaf87b67e962ccbf14a1bc542ce81816ab3f47363"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.564,
+     "edge_touch": 0.0086,
+     "large_parts": 2,
+     "dark_halo": 0.0033,
+     "sha256": "2de5490c835d59e6d7391a6f0503a0e215dbe98e5946e58493df7f34a2583468"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.553,
+     "edge_touch": 0.0098,
+     "large_parts": 1,
+     "dark_halo": 0.0029,
+     "sha256": "f1d156472a8cdbc3bcd24f3675b9a2bec89bf6c304248ab53f25f75e444543b6"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.493,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.004,
+     "sha256": "18aee27fddcdfa02e886c0519b0154d450d6611851c147a8be0f5be2ac8dcb00"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.397,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "6246353de08ae57d1360567d453c1200867a195835d26f8a04fb7facd88ad38d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.515,
+     "edge_touch": 0.0129,
+     "large_parts": 1,
+     "dark_halo": 0.0037,
+     "sha256": "e33a3110110c76be6b371bfa9cf24c199fe8562ed9fa0ce7a16800331139e2aa"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.57,
+     "edge_touch": 0.0176,
+     "large_parts": 1,
+     "dark_halo": 0.0031,
+     "sha256": "5c0260fd57804cfc09515044a3e00b0244156f09494d23d24f9a5f0b9da1305d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.441,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0019,
+     "sha256": "e93660308dd14f4af7f539ac0c35ccdcf9ba1d2ecce7076bcb8fca7aaf416e5c"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.407,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "7684298bd38597dfafe69637424a0c559235daaa43739f9987d07ad10b853bdf"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.479,
+     "edge_touch": 0.0121,
+     "large_parts": 1,
+     "dark_halo": 0.0015,
+     "sha256": "fb4771ed4e4815076b285f2fb99a7fafeabbe94698488be4759f9f5dec7b323f"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.455,
+     "edge_touch": 0.0129,
+     "large_parts": 1,
+     "dark_halo": 0.0014,
+     "sha256": "245bcc788ae0853967a2397d808bb9b5c5ee4073254bffc0ebce39faeeb462aa"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.517,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "9d1993465964b92e6b760d53a6583d38ea4697c94f72d2b79d5f161402dda5f2"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.568,
+     "edge_touch": 0.0395,
+     "large_parts": 2,
+     "dark_halo": 0.0037,
+     "sha256": "8140c2e6103e32af824c45a30f3c88e63ab40ec8da9a3cf789e84ea10166387f"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.618,
+     "edge_touch": 0.0402,
+     "large_parts": 1,
+     "dark_halo": 0.0038,
+     "sha256": "1e98e18f37a76440e67c77df721c0ea742ded53f13f7cb3a7efaa0f179090068"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.523,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0028,
+     "sha256": "3fc0af03d3d49fc72571e7ff98a699db8a02029ff2f21588d56af69b4f50fd86"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.447,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0003,
+     "sha256": "ee5b12a7716f67f876f9d9676a442b3b455a2a2e33326ac53fa3765e26c527b5"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.516,
+     "edge_touch": 0.0535,
+     "large_parts": 2,
+     "dark_halo": 0.0011,
+     "sha256": "6652ee57dcd8269a5b06ba693f52038ea2bd2eddd5829c5c0b3f67d37a004955"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.497,
+     "edge_touch": 0.0559,
+     "large_parts": 1,
+     "dark_halo": 0.0026,
+     "sha256": "383b65770e7aada3c84874170111dcbbce9e4509810b2de15d398f92d7cc8651"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.785,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.003,
+     "sha256": "bf63a30543796e3e4a8a07019f7ddcbe5d0d5658f9450649cc2268c1ef79ee5e"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.789,
+     "edge_touch": 0.0059,
+     "large_parts": 1,
+     "dark_halo": 0.0017,
+     "sha256": "c77268414e2c1746b14788b95f4d4ac0ae1d32a7e32dae8dd0f9b899e5c512d4"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.761,
+     "edge_touch": 0.0063,
+     "large_parts": 1,
+     "dark_halo": 0.0011,
+     "sha256": "7284a0654bc59b3416f8e5850d2487ba9ffb9956d0c3753a5c0de42f764dd605"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.841,
+     "edge_touch": 0.0109,
+     "large_parts": 1,
+     "dark_halo": 0.0022,
+     "sha256": "2513a7e923da12fa973d43aed4754464751155f202facae026dea3a0f312d075"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.469,
+     "edge_touch": 0.1344,
+     "large_parts": 2,
+     "dark_halo": 0.0019,
+     "sha256": "68a0676350940f7f1ced8d3a9114b35597ba9d5b7bb2ee48ef894051905e7cad"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.36,
+     "edge_touch": 0.1348,
+     "large_parts": 1,
+     "dark_halo": 0.0013,
+     "sha256": "32111a8413db8595041f4b6655a707496246ec5f61f8b040f83ac73e0d7f040b"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.502,
+     "edge_touch": 0.1008,
+     "large_parts": 2,
+     "dark_halo": 0.004,
+     "sha256": "94dd14976eac5df785ebfae327c61bd52ea2f320bcc65a5b9867ac41be5f7d47"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.508,
+     "edge_touch": 0.1008,
+     "large_parts": 1,
+     "dark_halo": 0.0036,
+     "sha256": "078ae3a56c0e9eea011dc860e5117c64f0720d2ca1c6d2981545e0edfa3d102d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.48,
+     "edge_touch": 0.0035,
+     "large_parts": 1,
+     "dark_halo": 0.0026,
+     "sha256": "251e765d5e0f7e3d78982dbd8e4b577db5ee3e9a742d194ccf0df1cb7c8b2bd4"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.519,
+     "edge_touch": 0.0023,
+     "large_parts": 1,
+     "dark_halo": 0.0006,
+     "sha256": "93f46d2b9b946f275a6fbd36dae9ebb2a2af377a6d641130ed77ba4925957f1f"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.489,
+     "edge_touch": 0.0691,
+     "large_parts": 2,
+     "dark_halo": 0.0023,
+     "sha256": "244f27fb1f56eaf1d00a4379b4b5a95d2d58f3c180df06742675c030a58f267d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets__1_/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.502,
+     "edge_touch": 0.0676,
+     "large_parts": 1,
+     "dark_halo": 0.0015,
+     "sha256": "61d89f1912a62c505634d5ec3b73762a22923183816c532069cb2ba35470589a"
+    }
+   ]
+  },
+  "US_Ground_Forces_Game_Assets": {
+   "png_files": 50,
+   "contact_sheets": 10,
+   "crops": 40,
+   "corrupt": [
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_front_three_quarter.png"
+   ],
+   "clipped_crops": [
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_overhead.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_side_profile.png"
+   ],
+   "multi_part_crops": [
+    "US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_side_profile.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_front_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_rear_three_quarter.png",
+    "US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_rear_three_quarter.png"
+   ],
+   "manifest_rows": 40,
+   "manifest_missing_files": [],
+   "files": [
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/HMMWV_Humvee_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.525,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0034,
+     "sha256": "66e775da81dccec6246dc2afb31f9df142729ccbf8eb25e5c24df0d63922e398"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M1097_Avenger_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.526,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0026,
+     "sha256": "ca515766094679d6ca7832f6127d13fac2756346652ffce3324ba9952a09eec5"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M109A7_Paladin_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.551,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0026,
+     "sha256": "44710a9c6e6be00958ce67c15b4c07f99bef0738683b31e30a00365f12eba670"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M1126_Stryker_ICV_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.494,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0028,
+     "sha256": "86680c4a5d46b34d207502b4e2117b73c92a698069acefd4de2f18c8f6b145d9"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M113_APC_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.446,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0013,
+     "sha256": "c41fc1ea2f873ea4bb637c98ba1f2c025fb778a063d7241f3a892c2be3878fc6"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M1A2_Abrams_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.562,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0027,
+     "sha256": "1ab58f3464e953f58ab601b77f59d9e275fdd4ad9ef35e67d91ee190a5733e46"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M2A3_Bradley_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.496,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0016,
+     "sha256": "95b247c14f43940840339034ab74ace80ac715da7c3f3520343d80345e4267ff"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M777_Howitzer_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.794,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.002,
+     "sha256": "d37cce9ae1c3a3761557e8eeadb544cd849dafdc3b31ce5b15e94813968df7be"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/M88A2_Hercules_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.46,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0026,
+     "sha256": "91db1ec7b8e6be1fa5fa75f6484a37618ff8ec87209e3fb64838e2576eefb8ed"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/contact_sheets/MRAP_M-ATV_4view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.498,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0018,
+     "sha256": "bd2f2ec40577afceee09f2799b2106770edf819204cd5a34a94eecb420ae1ba1"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.71,
+     "edge_touch": 0.0863,
+     "large_parts": 1,
+     "dark_halo": 0.0013,
+     "sha256": "5b0ca7ec7a41ced90456ec8d0ac076b8bc448e5107b2b977728e6ae85e3d825c"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.469,
+     "edge_touch": 0.1633,
+     "large_parts": 2,
+     "dark_halo": 0.0055,
+     "sha256": "3374486fbca66ecf99147192e5af2586fecbc6dbb0656f483e4f6439d889e570"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/HMMWV_Humvee/HMMWV_Humvee_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.511,
+     "edge_touch": 0.1797,
+     "large_parts": 1,
+     "dark_halo": 0.003,
+     "sha256": "34688767f67ad853901e0fea431f55023196d26110ce1a22770ab4fe7b495172"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.601,
+     "edge_touch": 0.0895,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "4200415a89b3551283e168d5b56f9c10b364fcdcd71c90d4e3b099c45e1eb414"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.503,
+     "edge_touch": 0.1078,
+     "large_parts": 2,
+     "dark_halo": 0.0039,
+     "sha256": "24516bfcdb0aa26441717bd00e4f29d7fa1b3790fbcc4dd1ee9cacdf334c20d9"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1097_Avenger/M1097_Avenger_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.524,
+     "edge_touch": 0.1715,
+     "large_parts": 2,
+     "dark_halo": 0.0021,
+     "sha256": "2f4f801eef54fd54febb0d2755544b8ca6c5d94fdeed8e0774f94c07fc63c467"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.539,
+     "edge_touch": 0.009,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "32a583d6b39e5e018e43beacaf87b67e962ccbf14a1bc542ce81816ab3f47363"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.564,
+     "edge_touch": 0.0086,
+     "large_parts": 2,
+     "dark_halo": 0.0033,
+     "sha256": "2de5490c835d59e6d7391a6f0503a0e215dbe98e5946e58493df7f34a2583468"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M109A7_Paladin/M109A7_Paladin_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.553,
+     "edge_touch": 0.0098,
+     "large_parts": 1,
+     "dark_halo": 0.0029,
+     "sha256": "f1d156472a8cdbc3bcd24f3675b9a2bec89bf6c304248ab53f25f75e444543b6"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.493,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.004,
+     "sha256": "18aee27fddcdfa02e886c0519b0154d450d6611851c147a8be0f5be2ac8dcb00"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.397,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0008,
+     "sha256": "6246353de08ae57d1360567d453c1200867a195835d26f8a04fb7facd88ad38d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.515,
+     "edge_touch": 0.0129,
+     "large_parts": 1,
+     "dark_halo": 0.0037,
+     "sha256": "e33a3110110c76be6b371bfa9cf24c199fe8562ed9fa0ce7a16800331139e2aa"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1126_Stryker_ICV/M1126_Stryker_ICV_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.57,
+     "edge_touch": 0.0176,
+     "large_parts": 1,
+     "dark_halo": 0.0031,
+     "sha256": "5c0260fd57804cfc09515044a3e00b0244156f09494d23d24f9a5f0b9da1305d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.441,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0019,
+     "sha256": "e93660308dd14f4af7f539ac0c35ccdcf9ba1d2ecce7076bcb8fca7aaf416e5c"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.407,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "7684298bd38597dfafe69637424a0c559235daaa43739f9987d07ad10b853bdf"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.479,
+     "edge_touch": 0.0121,
+     "large_parts": 1,
+     "dark_halo": 0.0015,
+     "sha256": "fb4771ed4e4815076b285f2fb99a7fafeabbe94698488be4759f9f5dec7b323f"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M113_APC/M113_APC_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.455,
+     "edge_touch": 0.0129,
+     "large_parts": 1,
+     "dark_halo": 0.0014,
+     "sha256": "245bcc788ae0853967a2397d808bb9b5c5ee4073254bffc0ebce39faeeb462aa"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.517,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "9d1993465964b92e6b760d53a6583d38ea4697c94f72d2b79d5f161402dda5f2"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.568,
+     "edge_touch": 0.0395,
+     "large_parts": 2,
+     "dark_halo": 0.0037,
+     "sha256": "8140c2e6103e32af824c45a30f3c88e63ab40ec8da9a3cf789e84ea10166387f"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M1A2_Abrams/M1A2_Abrams_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.618,
+     "edge_touch": 0.0402,
+     "large_parts": 1,
+     "dark_halo": 0.0038,
+     "sha256": "1e98e18f37a76440e67c77df721c0ea742ded53f13f7cb3a7efaa0f179090068"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.523,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0028,
+     "sha256": "3fc0af03d3d49fc72571e7ff98a699db8a02029ff2f21588d56af69b4f50fd86"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.447,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.0003,
+     "sha256": "ee5b12a7716f67f876f9d9676a442b3b455a2a2e33326ac53fa3765e26c527b5"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.516,
+     "edge_touch": 0.0535,
+     "large_parts": 2,
+     "dark_halo": 0.0011,
+     "sha256": "6652ee57dcd8269a5b06ba693f52038ea2bd2eddd5829c5c0b3f67d37a004955"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M2A3_Bradley/M2A3_Bradley_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.497,
+     "edge_touch": 0.0559,
+     "large_parts": 1,
+     "dark_halo": 0.0026,
+     "sha256": "383b65770e7aada3c84874170111dcbbce9e4509810b2de15d398f92d7cc8651"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.785,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.003,
+     "sha256": "bf63a30543796e3e4a8a07019f7ddcbe5d0d5658f9450649cc2268c1ef79ee5e"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.789,
+     "edge_touch": 0.0059,
+     "large_parts": 1,
+     "dark_halo": 0.0017,
+     "sha256": "c77268414e2c1746b14788b95f4d4ac0ae1d32a7e32dae8dd0f9b899e5c512d4"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.761,
+     "edge_touch": 0.0063,
+     "large_parts": 1,
+     "dark_halo": 0.0011,
+     "sha256": "7284a0654bc59b3416f8e5850d2487ba9ffb9956d0c3753a5c0de42f764dd605"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M777_Howitzer/M777_Howitzer_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.841,
+     "edge_touch": 0.0109,
+     "large_parts": 1,
+     "dark_halo": 0.0022,
+     "sha256": "2513a7e923da12fa973d43aed4754464751155f202facae026dea3a0f312d075"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.469,
+     "edge_touch": 0.1344,
+     "large_parts": 2,
+     "dark_halo": 0.0019,
+     "sha256": "68a0676350940f7f1ced8d3a9114b35597ba9d5b7bb2ee48ef894051905e7cad"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.36,
+     "edge_touch": 0.1348,
+     "large_parts": 1,
+     "dark_halo": 0.0013,
+     "sha256": "32111a8413db8595041f4b6655a707496246ec5f61f8b040f83ac73e0d7f040b"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.502,
+     "edge_touch": 0.1008,
+     "large_parts": 2,
+     "dark_halo": 0.004,
+     "sha256": "94dd14976eac5df785ebfae327c61bd52ea2f320bcc65a5b9867ac41be5f7d47"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/M88A2_Hercules/M88A2_Hercules_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.508,
+     "edge_touch": 0.1008,
+     "large_parts": 1,
+     "dark_halo": 0.0036,
+     "sha256": "078ae3a56c0e9eea011dc860e5117c64f0720d2ca1c6d2981545e0edfa3d102d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.48,
+     "edge_touch": 0.0035,
+     "large_parts": 1,
+     "dark_halo": 0.0026,
+     "sha256": "251e765d5e0f7e3d78982dbd8e4b577db5ee3e9a742d194ccf0df1cb7c8b2bd4"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_overhead.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.519,
+     "edge_touch": 0.0023,
+     "large_parts": 1,
+     "dark_halo": 0.0006,
+     "sha256": "93f46d2b9b946f275a6fbd36dae9ebb2a2af377a6d641130ed77ba4925957f1f"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.489,
+     "edge_touch": 0.0691,
+     "large_parts": 2,
+     "dark_halo": 0.0023,
+     "sha256": "244f27fb1f56eaf1d00a4379b4b5a95d2d58f3c180df06742675c030a58f267d"
+    },
+    {
+     "path": "US_Ground_Forces_Game_Assets/US_Ground_Forces_Game_Assets/individual_views/MRAP_M-ATV/MRAP_M-ATV_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.502,
+     "edge_touch": 0.0676,
+     "large_parts": 1,
+     "dark_halo": 0.0015,
+     "sha256": "61d89f1912a62c505634d5ec3b73762a22923183816c532069cb2ba35470589a"
+    }
+   ]
+  },
+  "US_Aircraft_Game_Assets_Expanded_1": {
+   "png_files": 55,
+   "contact_sheets": 11,
+   "crops": 44,
+   "corrupt": [
+    "individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_front_three_quarter.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_front_three_quarter.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_front_three_quarter.png"
+   ],
+   "clipped_crops": [
+    "individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_overhead_game_view.png",
+    "individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_rear_three_quarter.png",
+    "individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_side_profile.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_front_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_overhead_game_view.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_rear_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_side_profile.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_front_three_quarter.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_overhead_game_view.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_rear_three_quarter.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_side_profile.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_overhead_game_view.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_rear_three_quarter.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_side_profile.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_overhead_game_view.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_rear_three_quarter.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_side_profile.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_front_three_quarter.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_overhead_game_view.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_rear_three_quarter.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_side_profile.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_front_three_quarter.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_overhead_game_view.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_rear_three_quarter.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_side_profile.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_overhead_game_view.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_rear_three_quarter.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_side_profile.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_front_three_quarter.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_overhead_game_view.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_rear_three_quarter.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_side_profile.png",
+    "individual_views/SR-71_Blackbird/SR-71_Blackbird_overhead_game_view.png",
+    "individual_views/SR-71_Blackbird/SR-71_Blackbird_rear_three_quarter.png",
+    "individual_views/SR-71_Blackbird/SR-71_Blackbird_side_profile.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_front_three_quarter.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_overhead_game_view.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_rear_three_quarter.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_side_profile.png"
+   ],
+   "multi_part_crops": [
+    "individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_rear_three_quarter.png",
+    "individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_side_profile.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_front_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_rear_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_side_profile.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_rear_three_quarter.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_side_profile.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_side_profile.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_rear_three_quarter.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_side_profile.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_rear_three_quarter.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_side_profile.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_overhead_game_view.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_rear_three_quarter.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_side_profile.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_rear_three_quarter.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_side_profile.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_rear_three_quarter.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_side_profile.png",
+    "individual_views/SR-71_Blackbird/SR-71_Blackbird_rear_three_quarter.png",
+    "individual_views/SR-71_Blackbird/SR-71_Blackbird_side_profile.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_overhead_game_view.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_rear_three_quarter.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_side_profile.png"
+   ],
+   "manifest_rows": 0,
+   "manifest_missing_files": [],
+   "files": [
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/A-10_Thunderbolt_II_Warthog_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.686,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0004,
+     "sha256": "648e0c712df6847a3927dcf7c5390107a7322dea7b070d204b0084c39ba75749"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/AH-64_Apache_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.703,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0053,
+     "sha256": "e89854e4d32f4825105be07faa6703360a2e3599b8f5fd2bc502eef5d7a6b9a8"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/B-1_Lancer_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.772,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0014,
+     "sha256": "346253dacbd67804f9aa0c0367645a93d6d5c2d10da9974cd7a215477214da31"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/B-2_Spirit_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.757,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0016,
+     "sha256": "e3a39bc8b2da4c4b66260a27b0114f7becd8bb7bf054c06b65741aaf113fa5e1"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/B-52_Stratofortress_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.774,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.001,
+     "sha256": "57d758f817baf5873d62e6db831bdf7a915f2b80e068a0b9d8e636ccbb9b1819"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/CH-47_Chinook_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.755,
+     "edge_touch": 0.0008,
+     "large_parts": 4,
+     "dark_halo": 0.0047,
+     "sha256": "c6030dcadcd287594f419ed78d48b5473990f4a32e8f3db82434649227162396"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/F-16_Fighting_Falcon_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.718,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0001,
+     "sha256": "ff1ef1137c2b46cd3e2b6268c4c15345d75716a18d1030d646927f2a8a971dd9"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/F-22_Raptor_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.7,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0013,
+     "sha256": "a69a8f603ff956a9afe7d6be3bf5a975cf80801a33805bab6d5ca0fc0e2f64fb"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/F-A-18_Hornet_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.723,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0002,
+     "sha256": "e5ef2375af79a9ebb156b1c74da713f122449c1ccc182a2cca8292d97fe51e17"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/SR-71_Blackbird_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.732,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0057,
+     "sha256": "c186c136cec8a6e229a0798fb97ec47b7ddee3d1e0a147d3e38b86f23f16c7a6"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/contact_sheets/UH-60_Black_Hawk_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.739,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0043,
+     "sha256": "b87f050ac4e45a0e4144658a727ef6cf9e03cf79d57780e5d2baa428276a3228"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.624,
+     "edge_touch": 0.0258,
+     "large_parts": 1,
+     "dark_halo": 0.0003,
+     "sha256": "a6d0900b00b1cca7f3ce7d997c3f1ea76fd8f48f47e174d4146842f67bc1f6e4"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.676,
+     "edge_touch": 0.0637,
+     "large_parts": 2,
+     "dark_halo": 0.0005,
+     "sha256": "e8f1a304f258f314a81f0cd0531885675c49c1dbe55715e952f303ddb243020a"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.755,
+     "edge_touch": 0.0891,
+     "large_parts": 2,
+     "dark_halo": 0.0004,
+     "sha256": "665686a609bb4f936589b85a5ce5aec24a08067cdf4dabdb1701eb5957c65c07"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/AH-64_Apache/AH-64_Apache_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.672,
+     "edge_touch": 0.0336,
+     "large_parts": 2,
+     "dark_halo": 0.0042,
+     "sha256": "7424997711de0a9dd45889ef491321a2ab32a4ba55620ca7ab7fcfa7d85c8047"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/AH-64_Apache/AH-64_Apache_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.689,
+     "edge_touch": 0.0703,
+     "large_parts": 1,
+     "dark_halo": 0.0011,
+     "sha256": "d17d6c734ba8a25f428deb190df0a79676cc26a7d2ca991bf3e5a9c7d798cd74"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/AH-64_Apache/AH-64_Apache_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.701,
+     "edge_touch": 0.0434,
+     "large_parts": 2,
+     "dark_halo": 0.0078,
+     "sha256": "80c265e9d8bac85b74df9eb2469ea15f83e494bc6cfeab3f72b2e6e4354d21a5"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/AH-64_Apache/AH-64_Apache_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.749,
+     "edge_touch": 0.0762,
+     "large_parts": 3,
+     "dark_halo": 0.0091,
+     "sha256": "eed51eb43a64ebe698bce4c1fcfdda686ffdb16fd369ef39113ea6fd630204d3"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-1_Lancer/B-1_Lancer_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.771,
+     "edge_touch": 0.0266,
+     "large_parts": 1,
+     "dark_halo": 0.0009,
+     "sha256": "b47efced199c643ec6c3b69c8f877eafde40553e89ea4d3025ba5d22a13c1531"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-1_Lancer/B-1_Lancer_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.79,
+     "edge_touch": 0.0363,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "d3ac2a76979da11e284c1b728a54e86539d23e5c33e17f96731ea08d8b3ecb7c"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-1_Lancer/B-1_Lancer_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.719,
+     "edge_touch": 0.082,
+     "large_parts": 4,
+     "dark_halo": 0.0019,
+     "sha256": "93b752d2b6fb6158fe35800c9678ef00544c214e592e0e84e4c138ce9e452d12"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-1_Lancer/B-1_Lancer_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.809,
+     "edge_touch": 0.0941,
+     "large_parts": 2,
+     "dark_halo": 0.0025,
+     "sha256": "4017207402c734e49cc2587853bc7b5db2dc20b8cedf5a0818d84693563d95c9"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-2_Spirit/B-2_Spirit_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-2_Spirit/B-2_Spirit_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.631,
+     "edge_touch": 0.0355,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "a80c7d570131477d5c110976e2a8761cbfd95cfe893a14fd63b0bdaef833a4bd"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-2_Spirit/B-2_Spirit_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.794,
+     "edge_touch": 0.0113,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "4a2197a94877e47396f5f7c8a9e673785f8bb971bb2bd374eaffc84ec79b47c2"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-2_Spirit/B-2_Spirit_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.839,
+     "edge_touch": 0.0332,
+     "large_parts": 2,
+     "dark_halo": 0.0086,
+     "sha256": "b1747c417b4d1b7a693a26b8e6e72f2377b052a5913c2a53529e55eda365170c"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.754,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.001,
+     "sha256": "4f4d222028bdd6ced7c10eb4e96842f7107cc94ba609674404e77b847ab8ad3d"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.74,
+     "edge_touch": 0.0941,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "9b08c090052c0e9e4bd06c4b3a2f4aefeefd5599b8c1c7241cbef082ca1af45f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.8,
+     "edge_touch": 0.016,
+     "large_parts": 2,
+     "dark_halo": 0.0008,
+     "sha256": "7b170d91bad5ec8608af9d4d986df8d0790437eee4d6b296a4907172227d3ad9"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.801,
+     "edge_touch": 0.1105,
+     "large_parts": 2,
+     "dark_halo": 0.0025,
+     "sha256": "6436ef88d4f9242ce9524710622693ba56021db5be8461ca4a728a4633fd0f94"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/CH-47_Chinook/CH-47_Chinook_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.72,
+     "edge_touch": 0.0328,
+     "large_parts": 1,
+     "dark_halo": 0.0076,
+     "sha256": "18781f8074f2653f8223c40cf1c5dc04f1376c12708ae48bbe9a8120dbc23610"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/CH-47_Chinook/CH-47_Chinook_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.83,
+     "edge_touch": 0.0484,
+     "large_parts": 1,
+     "dark_halo": 0.0015,
+     "sha256": "cbfd140f2c40966222b8a57b4a96e12ba2dc7330f6fd551a62c2f534ea9967eb"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/CH-47_Chinook/CH-47_Chinook_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.785,
+     "edge_touch": 0.0816,
+     "large_parts": 3,
+     "dark_halo": 0.0046,
+     "sha256": "dd8a657a0ffac6a52f0aaa4cf17e7f75f66f89c798270a50040f947a9883e901"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/CH-47_Chinook/CH-47_Chinook_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.686,
+     "edge_touch": 0.0996,
+     "large_parts": 2,
+     "dark_halo": 0.0039,
+     "sha256": "4ecc8b27e0fdfc5bbb3a679d9a63b418828b3b73a6d740a4f3e97d8ee440b1ea"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.713,
+     "edge_touch": 0.0289,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "1a8dfa1d4d4b99991b9c6f64df291f81ba1ecb3fc458575417071befb78e2a7f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.707,
+     "edge_touch": 0.0727,
+     "large_parts": 2,
+     "dark_halo": 0.0,
+     "sha256": "e4e00e39411e5530ee8e00157e816bfa0be11914d2c9412c0c8dd526834ab670"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.744,
+     "edge_touch": 0.0988,
+     "large_parts": 2,
+     "dark_halo": 0.0002,
+     "sha256": "d0b88fea5c1419dd1da099f8c50cf9526081d8c5324ce57b7fd3997283426315"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.708,
+     "edge_touch": 0.1445,
+     "large_parts": 2,
+     "dark_halo": 0.0002,
+     "sha256": "d5d9749150dadaf919932300bb6096920132a81c688485d54804af16f00eba5a"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-22_Raptor/F-22_Raptor_front_three_quarter.png",
+     "ok": false,
+     "error": "image file is truncated"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-22_Raptor/F-22_Raptor_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.684,
+     "edge_touch": 0.1301,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "0bac503842da5e15f7fcdb573918e5625077722effeba853f59d1f54893cccae"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-22_Raptor/F-22_Raptor_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.717,
+     "edge_touch": 0.0883,
+     "large_parts": 3,
+     "dark_halo": 0.0009,
+     "sha256": "fdb67d62fc028697d3f8487ce1bc4e03f8aa13ca632f7d737a7aa656cd9bda9f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-22_Raptor/F-22_Raptor_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.746,
+     "edge_touch": 0.1648,
+     "large_parts": 2,
+     "dark_halo": 0.0051,
+     "sha256": "1c2f089455a1a1fd69daaba00510a291ef4fe8af20c6dd89eb73b608a68e032a"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.729,
+     "edge_touch": 0.0383,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "604a67636705dda2eaab047214474809bd22423dd774bb941cbeb51f2c05ec77"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.65,
+     "edge_touch": 0.0289,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "d88b001745704e4c17cae95e725f3d19c57854c0362192d3c2de7fa0b8b7116f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.725,
+     "edge_touch": 0.0465,
+     "large_parts": 3,
+     "dark_halo": 0.0006,
+     "sha256": "b9e5cf9ffd3ada932846bc14091cfeeedc7bbddaff4705a0106bbaf957cb314c"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.788,
+     "edge_touch": 0.041,
+     "large_parts": 2,
+     "dark_halo": 0.0,
+     "sha256": "a935f957746e74da81fb7a1a284a8217f1c3968106f8de3586f2b9866d57bff6"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/SR-71_Blackbird/SR-71_Blackbird_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.707,
+     "edge_touch": 0.0023,
+     "large_parts": 1,
+     "dark_halo": 0.0047,
+     "sha256": "3227662591ba78ae41bce68f999ac1b82d45686b6703f611a840d92d3323c4b4"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/SR-71_Blackbird/SR-71_Blackbird_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.716,
+     "edge_touch": 0.0359,
+     "large_parts": 1,
+     "dark_halo": 0.0016,
+     "sha256": "82c27c4a4fe445baf146f1702a867f253b728b985b7d2206b9e2e60122179d22"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/SR-71_Blackbird/SR-71_Blackbird_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.681,
+     "edge_touch": 0.0504,
+     "large_parts": 2,
+     "dark_halo": 0.006,
+     "sha256": "d63f28b2a5b1afc066464f003d350a8f403874c605458e98d6b023333951eb2a"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/SR-71_Blackbird/SR-71_Blackbird_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.824,
+     "edge_touch": 0.0859,
+     "large_parts": 2,
+     "dark_halo": 0.0133,
+     "sha256": "36626061c55f878f25e00cfd61119dc36cc3b73def8f45fb520a9d59f58189af"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.653,
+     "edge_touch": 0.0523,
+     "large_parts": 1,
+     "dark_halo": 0.0036,
+     "sha256": "7bc2aeb503b85617f9a8b4df0c00e00bbfe0bcca7bcc5d22005169558e8acb76"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.823,
+     "edge_touch": 0.0973,
+     "large_parts": 3,
+     "dark_halo": 0.0012,
+     "sha256": "fe0366d51fab47b76950276f13f3d5bd42899cf6caaeaa4e07c8713f67cfd7f5"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.728,
+     "edge_touch": 0.1016,
+     "large_parts": 4,
+     "dark_halo": 0.0051,
+     "sha256": "d7f70eebdc76b52bd4941a8041c1bbac70289880159ad604e68a5f1129dae891"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_Expanded_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.75,
+     "edge_touch": 0.1484,
+     "large_parts": 4,
+     "dark_halo": 0.0066,
+     "sha256": "e418d51029af03347533e2c789b517149c3afcbbca83013ccf023b635ab576da"
+    }
+   ]
+  },
+  "US_Aircraft_Game_Assets_1": {
+   "png_files": 45,
+   "contact_sheets": 9,
+   "crops": 36,
+   "corrupt": [],
+   "clipped_crops": [
+    "individual_views/AH-64_Apache/AH-64_Apache_front_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_overhead_game_view.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_rear_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_side_profile.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_front_three_quarter.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_overhead_game_view.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_rear_three_quarter.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_side_profile.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_front_three_quarter.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_overhead_game_view.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_rear_three_quarter.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_side_profile.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_overhead_game_view.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_rear_three_quarter.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_side_profile.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_front_three_quarter.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_overhead_game_view.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_rear_three_quarter.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_side_profile.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_front_three_quarter.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_overhead_game_view.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_rear_three_quarter.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_side_profile.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_front_three_quarter.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_overhead_game_view.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_rear_three_quarter.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_side_profile.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_front_three_quarter.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_overhead_game_view.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_rear_three_quarter.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_side_profile.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_front_three_quarter.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_overhead_game_view.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_rear_three_quarter.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_side_profile.png"
+   ],
+   "multi_part_crops": [
+    "individual_views/AH-64_Apache/AH-64_Apache_front_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_rear_three_quarter.png",
+    "individual_views/AH-64_Apache/AH-64_Apache_side_profile.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_rear_three_quarter.png",
+    "individual_views/B-1_Lancer/B-1_Lancer_side_profile.png",
+    "individual_views/B-2_Spirit/B-2_Spirit_side_profile.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_rear_three_quarter.png",
+    "individual_views/B-52_Stratofortress/B-52_Stratofortress_side_profile.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_rear_three_quarter.png",
+    "individual_views/CH-47_Chinook/CH-47_Chinook_side_profile.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_overhead_game_view.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_rear_three_quarter.png",
+    "individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_side_profile.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_rear_three_quarter.png",
+    "individual_views/F-22_Raptor/F-22_Raptor_side_profile.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_rear_three_quarter.png",
+    "individual_views/F-A-18_Hornet/F-A-18_Hornet_side_profile.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_overhead_game_view.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_rear_three_quarter.png",
+    "individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_side_profile.png"
+   ],
+   "manifest_rows": 0,
+   "manifest_missing_files": [],
+   "files": [
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/AH-64_Apache_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.703,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0053,
+     "sha256": "e89854e4d32f4825105be07faa6703360a2e3599b8f5fd2bc502eef5d7a6b9a8"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/B-1_Lancer_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.772,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0014,
+     "sha256": "346253dacbd67804f9aa0c0367645a93d6d5c2d10da9974cd7a215477214da31"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/B-2_Spirit_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.757,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0016,
+     "sha256": "e3a39bc8b2da4c4b66260a27b0114f7becd8bb7bf054c06b65741aaf113fa5e1"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/B-52_Stratofortress_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.774,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.001,
+     "sha256": "57d758f817baf5873d62e6db831bdf7a915f2b80e068a0b9d8e636ccbb9b1819"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/CH-47_Chinook_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.755,
+     "edge_touch": 0.0008,
+     "large_parts": 4,
+     "dark_halo": 0.0047,
+     "sha256": "c6030dcadcd287594f419ed78d48b5473990f4a32e8f3db82434649227162396"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/F-16_Fighting_Falcon_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.718,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0001,
+     "sha256": "ff1ef1137c2b46cd3e2b6268c4c15345d75716a18d1030d646927f2a8a971dd9"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/F-22_Raptor_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.7,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0013,
+     "sha256": "a69a8f603ff956a9afe7d6be3bf5a975cf80801a33805bab6d5ca0fc0e2f64fb"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/F-A-18_Hornet_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.723,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0002,
+     "sha256": "e5ef2375af79a9ebb156b1c74da713f122449c1ccc182a2cca8292d97fe51e17"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/contact_sheets/UH-60_Black_Hawk_4-view.png",
+     "ok": true,
+     "size": [
+      1536,
+      1024
+     ],
+     "mode": "RGBA",
+     "clear": 0.739,
+     "edge_touch": 0.0,
+     "large_parts": 4,
+     "dark_halo": 0.0043,
+     "sha256": "b87f050ac4e45a0e4144658a727ef6cf9e03cf79d57780e5d2baa428276a3228"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/AH-64_Apache/AH-64_Apache_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.672,
+     "edge_touch": 0.0336,
+     "large_parts": 2,
+     "dark_halo": 0.0042,
+     "sha256": "7424997711de0a9dd45889ef491321a2ab32a4ba55620ca7ab7fcfa7d85c8047"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/AH-64_Apache/AH-64_Apache_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.689,
+     "edge_touch": 0.0703,
+     "large_parts": 1,
+     "dark_halo": 0.0011,
+     "sha256": "d17d6c734ba8a25f428deb190df0a79676cc26a7d2ca991bf3e5a9c7d798cd74"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/AH-64_Apache/AH-64_Apache_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.701,
+     "edge_touch": 0.0434,
+     "large_parts": 2,
+     "dark_halo": 0.0078,
+     "sha256": "80c265e9d8bac85b74df9eb2469ea15f83e494bc6cfeab3f72b2e6e4354d21a5"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/AH-64_Apache/AH-64_Apache_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.749,
+     "edge_touch": 0.0762,
+     "large_parts": 3,
+     "dark_halo": 0.0091,
+     "sha256": "eed51eb43a64ebe698bce4c1fcfdda686ffdb16fd369ef39113ea6fd630204d3"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-1_Lancer/B-1_Lancer_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.771,
+     "edge_touch": 0.0266,
+     "large_parts": 1,
+     "dark_halo": 0.0009,
+     "sha256": "b47efced199c643ec6c3b69c8f877eafde40553e89ea4d3025ba5d22a13c1531"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-1_Lancer/B-1_Lancer_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.79,
+     "edge_touch": 0.0363,
+     "large_parts": 1,
+     "dark_halo": 0.0005,
+     "sha256": "d3ac2a76979da11e284c1b728a54e86539d23e5c33e17f96731ea08d8b3ecb7c"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-1_Lancer/B-1_Lancer_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.719,
+     "edge_touch": 0.082,
+     "large_parts": 4,
+     "dark_halo": 0.0019,
+     "sha256": "93b752d2b6fb6158fe35800c9678ef00544c214e592e0e84e4c138ce9e452d12"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-1_Lancer/B-1_Lancer_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.809,
+     "edge_touch": 0.0941,
+     "large_parts": 2,
+     "dark_halo": 0.0025,
+     "sha256": "4017207402c734e49cc2587853bc7b5db2dc20b8cedf5a0818d84693563d95c9"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-2_Spirit/B-2_Spirit_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.764,
+     "edge_touch": 0.0129,
+     "large_parts": 1,
+     "dark_halo": 0.0007,
+     "sha256": "3e0296d496b73d12f789e152bb388a6dc996402cd9dbdc1d1a734e270f311095"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-2_Spirit/B-2_Spirit_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.631,
+     "edge_touch": 0.0355,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "a80c7d570131477d5c110976e2a8761cbfd95cfe893a14fd63b0bdaef833a4bd"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-2_Spirit/B-2_Spirit_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.794,
+     "edge_touch": 0.0113,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "4a2197a94877e47396f5f7c8a9e673785f8bb971bb2bd374eaffc84ec79b47c2"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-2_Spirit/B-2_Spirit_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.839,
+     "edge_touch": 0.0332,
+     "large_parts": 2,
+     "dark_halo": 0.0086,
+     "sha256": "b1747c417b4d1b7a693a26b8e6e72f2377b052a5913c2a53529e55eda365170c"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.754,
+     "edge_touch": 0.0,
+     "large_parts": 1,
+     "dark_halo": 0.001,
+     "sha256": "4f4d222028bdd6ced7c10eb4e96842f7107cc94ba609674404e77b847ab8ad3d"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.74,
+     "edge_touch": 0.0941,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "9b08c090052c0e9e4bd06c4b3a2f4aefeefd5599b8c1c7241cbef082ca1af45f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.8,
+     "edge_touch": 0.016,
+     "large_parts": 2,
+     "dark_halo": 0.0008,
+     "sha256": "7b170d91bad5ec8608af9d4d986df8d0790437eee4d6b296a4907172227d3ad9"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/B-52_Stratofortress/B-52_Stratofortress_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.801,
+     "edge_touch": 0.1105,
+     "large_parts": 2,
+     "dark_halo": 0.0025,
+     "sha256": "6436ef88d4f9242ce9524710622693ba56021db5be8461ca4a728a4633fd0f94"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/CH-47_Chinook/CH-47_Chinook_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.72,
+     "edge_touch": 0.0328,
+     "large_parts": 1,
+     "dark_halo": 0.0076,
+     "sha256": "18781f8074f2653f8223c40cf1c5dc04f1376c12708ae48bbe9a8120dbc23610"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/CH-47_Chinook/CH-47_Chinook_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.83,
+     "edge_touch": 0.0484,
+     "large_parts": 1,
+     "dark_halo": 0.0015,
+     "sha256": "cbfd140f2c40966222b8a57b4a96e12ba2dc7330f6fd551a62c2f534ea9967eb"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/CH-47_Chinook/CH-47_Chinook_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.785,
+     "edge_touch": 0.0816,
+     "large_parts": 3,
+     "dark_halo": 0.0046,
+     "sha256": "dd8a657a0ffac6a52f0aaa4cf17e7f75f66f89c798270a50040f947a9883e901"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/CH-47_Chinook/CH-47_Chinook_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.686,
+     "edge_touch": 0.0996,
+     "large_parts": 2,
+     "dark_halo": 0.0039,
+     "sha256": "4ecc8b27e0fdfc5bbb3a679d9a63b418828b3b73a6d740a4f3e97d8ee440b1ea"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.713,
+     "edge_touch": 0.0289,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "1a8dfa1d4d4b99991b9c6f64df291f81ba1ecb3fc458575417071befb78e2a7f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.707,
+     "edge_touch": 0.0727,
+     "large_parts": 2,
+     "dark_halo": 0.0,
+     "sha256": "e4e00e39411e5530ee8e00157e816bfa0be11914d2c9412c0c8dd526834ab670"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.744,
+     "edge_touch": 0.0988,
+     "large_parts": 2,
+     "dark_halo": 0.0002,
+     "sha256": "d0b88fea5c1419dd1da099f8c50cf9526081d8c5324ce57b7fd3997283426315"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-16_Fighting_Falcon/F-16_Fighting_Falcon_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.708,
+     "edge_touch": 0.1445,
+     "large_parts": 2,
+     "dark_halo": 0.0002,
+     "sha256": "d5d9749150dadaf919932300bb6096920132a81c688485d54804af16f00eba5a"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-22_Raptor/F-22_Raptor_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.651,
+     "edge_touch": 0.0574,
+     "large_parts": 1,
+     "dark_halo": 0.0001,
+     "sha256": "5dda2fbdec16e84ca942d36d6be3de5a6e95671e7383384c05f8c9550374c17e"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-22_Raptor/F-22_Raptor_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.684,
+     "edge_touch": 0.1301,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "0bac503842da5e15f7fcdb573918e5625077722effeba853f59d1f54893cccae"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-22_Raptor/F-22_Raptor_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.717,
+     "edge_touch": 0.0883,
+     "large_parts": 3,
+     "dark_halo": 0.0009,
+     "sha256": "fdb67d62fc028697d3f8487ce1bc4e03f8aa13ca632f7d737a7aa656cd9bda9f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-22_Raptor/F-22_Raptor_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.746,
+     "edge_touch": 0.1648,
+     "large_parts": 2,
+     "dark_halo": 0.0051,
+     "sha256": "1c2f089455a1a1fd69daaba00510a291ef4fe8af20c6dd89eb73b608a68e032a"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.729,
+     "edge_touch": 0.0383,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "604a67636705dda2eaab047214474809bd22423dd774bb941cbeb51f2c05ec77"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.65,
+     "edge_touch": 0.0289,
+     "large_parts": 1,
+     "dark_halo": 0.0,
+     "sha256": "d88b001745704e4c17cae95e725f3d19c57854c0362192d3c2de7fa0b8b7116f"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.725,
+     "edge_touch": 0.0465,
+     "large_parts": 3,
+     "dark_halo": 0.0006,
+     "sha256": "b9e5cf9ffd3ada932846bc14091cfeeedc7bbddaff4705a0106bbaf957cb314c"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/F-A-18_Hornet/F-A-18_Hornet_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.788,
+     "edge_touch": 0.041,
+     "large_parts": 2,
+     "dark_halo": 0.0,
+     "sha256": "a935f957746e74da81fb7a1a284a8217f1c3968106f8de3586f2b9866d57bff6"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_front_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.653,
+     "edge_touch": 0.0523,
+     "large_parts": 1,
+     "dark_halo": 0.0036,
+     "sha256": "7bc2aeb503b85617f9a8b4df0c00e00bbfe0bcca7bcc5d22005169558e8acb76"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_overhead_game_view.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.823,
+     "edge_touch": 0.0973,
+     "large_parts": 3,
+     "dark_halo": 0.0012,
+     "sha256": "fe0366d51fab47b76950276f13f3d5bd42899cf6caaeaa4e07c8713f67cfd7f5"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_rear_three_quarter.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.728,
+     "edge_touch": 0.1016,
+     "large_parts": 4,
+     "dark_halo": 0.0051,
+     "sha256": "d7f70eebdc76b52bd4941a8041c1bbac70289880159ad604e68a5f1129dae891"
+    },
+    {
+     "path": "../incoming_air/US_Aircraft_Game_Assets_1/individual_views/UH-60_Black_Hawk/UH-60_Black_Hawk_side_profile.png",
+     "ok": true,
+     "size": [
+      768,
+      512
+     ],
+     "mode": "RGBA",
+     "clear": 0.75,
+     "edge_touch": 0.1484,
+     "large_parts": 4,
+     "dark_halo": 0.0066,
+     "sha256": "e418d51029af03347533e2c789b517149c3afcbbca83013ccf023b635ab576da"
+    }
+   ]
+  }
+ }
+}

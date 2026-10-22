@@ -1,5 +1,6 @@
-# Steel Accord - rendered evidence capture for the aircraft integration (run with: -- airshow lite evidence out=/dir).
-# Positions the camera on each aircraft type in flight / on the pads and saves screenshots. Not part of gameplay.
+# Steel Accord - rendered evidence capture for aircraft behaviour (run with: -- airshow lite evidence out=/dir).
+# Captures: scale reference on the pads, take-off roll, attack run with trails, B-1 / B-52 strikes with falling bombs
+# and impacts, and a jet landing on its pad. Not part of gameplay.
 extends Node
 
 var battle: Node
@@ -32,65 +33,76 @@ func _u(kind: String) -> Unit:
 	return null
 
 
+func _look(p: Vector3, alt := 0.0, zoom := 60.0) -> void:
+	var cam: RTSCamera = battle.camera
+	cam.zoom = zoom; cam._apply()
+	cam.focus(p - Vector3(0, 0, alt * 0.78))
+
+
 func _run() -> void:
 	await _wait_sim(0.5)
-	var cam: RTSCamera = battle.camera
+	battle.ai = null
 	var cmd: Commander = battle.commander
-	battle.hud.show_help = false
-	cam.edge_pan = false
-	# 1. the air wing on its pads, F-16 selected (portrait + command card visible)
-	cam.zoom = 62.0; cam._apply(); cam.focus(Vector3(97, 0, 127))
-	cmd._set_selection([_u("f16")])
-	await _shot("air_01_pads_f16_selected")
-	# 2. launch everything north in a loose formation
-	var kinds := ["f16", "fa18", "f22", "a10", "ah64", "uh60", "ch47"]
-	for i in kinds.size():
-		var u := _u(kinds[i])
-		battle.issue({"type": "move", "ids": [u.uid], "points": [Vector3(-60 + i * 22, 0, 40)]})
-	cmd._set_selection([])
-	await _wait_sim(7.0)
-	cam.zoom = 46.0; cam._apply()
-	for k in kinds:
-		var u := _u(k)
-		if u == null: continue
-		cam.focus(u.position - Vector3(0, 0, u.altitude * 0.75))   # aim at the airframe, not its ground point
-		cmd._set_selection([u])
-		await _shot("air_10_%s_in_flight" % k)
-	cmd._set_selection([])
-	# 3. AH-64 and A-10 attack the nearest enemy tank; capture the engagement
+	battle.camera.edge_pan = false
+	# 0. scale reference: a Vanguard tank parked beside the pads with the aircraft
+	var tank := _u("vanguard")
+	tank.position = Vector3(130, 0, 165); tank.heading = 0.0
+	_look(Vector3(185, 0, 167), 0.0, 95.0)
+	await _shot("air2_00_scale_pads_tank")
+	# 1. F-16 take-off roll and climb toward the enemy
+	var f16 := _u("f16")
 	var reds: Array = battle.units.filter(func(u): return u.team == 1 and not u.dead)
-	var tgt: Unit = reds[0]
-	for k in ["ah64", "a10", "f16"]:
-		battle.issue({"type": "attack", "ids": [_u(k).uid], "target": tgt.uid})
+	for r in reds: r.order_stop()
+	var tgt: Unit = reds[3]
+	tgt.position = Vector3(40, 0, -20)
+	battle.issue({"type": "attack", "ids": [f16.uid], "target": tgt.uid})
+	cmd._set_selection([f16])
+	await _wait_sim(1.0)
+	_look(f16.position, f16.altitude, 60.0)
+	await _shot("air2_01_f16_takeoff_roll")
+	# 2. attack run: wait for the first missile, capture jet + missile trail + target
 	var t_end: float = battle.sim_time + 30.0
-	var got := false
-	while battle.sim_time < t_end and not got:
-		await _wait_sim(0.25)
-		var h := _u("ah64")
-		if h and battle.shots.any(func(s): return s.shooter == h):
-			cam.zoom = 48.0; cam._apply(); cam.focus((h.position + tgt.position) * 0.5)
-			await _shot("air_20_ah64_attack")
-			got = true
-	# 4. support powers: carpet bombing and stealth strike on the enemy group, recon overflight
-	reds = battle.units.filter(func(u): return u.team == 1 and not u.dead)
-	var c := Vector3.ZERO
-	for r in reds: c += r.position
-	c /= maxi(1, reds.size())
-	battle.issue({"type": "power", "team": 0, "id": "carpet", "pos": c})
-	cam.zoom = 95.0; cam._apply(); cam.focus(c + Vector3(0, 0, 25))
-	await _wait_sim(5.2)
-	await _shot("air_30_carpet_bombing_b52")
+	while battle.sim_time < t_end:
+		await _wait_sim(0.1)
+		if battle.shots.any(func(s): return s.shooter == f16):
+			await _wait_sim(0.5)
+			_look((f16.position + tgt.position) * 0.5, 8.0, 90.0)
+			await _shot("air2_02_f16_attack_run_trails")
+			break
+	# 3. B-1 strike: falling bombs, then impacts
+	var c := Vector3(-60, 0, -60)
+	for i in 3: reds[i].position = c + Vector3(i * 10 - 10, 0, 0)
+	battle.issue({"type": "power", "team": 0, "id": "supersonic", "pos": c})
+	_look(c + Vector3(0, 0, 40), 0.0, 120.0)
+	t_end = battle.sim_time + 15.0
+	while battle.sim_time < t_end and battle.bombs.is_empty():
+		await _wait_sim(0.1)
+	await _wait_sim(0.6)
+	await _shot("air2_03_b1_bombs_falling")
+	await _wait_sim(1.3)
+	_look(c, 0.0, 110.0)
+	await _shot("air2_04_b1_impacts")
+	# 4. B-52 carpet strike
+	var c2 := Vector3(80, 0, -120)
+	battle.issue({"type": "power", "team": 0, "id": "carpet", "pos": c2})
+	_look(c2 + Vector3(0, 0, 30), 0.0, 130.0)
+	while battle.bombs.is_empty():
+		await _wait_sim(0.1)
 	await _wait_sim(1.5)
-	await _shot("air_31_carpet_impacts")
-	battle.issue({"type": "power", "team": 0, "id": "stealth", "pos": c + Vector3(15, 0, 0)})
-	await _wait_sim(4.0)
-	await _shot("air_32_stealth_b2")
-	battle.issue({"type": "power", "team": 0, "id": "supersonic", "pos": c - Vector3(15, 0, 0)})
-	await _wait_sim(3.0)
-	await _shot("air_33_supersonic_b1")
-	battle.issue({"type": "power", "team": 0, "id": "recon", "pos": Vector3(-80, 0, -60)})
-	cam.zoom = 120.0; cam._apply(); cam.focus(Vector3(-70, 0, 20))
-	await _wait_sim(1.6)
-	await _shot("air_34_recon_sr71")
+	await _shot("air2_05_b52_carpet")
+	# 5. F-16 returns and lands on its pad
+	battle.issue({"type": "return", "ids": [f16.uid]})
+	t_end = battle.sim_time + 60.0
+	var shot_final := false
+	while battle.sim_time < t_end and f16.state != Unit.S.LANDED:
+		await _wait_sim(0.2)
+		if not shot_final and f16.ret_phase == 1 and f16.flat_dist(f16.home) < 50.0:
+			_look(f16.home + Vector3(0, 0, 20), 0.0, 70.0)
+			await _shot("air2_06_f16_final_approach")
+			shot_final = true
+	await _wait_sim(1.0)
+	_look(f16.home, 0.0, 60.0)
+	cmd._set_selection([f16])
+	await _shot("air2_07_f16_landed_on_pad")
 	print("EVIDENCE DONE")
 	get_tree().quit()

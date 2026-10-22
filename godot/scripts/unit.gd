@@ -39,6 +39,9 @@ var bank := 0.0
 var w_reload: Array = []
 var w_ammo: Array = []
 var rearm_t := 0.0
+var airborne := true
+var run_out_t := 0.0
+var ret_phase := 0
 
 var model: Node3D
 var body: Node3D              # visual root (lifted for aircraft)
@@ -103,6 +106,8 @@ func _build_sprite() -> void:
 	s.name = "Sprite"
 	body.add_child(s)
 	model = s
+	if domain == "jet":
+		FX.exhaust_trail(body, Vector3(0, 0.2, float(def.length) * 0.47), 0.9, false)
 	if domain == "heli":
 		rotor = MeshInstance3D.new()
 		var q := QuadMesh.new(); q.size = Vector2(def.rotor * 2.0, def.rotor * 2.0)
@@ -229,8 +234,8 @@ func order_stop() -> void:
 
 
 func order_return() -> void:
-	if domain != "jet": return
-	_clear(); state = S.RETURN; goal = home
+	if domain != "jet" or state == S.LANDED: return
+	_clear(); state = S.RETURN; goal = home; ret_phase = 0
 
 
 func _plan(p: Vector3) -> void:
@@ -377,12 +382,17 @@ func _follow(dt: float) -> bool:
 	return false
 
 
-## Jets never stop in the air: they fly at >= min speed, orbit when idle, make attack passes, and return to their
-## pad to rearm when out of ammunition (C&C-style air unit loop).
+## Jets never stop in the air. Phases: take-off roll from the pad -> climb -> orbit / move / attack runs ->
+## return pattern (approach point south of the pad, aligned final, touchdown on the pad centre facing north) ->
+## landed and rearming. Attack runs: fly in, fire while the target is inside the weapon window, overfly,
+## extend straight for a moment, then turn back for another pass (no endless circling inside the turn radius).
 func _jet_tick(dt: float) -> void:
 	if state == S.LANDED:
+		airborne = false
 		speed_cur = 0.0
 		altitude = move_toward(altitude, 0.4, dt * 8.0)
+		position = position.move_toward(home, dt * 6.0)
+		heading = lerp_angle(heading, 0.0, minf(1.0, dt * 3.0))
 		bank = 0.0
 		rearm_t -= dt
 		if rearm_t <= 0.0:
@@ -390,53 +400,88 @@ func _jet_tick(dt: float) -> void:
 			for i in w_ammo.size():
 				var full := int(def.weapons[i].get("ammo", -1))
 				if full > 0 and w_ammo[i] < full: w_ammo[i] += 1; break
+		vel = Vector3.ZERO
 		return
-	altitude = move_toward(altitude, def.altitude, dt * 10.0)
+	if not airborne:
+		# take-off roll straight down the pad heading, lift off at 80 % of minimum flying speed
+		bank = 0.0
+		speed_cur = move_toward(speed_cur, def.speed, def.accel * 1.4 * dt)
+		position += forward() * speed_cur * dt
+		altitude = move_toward(altitude, 0.4 + maxf(0.0, speed_cur - def.min_speed * 0.6) * 0.4, dt * 6.0)
+		if speed_cur >= def.min_speed * 0.8: airborne = true
+		vel = forward() * speed_cur
+		return
 	if not has_ammo() and state != S.RETURN:
-		_clear(); state = S.RETURN; goal = home
+		_clear(); state = S.RETURN; goal = home; ret_phase = 0
+	altitude = move_toward(altitude, def.altitude, dt * maxf(4.0, speed_cur * 0.3))
 	var steer := goal
 	var throttle: float = def.speed
+	var min_v: float = def.min_speed
 	match state:
 		S.IDLE, S.MOVE:
 			if state == S.MOVE and flat_dist(goal) < 25.0:
 				if queue.is_empty(): state = S.IDLE
 				else: goal = queue.pop_front()
-			steer = _orbit_point(goal, 45.0) if state == S.IDLE else goal
+			steer = _orbit_point(goal, 60.0) if state == S.IDLE else goal
 			if state == S.IDLE: _acquire(def.sight * 0.7)
 			if state == S.IDLE and target: state = S.ATTACK
 		S.ATTACK_MOVE:
 			_acquire(def.sight)
-			steer = target.position if target else goal
+			steer = _run_steer(target.position, dt) if target else goal
 			if target == null and flat_dist(goal) < 25.0: state = S.IDLE
 		S.ATTACK:
-			if target: steer = target.position
+			if target: steer = _run_steer(target.position, dt)
 			else: state = S.IDLE
 		S.FORCE_GROUND:
-			steer = force_pos
+			steer = _run_steer(force_pos, dt)
 		S.GUARD:
 			if guard_unit and not guard_unit.dead: guard_pos = guard_unit.position
 			if target == null: target = battle.find_enemy_near_point(self, guard_pos, def.sight)
-			steer = target.position if target else _orbit_point(guard_pos, 50.0)
+			steer = _run_steer(target.position, dt) if target else _orbit_point(guard_pos, 60.0)
 		S.RETURN:
-			steer = home
-			throttle = def.speed * 0.8
-			if flat_dist(home) < 12.0:
-				state = S.LANDED; rearm_t = 1.5; altitude = def.altitude
-				return
-	# steer: constant turn-rate pursuit; slows toward min speed in tight turns
+			var approach := home + Vector3(0, 0, 110.0)       # line up south of the pad, land heading north
+			if ret_phase == 0:
+				steer = approach
+				if flat_dist(approach) < 35.0: ret_phase = 1
+			else:
+				steer = home
+				var d := flat_dist(home)
+				var to_pad := Vector3(home.x - position.x, 0, home.z - position.z)
+				var err := absf(wrapf(atan2(-to_pad.x, -to_pad.z) - heading, -PI, PI))
+				if d > 25.0 and err > deg_to_rad(60.0):
+					ret_phase = 0                                 # overshot or badly aligned: go around
+				altitude = move_toward(altitude, def.altitude * clampf((d - 4.0) / 110.0, 0.0, 1.0) + 0.4, dt * 12.0)
+				throttle = clampf(d * 0.32, 5.0, def.speed * 0.75)
+				min_v = 3.0
+				if d < 3.0:
+					position = Vector3(home.x, 0, home.z); heading = 0.0
+					state = S.LANDED; rearm_t = 1.5; speed_cur = 0.0; airborne = false
+					return
 	var to := Vector3(steer.x - position.x, 0, steer.z - position.z)
 	var diff := wrapf(atan2(-to.x, -to.z) - heading, -PI, PI)
 	var step := deg_to_rad(def.turn_deg) * dt
 	var turn := clampf(diff, -step, step)
 	heading = wrapf(heading + turn, -PI, PI)
-	if state == S.RETURN and flat_dist(home) < 80.0:
-		throttle = maxf(12.0, flat_dist(home) * 0.6)   # final approach: decelerate onto the pad
-	else:
-		throttle = maxf(def.min_speed, throttle * (1.0 - absf(diff) / PI * 0.4))
+	throttle = maxf(min_v, throttle * (1.0 - absf(diff) / PI * 0.4))
 	speed_cur = move_toward(speed_cur, throttle, def.accel * dt)
 	position += forward() * speed_cur * dt
 	bank = move_toward(bank, (turn / maxf(step, 1e-4)) * 0.55, dt * 1.8)
 	vel = forward() * speed_cur
+
+
+## Steering for an attack run on point p: run in, overfly, extend, come back around.
+func _run_steer(p: Vector3, dt: float) -> Vector3:
+	if run_out_t > 0.0:
+		run_out_t -= dt
+		return position + forward() * 100.0
+	var to := Vector3(p.x - position.x, 0, p.z - position.z)
+	var d := to.length()
+	var err := absf(wrapf(atan2(-to.x, -to.z) - heading, -PI, PI))
+	var turn_r: float = def.speed / deg_to_rad(def.turn_deg)
+	if d < 25.0 or (d < turn_r * 1.6 and err > deg_to_rad(70.0)):
+		run_out_t = turn_r * 2.2 / maxf(speed_cur, 1.0)   # extend far enough to turn back onto the target
+		return position + forward() * 100.0
+	return p
 
 
 func _orbit_point(c: Vector3, r: float) -> Vector3:
@@ -462,6 +507,7 @@ func _aim_turret(dt: float) -> void:
 
 
 func _fire_weapons() -> void:
+	if domain == "jet" and (not airborne or state == S.RETURN): return
 	var tpos: Variant = null
 	var tunit: Unit = null
 	if state == S.FORCE_GROUND:

@@ -5,8 +5,9 @@ class_name Battle
 extends Node3D
 
 const TICK_HZ := 30
-const MAP_HALF := 150.0
-const PAD_POSITIONS := [Vector3(70, 0, 118), Vector3(88, 0, 118), Vector3(106, 0, 118), Vector3(70, 0, 136), Vector3(88, 0, 136), Vector3(106, 0, 136), Vector3(124, 0, 127)]
+const MAP_HALF := 300.0   # 600 x 600 m: real-world unit sizes need real-world room (aircraft, approaches)
+const PAD_SIZE := 28.0
+const PAD_POSITIONS := [Vector3(150, 0, 150), Vector3(184, 0, 150), Vector3(218, 0, 150), Vector3(252, 0, 150), Vector3(150, 0, 184), Vector3(184, 0, 184), Vector3(218, 0, 184)]
 
 var map_bounds := Rect2(-MAP_HALF, -MAP_HALF, MAP_HALF * 2, MAP_HALF * 2)
 var units: Array[Unit] = []
@@ -30,6 +31,8 @@ var game_over := false
 var ai: EnemyAI
 var props := {}
 var args := {}
+var diag: Node = null
+var bomb_log: Array = []
 
 var camera: RTSCamera
 var commander: Commander
@@ -41,7 +44,7 @@ func _ready() -> void:
 	rng.seed = 20261021
 	Engine.physics_ticks_per_second = TICK_HZ
 	await World.environment(self)
-	await World.terrain(self, 175.0, 0.0)
+	await World.terrain(self, MAP_HALF + 30.0, 0.0)
 	props = World.props()
 	_build_map()
 	await _bake_nav()
@@ -52,7 +55,7 @@ func _ready() -> void:
 	camera = RTSCamera.new()
 	camera.bounds = map_bounds.grow(-10)
 	add_child(camera)
-	camera.focus(Vector3(20, 0, 67.0 if "close" in args else 105.0))
+	camera.focus(Vector3(30, 0, 140.0 if "close" in args else 205.0))
 	commander = Commander.new()
 	commander.battle = self; commander.camera = camera
 	add_child(commander)
@@ -63,7 +66,11 @@ func _ready() -> void:
 	layer.add_child(hud)
 	ai = EnemyAI.new(self, 1, 30.0)
 	hud.flash_message("Enemy armour reported to the north. Destroy all hostile units.")
-	if "evidence" in args:
+	if "airdiag" in args:
+		var dg: Node = load("res://scripts/airdiag.gd").new()
+		dg.battle = self
+		add_child(dg)
+	elif "evidence" in args:
 		var ev: Node = load("res://scripts/evidence.gd").new()
 		ev.battle = self
 		add_child(ev)
@@ -83,33 +90,39 @@ func _args() -> Dictionary:
 
 # ------------------------------------------------------------------ map
 func _build_map() -> void:
-	var outcrops := [Vector3(-62, 0, 0), Vector3(58, 0, -8), Vector3(-10, 0, -55), Vector3(14, 0, 52), Vector3(-110, 0, 70), Vector3(105, 0, -75)]
+	# rock outcrops forming three approach lanes, plus scattered boulders, bushes and grass
+	var outcrops := [Vector3(-124, 0, 0), Vector3(116, 0, -16), Vector3(-20, 0, -110), Vector3(28, 0, 104), Vector3(-220, 0, 140), Vector3(210, 0, -150), Vector3(-200, 0, -200), Vector3(-90, 0, 230)]
 	var k := 0
 	for c in outcrops:
-		for i in 7:
+		for i in 8:
 			var a := rng.randf() * TAU
-			var d := rng.randf_range(0.0, 9.0)
-			var s := rng.randf_range(2.6, 5.0)
+			var d := rng.randf_range(0.0, 16.0)
+			var s := rng.randf_range(3.0, 6.0)
 			var p: Vector3 = c + Vector3(cos(a) * d, 0, sin(a) * d)
 			World.rock(self, props["Rock%d" % (k % 6)], p, s, rng.randf() * TAU)
 			obstacles_2d.append(Vector3(p.x, p.z, s * 1.4))
 			k += 1
-	for i in 40:
-		var p := Vector3(rng.randf_range(-140, 140), 0, rng.randf_range(-140, 140))
-		if absf(p.z) > 95 and absf(p.x) < 50: continue
-		if p.z > 100 and p.x > 55: continue   # keep the air pads clear
-		var s := rng.randf_range(0.6, 1.6)
+	for i in 90:
+		var p := Vector3(rng.randf_range(-285, 285), 0, rng.randf_range(-285, 285))
+		if _reserved(p, 10.0): continue
+		var s := rng.randf_range(0.6, 1.8)
 		World.rock(self, props["Rock%d" % (i % 6)], p, s, rng.randf() * TAU)
 		if s > 1.1: obstacles_2d.append(Vector3(p.x, p.z, s * 1.3))
-	for i in 90:
-		var p := Vector3(rng.randf_range(-145, 145), 0, rng.randf_range(-145, 145))
-		if absf(p.z) > 90 and absf(p.x) < 55: continue
-		if p.z > 100 and p.x > 55: continue
-		World.bush(self, props["Bush%d" % (i % 4)], p, rng.randf_range(0.7, 1.6), rng.randf() * TAU,
+	for i in 220:
+		var p := Vector3(rng.randf_range(-295, 295), 0, rng.randf_range(-295, 295))
+		if _reserved(p, 6.0): continue
+		World.bush(self, props["Bush%d" % (i % 4)], p, rng.randf_range(0.8, 1.8), rng.randf() * TAU,
 			Color(0.85, 0.9, 0.8).lerp(Color(1.15, 1.1, 0.85), rng.randf()))
 	_build_pads()
-	var tries := 50000 if "lite" in args else 160000
-	World.grass(self, Rect2(-160, -160, 320, 320), tries, rng, func(p): return _in_obstacle(p, 1.0) or _on_pad(p))
+	var tries := 70000 if "lite" in args else 260000
+	World.grass(self, Rect2(-310, -310, 620, 620), tries, rng, func(p): return _in_obstacle(p, 1.0) or _on_pad(p))
+
+
+## Start areas, the air base and its approach lane stay clear of rocks and bushes.
+func _reserved(p: Vector3, margin: float) -> bool:
+	if absf(p.z) > 185 and absf(p.x) < 110: return true
+	if p.x > 125 - margin and p.z > 125 - margin: return true
+	return false
 
 
 func _build_pads() -> void:
@@ -117,18 +130,18 @@ func _build_pads() -> void:
 	var mark := StandardMaterial3D.new(); mark.albedo_color = Color(0.85, 0.82, 0.6); mark.roughness = 0.8
 	for p: Vector3 in PAD_POSITIONS:
 		var slab := MeshInstance3D.new()
-		var b := BoxMesh.new(); b.size = Vector3(15, 0.3, 15); b.material = con
+		var b := BoxMesh.new(); b.size = Vector3(PAD_SIZE, 0.3, PAD_SIZE); b.material = con
 		slab.mesh = b; slab.position = p + Vector3(0, 0.1, 0)
 		add_child(slab)
 		var ring := MeshInstance3D.new()
-		var t := TorusMesh.new(); t.inner_radius = 5.0; t.outer_radius = 5.4; t.material = mark
+		var t := TorusMesh.new(); t.inner_radius = 9.0; t.outer_radius = 9.6; t.material = mark
 		ring.mesh = t; ring.scale = Vector3(1, 0.02, 1); ring.position = p + Vector3(0, 0.27, 0)
 		add_child(ring)
 
 
 func _on_pad(p: Vector3) -> bool:
 	for q: Vector3 in PAD_POSITIONS:
-		if absf(p.x - q.x) < 8.5 and absf(p.z - q.z) < 8.5: return true
+		if absf(p.x - q.x) < PAD_SIZE * 0.55 and absf(p.z - q.z) < PAD_SIZE * 0.55: return true
 	return false
 
 
@@ -173,12 +186,12 @@ func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
 
 
 func _spawn_forces() -> void:
-	var zb := 70.0 if "close" in args else 108.0
-	var zr := -75.0 if "close" in args else -108.0
+	var zb := 140.0 if "close" in args else 210.0
+	var zr := -140.0 if "close" in args else -215.0
 	for i in 6:
-		_spawn("vanguard", 0, Vector3(-20 + (i % 3) * 20, 0, zb + (i / 3) * 12), 0.0)
+		_spawn("vanguard", 0, Vector3(-20 + (i % 3) * 20, 0, zb + (i / 3) * 14), 0.0)
 	for i in 7:
-		_spawn("vanguard", 1, Vector3(-36 + i * 12, 0, zr - (i % 2) * 10), PI)
+		_spawn("vanguard", 1, Vector3(-48 + i * 16, 0, zr - (i % 2) * 12), PI)
 	# air wing on the pads (south-east). "airshow" adds every controllable aircraft type.
 	var wing := ["f16", "f16", "ah64", "a10"]
 	if "airshow" in args: wing = ["f16", "fa18", "f22", "a10", "ah64", "uh60", "ch47"]
@@ -186,7 +199,7 @@ func _spawn_forces() -> void:
 	for i in wing.size():
 		var u := _spawn(wing[i], 0, PAD_POSITIONS[i], 0.0)
 		if u.domain == "jet":
-			u.state = Unit.S.LANDED; u.altitude = 0.4; u.speed_cur = 0.0; u.body.position.y = 0.4
+			u.state = Unit.S.LANDED; u.altitude = 0.4; u.speed_cur = 0.0; u.body.position.y = 0.4; u.airborne = false
 
 
 func _spawn(kind: String, team: int, pos: Vector3, yaw: float) -> Unit:
@@ -354,6 +367,7 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 		var c := t.world_center()
 		direct = c.distance_to(p) < t.def.radius * 1.4 + 1.0
 		if direct: t.take_damage(s.dmg * rng.randf_range(0.85, 1.15), s.shooter)
+	if diag and s.shooter and s.shooter.team == 0: diag.on_shot(s.shooter, t, p, direct)
 	if s.splash > 0.0:
 		for o in units:
 			if o.dead or o == t or o.domain == "jet": continue
@@ -392,6 +406,10 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 	s.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	s.position.y = p.altitude
 	node.add_child(s)
+	var span: float = float(p.length) * (0.4 if id == "carpet" or id == "supersonic" else 0.3)
+	for side in [-1.0, 1.0]:
+		FX.exhaust_trail(node, Vector3(side * span * 0.5, float(p.altitude), float(p.length) * 0.35), 1.6, true)
+	FX.target_marker(self, target, 14.0 if p.has("bombs") else 0.0)
 	node.position = start
 	node.rotation.y = atan2(-dir.x, -dir.z)
 	node.reset_physics_interpolation()
@@ -434,7 +452,8 @@ func _update_bombs(dt: float) -> void:
 		if b.vel.length() > 0.1: b.node.look_at(b.pos + b.vel, Vector3.RIGHT)
 		if b.pos.y <= 0.3:
 			var p := Vector3(b.pos.x, 0.2, b.pos.z)
-			FX.explosion(self, p, b.splash > 10.0)
+			bomb_log.append(p)
+			FX.explosion(self, p, clampf(b.splash / 7.0, 0.8, 2.2))
 			for o in units:
 				if o.dead or o.domain == "jet": continue
 				var d := o.world_center().distance_to(p)
@@ -446,7 +465,7 @@ func _update_bombs(dt: float) -> void:
 # ------------------------------------------------------------------ deaths and visibility
 func on_unit_died(u: Unit) -> void:
 	if u.domain == "ground":
-		FX.explosion(self, u.global_position, true)
+		FX.explosion(self, u.global_position, 1.0)
 		FX.wreck_fire(u.body)
 		if u.turret:
 			var t := u.turret
@@ -458,7 +477,7 @@ func on_unit_died(u: Unit) -> void:
 			debris.append({"node": t, "vel": Vector3(rng.randf_range(-3, 3), rng.randf_range(9, 13), rng.randf_range(-3, 3)),
 				"spin": Vector3(rng.randf_range(-3, 3), rng.randf_range(-4, 4), rng.randf_range(-3, 3)), "crash": false})
 	else:
-		FX.explosion(self, u.world_center(), false)
+		FX.explosion(self, u.world_center(), 0.6)
 		# the airframe falls and burns on impact
 		debris.append({"node": u.body, "vel": u.vel * 0.6 + Vector3(0, -2, 0), "spin": Vector3(rng.randf_range(-1, 1), rng.randf_range(-2, 2), rng.randf_range(-1.5, 1.5)), "crash": true})
 		if u.rotor: u.rotor.visible = false
@@ -477,7 +496,7 @@ func _update_debris(dt: float) -> void:
 		if n.global_position.y <= 0.4 and d.vel.y < 0:
 			n.global_position.y = 0.4
 			if d.crash:
-				FX.explosion(self, n.global_position, true)
+				FX.explosion(self, n.global_position, 0.9)
 				var sp := n.get_node_or_null("Sprite") as Sprite3D
 				if sp: sp.modulate = Color(0.12, 0.11, 0.1)
 				FX.wreck_fire(n)

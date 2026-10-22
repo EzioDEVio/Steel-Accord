@@ -91,20 +91,16 @@ static func impact(parent: Node, pos: Vector3, hit_armour: bool) -> void:
 		[Color(0.42, 0.36, 0.27, 0.9), Color(0.38, 0.33, 0.26, 0.5), Color(0.35, 0.32, 0.28, 0)], Vector3(0, -3, 0))
 
 
-static func explosion(parent: Node, pos: Vector3, big := true) -> void:
-	var s := 1.0 if big else 0.5
-	_flash(parent, pos + Vector3.UP * 2.0, 18.0 * s, 30.0 * s, Color(1.0, 0.6, 0.25), 0.9)
-	# fireball
-	_particles(parent, pos + Vector3.UP * 1.2, int(36 * s), 0.9, true, 3.2 * s, Vector2(3, 9), 70.0,
+## Explosion scaled by `s` (1.0 = vehicle kill, ~2 = heavy bomb). Fireball, sparks, rolling smoke, dust ring, scorch.
+static func explosion(parent: Node, pos: Vector3, s := 1.0) -> void:
+	_flash(parent, pos + Vector3.UP * 2.0 * s, 18.0 * s, 30.0 * s, Color(1.0, 0.6, 0.25), 0.6 + 0.4 * s)
+	_particles(parent, pos + Vector3.UP * 1.2 * s, int(30 + 24 * s), 0.8 + 0.3 * s, true, 3.2 * s, Vector2(3, 9) * s, 70.0,
 		[Color(1, 0.95, 0.75, 1), Color(1, 0.6, 0.15, 0.9), Color(0.7, 0.2, 0.05, 0.5), Color(0.15, 0.05, 0.02, 0)], Vector3(0, 2, 0))
-	# debris sparks
-	_particles(parent, pos + Vector3.UP, int(30 * s), 1.2, true, 0.35, Vector2(10, 22), 75.0,
+	_particles(parent, pos + Vector3.UP, int(20 + 20 * s), 1.2, true, 0.35 * maxf(1.0, s), Vector2(10, 22) * sqrt(s), 75.0,
 		[Color(1, 0.8, 0.4, 1), Color(1, 0.4, 0.1, 0.8), Color(0.2, 0.05, 0, 0)], Vector3(0, -14, 0), Vector3.UP, false)
-	# rolling black smoke
-	_particles(parent, pos + Vector3.UP * 1.5, int(40 * s), 4.5, false, 4.5 * s, Vector2(1, 5), 60.0,
+	_particles(parent, pos + Vector3.UP * 1.5 * s, int(26 + 24 * s), 3.5 + 1.5 * s, false, 4.5 * s, Vector2(1, 5) * sqrt(s), 60.0,
 		[Color(0.12, 0.11, 0.1, 0.85), Color(0.2, 0.19, 0.18, 0.6), Color(0.35, 0.34, 0.33, 0)], Vector3(0, 2.2, 0))
-	# dust ring
-	_particles(parent, pos + Vector3.UP * 0.3, int(24 * s), 2.2, false, 3.0 * s, Vector2(6, 12), 85.0,
+	_particles(parent, pos + Vector3.UP * 0.3, int(16 + 16 * s), 2.2, false, 3.0 * s, Vector2(6, 12) * s, 85.0,
 		[Color(0.45, 0.39, 0.3, 0.7), Color(0.42, 0.37, 0.3, 0.35), Color(0.4, 0.36, 0.3, 0)], Vector3(0, -1, 0), Vector3.UP)
 	scorch(parent, pos, 7.0 * s)
 
@@ -216,14 +212,78 @@ static func bullet_hit(parent: Node, pos: Vector3, armour: bool) -> void:
 			[Color(0.45, 0.39, 0.3, 0.8), Color(0.42, 0.37, 0.3, 0)], Vector3(0, -4, 0))
 
 
-static func bomb_node() -> MeshInstance3D:
+## Falling bomb: olive body with tail fins and a light smoke trail so the drop is readable from the RTS camera.
+static func bomb_node() -> Node3D:
+	var n := Node3D.new()
 	var mi := MeshInstance3D.new()
-	var c := CapsuleMesh.new(); c.radius = 0.25; c.height = 1.9
-	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.25, 0.27, 0.2); m.roughness = 0.6
+	var c := CapsuleMesh.new(); c.radius = 0.45; c.height = 3.2
+	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.36, 0.38, 0.28); m.roughness = 0.5
 	c.material = m
 	mi.mesh = c
 	mi.rotation.x = PI / 2
-	return mi
+	n.add_child(mi)
+	var fin := MeshInstance3D.new()
+	var fb := BoxMesh.new(); fb.size = Vector3(1.4, 0.06, 0.6); fb.material = m
+	fin.mesh = fb; fin.position.z = 1.4
+	n.add_child(fin)
+	var fin2 := fin.duplicate() as MeshInstance3D
+	fin2.rotation.z = PI / 2
+	n.add_child(fin2)
+	exhaust_trail(n, Vector3(0, 0, 1.6), 0.7, true)
+	return n
+
+
+## World-space smoke / contrail emitter attached to a moving node (offset in the node's local space; +Z is aft).
+static func exhaust_trail(host: Node3D, offset: Vector3, width: float, contrail: bool) -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	var q := QuadMesh.new(); q.size = Vector2(width, width); q.material = _mat(false)
+	p.mesh = q
+	p.amount = 60 if contrail else 36
+	p.lifetime = 2.6 if contrail else 1.1
+	p.local_coords = false
+	p.direction = Vector3(0, 0, 1); p.spread = 5.0
+	p.initial_velocity_min = 0.2; p.initial_velocity_max = 0.8
+	p.gravity = Vector3(0, 0.3, 0)
+	var cv := Curve.new(); cv.add_point(Vector2(0, 0.6)); cv.add_point(Vector2(1, 2.6 if contrail else 1.8))
+	p.scale_amount_curve = cv
+	var col := Color(0.95, 0.95, 0.95, 0.55) if contrail else Color(0.55, 0.53, 0.5, 0.35)
+	p.color_ramp = _ramp([col, Color(col.r, col.g, col.b, col.a * 0.4), Color(col.r, col.g, col.b, 0)])
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.position = offset
+	host.add_child(p)
+	p.emitting = true
+	if not contrail:
+		var glow := MeshInstance3D.new()
+		var gq := QuadMesh.new(); gq.size = Vector2(width * 1.6, width * 1.6); gq.material = _mat(true)
+		(gq.material as StandardMaterial3D).billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		(gq.material as StandardMaterial3D).albedo_color = Color(1, 0.7, 0.4, 0.8)
+		glow.mesh = gq; glow.position = offset
+		glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		host.add_child(glow)
+	return p
+
+
+## Red target circle + crosshair on the ground for a called-in strike; fades out after `t` seconds (0 = 6 s).
+static func target_marker(parent: Node, pos: Vector3, t: float) -> void:
+	var n := Node3D.new()
+	parent.add_child(n)
+	n.global_position = pos + Vector3.UP * 0.25
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = Color(1, 0.25, 0.15, 0.85); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var ring := MeshInstance3D.new()
+	var tm := TorusMesh.new(); tm.inner_radius = 9.0; tm.outer_radius = 9.8; tm.rings = 48; tm.ring_segments = 4; tm.material = m
+	ring.mesh = tm; ring.scale = Vector3(1, 0.03, 1)
+	n.add_child(ring)
+	for k in 2:
+		var bar := MeshInstance3D.new()
+		var bm := BoxMesh.new(); bm.size = Vector3(22, 0.05, 0.6); bm.material = m
+		bar.mesh = bm; bar.rotation.y = k * PI / 2
+		n.add_child(bar)
+	var tw := n.create_tween()
+	tw.tween_interval(t if t > 0.0 else 6.0)
+	tw.tween_property(m, "albedo_color:a", 0.0, 1.0)
+	tw.tween_callback(n.queue_free)
 
 
 static func order_marker(parent: Node, pos: Vector3, color: Color) -> void:

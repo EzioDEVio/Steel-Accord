@@ -182,10 +182,12 @@ func _run() -> void:
 	_log("f16_click_select", sel_f16 == 2 and cmd.live_selection().size() == 2, "%d F-16 selected by click + shift-click" % sel_f16)
 	await _shot("f16_selected_on_pad")
 	_key(KEY_A)
-	cam.focus(Vector3(0, 0, 20)); await _frames()
-	_click(MOUSE_BUTTON_LEFT, _screen(Vector3(0, 0, -60)))
-	await _wait_sim(3.0)
-	var airborne := f16s.filter(func(u): return u.altitude > 15.0).size()
+	var reds0: Array = battle.units.filter(func(u): return u.team == 1 and not u.dead)
+	var strike: Vector3 = _centroid(reds0)
+	cam.focus(strike); await _frames()
+	_click(MOUSE_BUTTON_LEFT, _screen(strike))
+	await _wait_sim(6.0)
+	var airborne := f16s.filter(func(u): return u.altitude > 12.0 and u.airborne).size()
 	_log("f16_takeoff", airborne == f16s.size(), "%d airborne, alt %.1f m" % [airborne, f16s[0].altitude])
 	var ammo0: int = f16s[0].w_ammo[0]
 	var fired := false
@@ -201,7 +203,8 @@ func _run() -> void:
 	while battle.sim_time < t_end and not landed:
 		await _wait_sim(0.5)
 		landed = _alive(f16s).any(func(u): return u.state == Unit.S.LANDED)
-	_log("f16_return_to_pad", landed, "")
+	var lj0: Array = _alive(f16s).filter(func(u): return u.state == Unit.S.LANDED)
+	_log("f16_return_to_pad", landed and lj0[0].flat_dist(lj0[0].home) < 0.5, "landed %.2f m from pad centre, heading %.0f deg" % [lj0[0].flat_dist(lj0[0].home) if landed else -1.0, rad_to_deg(lj0[0].heading) if landed else 0.0])
 	if landed:
 		var lj: Unit = _alive(f16s).filter(func(u): return u.state == Unit.S.LANDED)[0]
 		var a0: int = lj.w_ammo[0]
@@ -223,6 +226,18 @@ func _run() -> void:
 	await _wait_sim(4.0)
 	var hp1 := _red_hp()
 	_log("support_power_carpet", pm and flying and hp1 < hp0, "mode=%s flight=%s red hp %.0f -> %.0f" % [pm, flying, hp0, hp1])
+	# 10b. B-1 supersonic strike by mouse: bombs must be released and land near the marked point
+	reds = battle.units.filter(func(u): return u.team == 1 and not u.dead)
+	if not reds.is_empty():
+		var t2: Vector3 = reds[0].position
+		cam.focus(t2); await _frames(2)
+		var nb0: int = battle.bomb_log.size()
+		_press_button(battle.hud.power_buttons["supersonic"]); await _frames()
+		_click(MOUSE_BUTTON_LEFT, _screen(t2))
+		await _wait_sim(9.0)
+		var drops: Array = battle.bomb_log.slice(nb0)
+		var near: int = drops.filter(func(p): return Vector2(p.x - t2.x, p.z - t2.z).length() < 25.0).size()
+		_log("support_power_b1", drops.size() == 6 and near >= 4, "%d bombs released, %d within 25 m of the mark" % [drops.size(), near])
 	# 11. Ctrl+A then attack-move everything; play to the end
 	_key(KEY_A, true); await _frames()
 	_log("select_all", cmd.live_selection().size() == battle.alive_count(0), "%d selected" % cmd.live_selection().size())
@@ -241,7 +256,7 @@ func _run() -> void:
 	await _wait_sim(2.0)
 	await _shot("end")
 	_log("match_end", battle.game_over, battle.hud.banner)
-	_log("command_log", battle.command_log.size() >= 8, "%d commands logged with ticks" % battle.command_log.size())
+	_log("command_log", battle.command_log.size() >= 9, "%d commands logged with ticks" % battle.command_log.size())
 	var f := FileAccess.open(out + "/result.txt", FileAccess.WRITE)
 	for ch in checks: f.store_line("%s %s %s" % [ch[0], "PASS" if ch[1] else "FAIL", ch[2]])
 	f.close()
