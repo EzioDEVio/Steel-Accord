@@ -20,6 +20,7 @@ python3 -I tools/art/bld_supply_depot_3d.py godot/assets/units3d/supply_depot \
     --previews docs/screens --concept <.../Supply_Depot_overhead.png>
 # options: --previews-only (re-render existing GLB), --only rts,front (subset of shots)
 ```
+Determinism was checked by running the build twice into different folders. Both GLBs are byte-identical (md5 `55d2d89f…`).
 Run times on 2 CPU cores with no GPU: about 2.5 min for the build and texture bakes, and about 1 min per preview shot.
 
 ## Dimensions and conventions
