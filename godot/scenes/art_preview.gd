@@ -42,6 +42,11 @@ func _ready() -> void:
 	_apply_materials(model, 0, args.model)
 	if args.pose == "walk":
 		_pose_walk(model)
+	elif args.pose == "spin":
+		# pivot test for rotorcraft: rotors about their hub axes, chin gun traversed + elevated
+		_rot(model, "MainRotor", Vector3(0, 30, 0))
+		_rot(model, "TailRotor", Vector3(45, 0, 0))
+		_rot(model, "Cannon", Vector3(0, 35, 0))
 	var aabb := _aabb(model, Transform3D.IDENTITY)
 	print("AABB ", aabb.position, " size ", aabb.size)
 	if args.view == "rts" and args.ref == "1":
@@ -116,7 +121,7 @@ func _unit_material(src: Material, ao: Texture2D, idx: int) -> ShaderMaterial:
 		"SA_Canvas": [Color(0.36, 0.33, 0.23), 0.95, 0.0, 4],
 		# new names introduced by the technical-art pass (engine palette must add these too)
 		"SA_Skin": [Color(0.55, 0.40, 0.31), 0.7, 0.0, 4],
-		"SA_Concrete": [Color(0.50, 0.49, 0.46), 0.9, 0.0, 4],
+		"SA_Concrete": [Color(0.40, 0.39, 0.36), 0.9, 0.0, 4],
 	}
 	var e: Array = pal.get(src.resource_name, pal["SA_Paint"])
 	var m := ShaderMaterial.new(); m.shader = UNIT_SHADER

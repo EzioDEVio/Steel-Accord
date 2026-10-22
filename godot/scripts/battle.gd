@@ -42,7 +42,7 @@ func _ready() -> void:
 	camera = RTSCamera.new()
 	camera.bounds = map_bounds.grow(-10)
 	add_child(camera)
-	camera.focus(Vector3(0, 0, 105))
+	camera.focus(Vector3(0, 0, 67.0 if "close" in _args() else 105.0))
 	commander = Commander.new()
 	commander.battle = self; commander.camera = camera
 	add_child(commander)
@@ -92,7 +92,8 @@ func _build_map() -> void:
 		if absf(p.z) > 90 and absf(p.x) < 55: continue
 		World.bush(self, props["Bush%d" % (i % 4)], p, rng.randf_range(0.7, 1.6), rng.randf() * TAU,
 			Color(0.85, 0.9, 0.8).lerp(Color(1.15, 1.1, 0.85), rng.randf()))
-	World.grass(self, Rect2(-160, -160, 320, 320), 160000, rng, func(p): return _in_obstacle(p, 1.0))
+	var tries := 50000 if "lite" in _args() else 160000
+	World.grass(self, Rect2(-160, -160, 320, 320), tries, rng, func(p): return _in_obstacle(p, 1.0))
 
 
 func _in_obstacle(p: Vector3, margin: float) -> bool:
@@ -121,8 +122,11 @@ func _bake_nav() -> void:
 	nav_map = get_world_3d().navigation_map
 	NavigationServer3D.map_set_cell_size(nav_map, 0.5)
 	NavigationServer3D.map_set_cell_height(nav_map, 0.25)
-	await get_tree().physics_frame
-	await get_tree().physics_frame
+	# wait for the navigation map to sync before the battle starts (deterministic start state)
+	for i in 120:
+		await get_tree().physics_frame
+		if NavigationServer3D.map_get_iteration_id(nav_map) > 0:
+			break
 	nav_ready = NavigationServer3D.map_get_iteration_id(nav_map) > 0
 	print("NAV polygons=", nm.get_polygon_count(), " ready=", nav_ready)
 
@@ -135,10 +139,13 @@ func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
 
 
 func _spawn_forces() -> void:
+	# "close" start (used for recorded demos) puts the armies ~150 m apart instead of ~220 m
+	var zb := 70.0 if "close" in _args() else 108.0
+	var zr := -75.0 if "close" in _args() else -108.0
 	for i in 6:
-		_spawn("vanguard", 0, Vector3(-20 + (i % 3) * 20, 0, 108 + (i / 3) * 12), 0.0)
+		_spawn("vanguard", 0, Vector3(-20 + (i % 3) * 20, 0, zb + (i / 3) * 12), 0.0)
 	for i in 5:
-		_spawn("vanguard", 1, Vector3(-24 + i * 12, 0, -108 - (i % 2) * 10), PI)
+		_spawn("vanguard", 1, Vector3(-24 + i * 12, 0, zr - (i % 2) * 10), PI)
 
 
 func _spawn(kind: String, team: int, pos: Vector3, yaw: float) -> Unit:
