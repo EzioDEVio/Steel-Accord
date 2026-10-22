@@ -55,19 +55,20 @@ def body_and_wheels(ctx, V):
     # chassis underside between the axles (frame rails, axles, diffs) so it is not see-through from low angles
     fy, ry_ = S.y(fw[0]), S.y(rw[0])
     wz = S.z(fw[1])
-    H.box((0, (fy + ry_) / 2, wz + 0.05), (1.3, fy - ry_ + 0.6, 0.28))
+    H.box((0, (fy + ry_) / 2, wz + 0.15), (1.3, fy - ry_ + 0.6, 0.24))
     for y in [S.y(p[0]) for _, p in wheels]:
         H.cyl((0, y, wz), 0.07, 2 * V["wheel_x"] - 0.2, (0, PI / 2, 0), seg=8)
         H.box((0, y, wz), (0.4, 0.35, 0.3))
     # common HMMWV details: grille slats, brush-guard tubes, rocker steps, tow shackles, hood vents
-    for k in range(7):
+    for k in range(7 if V.get("hmmwv_details", True) else 0):
         H.box(((k - 3) * 0.13, yf + 0.03, S.z(V["headlight_py"]) - 0.02), (0.05, 0.04, 0.3))
-    for s in (-1, 1):
+    for s in ((-1, 1) if V.get("hmmwv_details", True) else ()):
         H.rod((s * 0.55, yf + 0.12, S.z(fb[3]) + 0.02), (s * 0.55, yf + 0.12, S.z(V["headlight_py"]) + 0.2), 0.025)
         H.cyl((s * 0.62, yf + 0.06, S.z(fb[3]) + 0.06), 0.045, 0.06, (0, PI / 2, 0), seg=10)
         H.box((s * (hw + 0.03), (fy + ry_) / 2, S.z(V.get("rocker_py", fw[1] - 5))), (0.08, fy - ry_ - 1.2, 0.05))
         H.cyl((s * (hw - 0.3), yr - 0.04, S.z(rb[3]) + 0.07), 0.04, 0.06, (PI / 2, 0, 0), seg=8)
-    H.rod((-0.95, yf + 0.12, S.z(V["headlight_py"]) + 0.2), (0.95, yf + 0.12, S.z(V["headlight_py"]) + 0.2), 0.025)
+    if V.get("hmmwv_details", True):
+        H.rod((-0.95, yf + 0.12, S.z(V["headlight_py"]) + 0.2), (0.95, yf + 0.12, S.z(V["headlight_py"]) + 0.2), 0.025)
     for fn in V.get("hull_extra", []):
         fn(H, S, T)
     det = H.build(mat, bevel=0.0)
@@ -75,10 +76,10 @@ def body_and_wheels(ctx, V):
     body.data.materials.clear(); body.data.materials.append(mat)
     o["Hull"] = body
     # wheels (left authored; right are UV-sharing mirrors made after unwrapping)
-    r = r_px * S.s
+    r = r_px * S.s * V.get("wheel_scale", 1.04)        # concept tyres read ~4% larger than the arch fit
     for suf, (px, py) in wheels:
         P = vk.tyre_part(f"Wheel{suf}", r, V["tyre_w"], r * V.get("rim_frac", 0.55), seg=V.get("tyre_seg", 34))
-        o[f"Wheel{suf}"] = P.build(mat, bevel=0.0, smooth=50, location=(-V["wheel_x"], S.y(px), S.z(py)))
+        o[f"Wheel{suf}"] = P.build(mat, bevel=0.0, smooth=50, location=(-V["wheel_x"], S.y(px), r))
     return [f"Wheel{suf}" for suf, _ in wheels], r
 
 
@@ -295,6 +296,15 @@ def V_tow():
 
 
 # ======================================================================== hmmwv (base troop carrier, soft top)
+def base_extra(H, S, T):
+    hw = T.x(266)
+    for px in (300, 420, 540, 660, 780):                       # canvas bows / tie-down straps over the soft top
+        H.box((0, S.y(px), S.z(16) + 0.01), (2 * hw * 0.98, 0.05, 0.03))
+        for s in (-1, 1):
+            H.box((s * (hw + 0.005), S.y(px), S.z(60)), (0.02, 0.05, S.z(16) - S.z(105)))
+    H.cyl((-0.85, S.y(248), (S.z(18) + S.z(170)) / 2), 0.04, S.z(18) - S.z(170), seg=8)   # snorkel/antenna mast
+    for s in (-1, 1):
+        H.box((s * 0.6, S.y(858) - 0.04, S.z(205)), (0.5, 0.06, 0.1))   # tailgate hinges / latches
 def V_base():
     S = vk.SideFrame(4.6 / 845.0, 435.0, 365.0)
     T = vk.TopFrame(4.6 / 493.0, 152.0, 259.5)
@@ -308,12 +318,20 @@ def V_base():
         cams={"front34": -40.0, "rear34": -140.0},
         team_strips=[(S.y(740), S.y(840), S.z(150))],
         preview=dict(length=4.9, width=2.4, height=2.3, rts_dist=11, close_dist=8.5, close_az=-40),
-        turret=None,
+        turret=None, tyre_seg=40, hull_extra=[base_extra],
         notes=["HMMWV base: soft-top troop carrier, no weapon -> no Turret/Gun/Muzzle nodes."],
     )
 
 
 # ======================================================================== hmmwv_medical (ambulance; red crosses removed)
+def med_extra(H, S, T):
+    H.box((0.0, S.y(640), S.z(24) + 0.1), (0.9, 0.6, 0.24))          # roof air-conditioning unit (rear)
+    H.box((0.0, S.y(640), S.z(24) + 0.23), (0.7, 0.45, 0.04))
+    for s in (-1, 1):
+        H.box((s * 0.75, S.y(762) - 0.05, S.z(20) - 0.05), (0.3, 0.1, 0.1))     # rear marker / flood lights
+        H.box((s * 0.55, S.y(762) - 0.02, S.z(150)), (0.03, 0.04, 1.0))         # rear door hinges
+        H.box((s * (T.x(313) + 0.02), S.y(300), S.z(40)), (0.04, 0.12, 0.1))   # side marker lights
+    H.box((0, S.y(770), S.z(300)), (1.2, 0.3, 0.05))                  # rear step
 def neutralise_red_emblems(ref, min_px=1000):
     """Replace large saturated-red regions (protected red-cross emblem in the concept) with the surrounding
     white panel colour. Returns the bounding boxes that were neutralised."""
@@ -364,7 +382,7 @@ def V_medical():
         cams={"front34": -40.0, "rear34": -140.0},
         team_strips=[], team_extra=[team], emblem_fix=True,
         preview=dict(length=5.4, width=2.5, height=2.9, rts_dist=12, close_dist=9.5, close_az=-40),
-        turret=None,
+        turret=None, tyre_seg=40, hull_extra=[med_extra],
         notes=["HMMWV ambulance: the concept's red-cross emblems (protected emblem) were removed from all four "
                "projection sources (replaced by the surrounding white panel colour) and replaced by plain SA_Team "
                "squares on both sides, the roof and the rear doors. No weapon -> no Turret/Gun/Muzzle."],

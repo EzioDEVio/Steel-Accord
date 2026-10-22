@@ -161,15 +161,15 @@ def build():
             B.span("yellow", x - 0.06, x + 0.06, HY0 + 0.3, IY1 - 0.5, SL + 0.01, SL + 0.02)
         # crane runway beams along both bay walls
         for x in (bx0 + 0.25, bx1 - 0.25):
-            B.span("yellow" if bi == 0 else "metal", x - 0.15, x + 0.15, HY0 + 0.6, IY1 - 0.3, WH - 1.3, WH - 1.0, bottom=True)
+            B.span("yellow" if bi == 0 else "metal", x - 0.15, x + 0.15, HY0 + 0.6, IY1 - 0.3, BT - 0.75, BT - 0.45, bottom=True)
         if bi == 0:                                       # yellow gantry crane bridge + hoist
             yb = HY0 + 1.1                                   # bridge just behind the header, visible from outside
-            B.span("yellow", bx0 + 0.1, bx1 - 0.1, yb - 0.3, yb + 0.3, BT - 0.75, BT - 0.1, bottom=True)
-            B.span("hazard", bx0 + 0.3, bx1 - 0.3, yb - 0.32, yb - 0.3, BT - 0.65, BT - 0.4, bottom=True)
+            B.span("yellow", bx0 + 0.1, bx1 - 0.1, yb - 0.3, yb + 0.3, BT - 1.45, BT - 0.75, bottom=True)
+            B.span("hazard", bx0 + 0.3, bx1 - 0.3, yb - 0.32, yb - 0.3, BT - 1.35, BT - 1.05, bottom=True)
             hx = (bx0 + bx1) / 2 - 0.8
-            B.span("yellow", hx - 0.45, hx + 0.45, yb - 0.45, yb + 0.45, BT - 1.25, BT - 0.75, bottom=True)
-            B.strut("dark", (hx, yb, BT - 1.25), (hx, yb, 3.2), 0.025, seg=4)
-            B.box("yellow", (hx, yb, 3.05), (0.3, 0.2, 0.3), bottom=True)
+            B.span("yellow", hx - 0.45, hx + 0.45, yb - 0.45, yb + 0.45, BT - 1.95, BT - 1.45, bottom=True)
+            B.strut("dark", (hx, yb, BT - 1.95), (hx, yb, 2.9), 0.025, seg=4)
+            B.box("yellow", (hx, yb, 2.75), (0.3, 0.2, 0.3), bottom=True)
             # red machinery / tool carts inside (as in the concept)
             for (x, y, sx, sy, h) in ((bx0 + 1.0, HY0 + 4.5, 1.2, 0.8, 1.3), (bx1 - 1.1, HY0 + 5.2, 1.0, 1.4, 1.6),
                                       (bx0 + 1.2, HY0 + 7.0, 1.4, 1.0, 1.1)):

@@ -28,7 +28,7 @@ def V_mrap():
             H.box((s * (T.x(312) + 0.05), S.y(380), S.z(355)), (0.1, 1.8, 0.05))
         H.cyl((0, S.y(730), S.z(250)), 0.5, 0.3, (PI / 2, 0, 0), seg=24)    # spare tyre
     return dict(
-        S=S, T=T, front_wheel=(152, 396), rear_wheel=(608, 396), wheel_r_px=80, arch_pad=6,
+        S=S, T=T, front_wheel=(152, 396), rear_wheel=(608, 396), wheel_r_px=80, arch_pad=6, wheel_scale=1.0,
         body_clip=(0, 158, 778, 488), open_px=3,
         plan=[(75, 14), (290, 14), (312, 60), (312, 700), (300, 711), (66, 711), (54, 700), (54, 60)],
         half_w=T.x(312), wheel_x=1.22, tyre_w=0.42, rim_frac=0.5, nose_px=15, tail_px=762, headlight_py=300,

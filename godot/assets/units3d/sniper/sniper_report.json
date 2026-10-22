@@ -1,0 +1,198 @@
+{
+ "idle": {
+  "frames": 91,
+  "length_s": 3.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 1.7,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 610.0
+ },
+ "walk": {
+  "frames": 31,
+  "length_s": 1.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 6.2,
+   "RightLeg": 2.2,
+   "LeftLeg": 2.2
+  },
+  "ik_worst_frame": {
+   "LeftArm": 25,
+   "RightLeg": 0,
+   "LeftLeg": 15
+  },
+  "body_min_z_mm": [
+   -1.4,
+   0.0
+  ],
+  "rifle_min_z_mm": 495.1
+ },
+ "run": {
+  "frames": 22,
+  "length_s": 0.7,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 9.5,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {
+   "LeftArm": 17
+  },
+  "body_min_z_mm": [
+   -1.8,
+   66.8
+  ],
+  "rifle_min_z_mm": 288.4
+ },
+ "aim": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1311.6
+ },
+ "fire": {
+  "frames": 25,
+  "length_s": 0.8,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1315.8
+ },
+ "crouch_fire": {
+  "frames": 25,
+  "length_s": 0.8,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -22.6,
+   -22.6
+  ],
+  "rifle_min_z_mm": 935.2
+ },
+ "die": {
+  "frames": 46,
+  "length_s": 1.5,
+  "loop": false,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 98.7,
+   "LeftLeg": 24.5
+  },
+  "ik_worst_frame": {
+   "RightLeg": 38,
+   "LeftLeg": 38
+  },
+  "body_min_z_mm": [
+   -4.5,
+   0.0
+  ],
+  "rifle_min_z_mm": 1.5,
+  "final_body_min_z_mm": -1.1
+ },
+ "stride_m": {
+  "walk": 1.4,
+  "run": 3.15
+ },
+ "speed_mps": {
+  "walk": 1.4,
+  "run": 4.5
+ },
+ "triangles": {
+  "Sniper_Body": 4138,
+  "SniperRifle": 408,
+  "total": 4546
+ },
+ "notes": "fire/crouch_fire = one heavy shot, 0.8 s (kick + settle); crouch_fire is kneeling. Ghillie strands are single-sided quads: keep the materials double-sided (cull disabled) in Godot.",
+ "role": "sniper",
+ "weapon": {
+  "object": "SniperRifle",
+  "muzzle_local": [
+   0.0,
+   1.225,
+   0.0
+  ]
+ },
+ "palette_rgb": {
+  "dark": [
+   27,
+   24,
+   16
+  ],
+  "brown": [
+   75,
+   61,
+   40
+  ],
+  "olive": [
+   76,
+   81,
+   46
+  ],
+  "khaki": [
+   104,
+   97,
+   64
+  ],
+  "base": [
+   142,
+   132,
+   91
+  ],
+  "cream": [
+   194,
+   182,
+   142
+  ]
+ },
+ "materials": [
+  "SA_Camo",
+  "SA_CamoGear",
+  "SA_Canvas",
+  "SA_Skin",
+  "SA_Metal",
+  "SA_Rubber",
+  "SA_Glass",
+  "SA_Team",
+  "SA_Ghillie",
+  "SA_Ghillie2"
+ ]
+}

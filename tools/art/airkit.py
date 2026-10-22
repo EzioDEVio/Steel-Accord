@@ -52,7 +52,35 @@ def load_rgba(path):
     return np.asarray(Image.open(path).convert("RGBA"))
 
 
-def sheet_cell(path, cell, dil=6, min_frac=0.01):
+def sheet_cell(path, cell, dil=6, min_frac=0.01, split=0):
+    """split > 0: views touching each other on the sheet are separated by eroding the alpha `split` px before
+    labelling (no dilation), then grown back inside the original alpha."""
+    if split:
+        a = load_rgba(path).copy()
+        H, W = a.shape[:2]
+        m = a[..., 3] > 24
+        core = ndimage.binary_erosion(m, iterations=split)
+        lab, n = ndimage.label(core)
+        keep = np.zeros_like(m)
+        cx_want = 0 if cell[1] == "l" else 1
+        cy_want = 0 if cell[0] == "t" else 1
+        tot = core.sum()
+        for k in range(1, n + 1):
+            mk = lab == k
+            if mk.sum() < min_frac * tot / 4:
+                continue
+            ys, xs = np.nonzero(mk)
+            if int(xs.mean() >= W / 2) == cx_want and int(ys.mean() >= H / 2) == cy_want:
+                keep |= mk
+        other = core & ~keep
+        grow = ndimage.binary_dilation(keep, iterations=split + 2) & m
+        grow &= ~ndimage.binary_dilation(other, iterations=split + 2) | ndimage.binary_dilation(keep, iterations=2)
+        a[..., 3] = np.where(grow, a[..., 3], 0)
+        return a
+    return _sheet_cell(path, cell, dil, min_frac)
+
+
+def _sheet_cell(path, cell, dil=6, min_frac=0.01):
     """Return the full sheet RGBA with alpha kept only on the connected components that belong to one
     cell of a 2x2 turnaround sheet. cell = 'tl' | 'tr' | 'bl' | 'br'. A component belongs to the cell
     in which its (alpha-weighted) centroid lies; parts may extend across the visual cell boundary."""
@@ -653,7 +681,7 @@ def preview_sheet(aid, title, length, span, height, out_png, res=(640, 400), sam
     asp = res[0] / res[1]
     fr = max(span, height * asp) * 1.12
     sd = max(length, height * asp) * 1.10
-    tp = max(span, length * asp) * 1.06
+    tp = max(length, span * asp) * 1.06
     diag = math.sqrt(length ** 2 + span ** 2)
     views = [("front", 0, 5, (0, 0, zc), fr, None), ("side", -90, 5, (0, 0, zc), sd, None),
              ("rear", 180, 5, (0, 0, zc), fr, None), ("top", 0, 90, (0, 0, zc), tp, (1, 0, 0)),
@@ -715,3 +743,68 @@ def parse_args(aid):
         i += 1
     os.makedirs(o["out"], exist_ok=True)
     return o
+
+
+# ============================================================================ standard pipeline
+def finish(aid, o, mat, objs, empties, refs, side, top, side_rgba, top_rgba, bounds, dims, title,
+           flat=None, extra_export=(), ao=0.45, grime=0.12, cell=0.03, under_rgb=None, shade_kw=None,
+           blade=None):
+    """objs: dict with 'air' (+ optional 'stores', 'gear', 'glass', ...) projected objects and 'team'.
+    flat: {key: rgb} objects coloured flat instead of projected. blade: (mat, png, name) for rotor/prop mats.
+    Builds the atlas, joins everything into Body (+ SA_Team surface), adds empties, exports, previews."""
+    keys = [k for k in objs if k != "team"]
+    tex_objs = [objs[k] for k in keys]
+    if o["fit_png"]:
+        fit_overlay(tex_objs + ([objs["team"]] if "team" in objs else []) + list(extra_export), side, top,
+                    side_rgba, top_rgba, o["fit_png"])
+    L.smart_uv(tex_objs, margin=0.003)
+    modes = {}
+    for i, k in enumerate(keys):
+        if flat and k in flat:
+            modes[i] = ("flat", flat[k])
+    shade = Shade(refs, top, side, modes=modes, grime=grime, under_rgb=under_rgb, **(shade_kw or {}))
+    albedo = os.path.join(o["out"], f"{aid}_albedo.png")
+    _, cover = texture_atlas(tex_objs, shade, 2048, 1024, ao, cell, bounds, albedo,
+                             depth_objs=tex_objs + ([objs["team"]] if "team" in objs else []))
+    attach_texture(mat, albedo, f"{aid}_albedo")
+    if blade:
+        attach_texture(blade[0], blade[1], blade[2])
+    body = join(tex_objs, "Body")
+    if "team" in objs:
+        body = join_team(body, objs["team"])
+    body.name = "Body"; body.data.name = "Body"
+    ems = [empty(n, p) for n, p in empties.items()]
+    export = [body] + list(extra_export) + ems
+    glb = os.path.join(o["out"], f"{aid}.glb")
+    export_glb(export, glb)
+    print(f"{aid.upper()} atlas coverage {cover:.3f}")
+    print(report(export, body))
+    print(f"{aid.upper()} GLB", glb)
+    if o["prev"]:
+        preview_sheet(aid, title, dims[0], dims[1], dims[2], o["sheet"])
+        print(f"{aid.upper()} sheet", o["sheet"])
+    return body, export
+
+
+def load_views(sheet, cell, top_png=None, top_cell=None, top_rot=0, side_rot=0, side_flip=False, top_flip=False,
+               split=0):
+    """Side view from a sheet cell (oriented nose-left), top view from a cleaned sprite or a sheet cell."""
+    side_rgba = orient(sheet_cell(sheet, cell, split=split), side_rot, side_flip)
+    if top_png:
+        top_rgba = load_rgba(top_png)
+    else:
+        top_rgba = orient(sheet_cell(sheet, top_cell, split=split), top_rot, top_flip)
+    refs = {"side": ref_from_rgba(side_rgba, erode=2, keep_largest=True),
+            "top": ref_from_rgba(top_rgba, erode=2, keep_largest=True)}
+    L.gain_to(refs["top"], refs["side"]["mean"], strength=0.6)
+    return side_rgba, top_rgba, refs
+
+
+def disc(P, c, r, axis="y", depth=0.02, squash=1.0, seg=18):
+    """Thin dark cap (intake face / nozzle interior) centred at c, facing along the given axis."""
+    c = Vector(c)
+    d = Vector({"x": (1, 0, 0), "y": (0, 1, 0), "z": (0, 0, 1)}[axis]) * (depth / 2)
+    body_rev(P, c - d, c + d, [(0, r), (1, r)], seg=seg, squash=squash)
+
+
+DARK = (0.03, 0.03, 0.035)

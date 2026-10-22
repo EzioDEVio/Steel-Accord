@@ -61,7 +61,7 @@ def build():
     outer = [(RV, APEX_Z - 0.05), (1.1, APEX_Z - 0.12), (1.9, APEX_Z - 0.42), (2.55, APEX_Z - 0.95),
              (3.0, APEX_Z - 1.6), (RS, SKIRT_Z + 0.25), (RS - 0.08, SKIRT_Z)]
     inner = [(r - 0.05, z - 0.07) for r, z in outer[::-1]]
-    prof = outer + inner
+    prof = (outer + inner)[::-1]          # winding: lathe faces point outward when the profile runs skirt -> apex
     for g in range(GORES):
         a0 = 2 * PI * g / GORES
         N.lathe("canvas_o" if g % 2 == 0 else "canvas_t", prof, seg=3, a0=a0, a1=a0 + 2 * PI / GORES, closed_prof=True)

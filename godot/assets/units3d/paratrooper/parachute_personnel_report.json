@@ -1,0 +1,16 @@
+{
+ "triangles": {
+  "Canopy": 576,
+  "Rigging": 192
+ },
+ "skirt_radius_m": 3.2,
+ "skirt_height_m": 5.300000000000001,
+ "apex_height_m": 7.300000000000001,
+ "origin": "harness attachment point (risers end at x=+/-0.12)",
+ "actions": {
+  "canopy_idle": {
+   "length_s": 2.0,
+   "loop": true
+  }
+ }
+}

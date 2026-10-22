@@ -1,0 +1,243 @@
+{
+ "idle": {
+  "frames": 91,
+  "length_s": 3.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 1.7,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 780.9
+ },
+ "walk": {
+  "frames": 31,
+  "length_s": 1.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 6.2,
+   "RightLeg": 2.2,
+   "LeftLeg": 2.2
+  },
+  "ik_worst_frame": {
+   "LeftArm": 25,
+   "RightLeg": 0,
+   "LeftLeg": 15
+  },
+  "body_min_z_mm": [
+   -1.4,
+   0.0
+  ],
+  "rifle_min_z_mm": 678.1
+ },
+ "run": {
+  "frames": 22,
+  "length_s": 0.7,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 9.5,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {
+   "LeftArm": 17
+  },
+  "body_min_z_mm": [
+   -1.8,
+   66.8
+  ],
+  "rifle_min_z_mm": 520.0
+ },
+ "aim": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1153.8
+ },
+ "fire": {
+  "frames": 10,
+  "length_s": 0.3,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1159.2
+ },
+ "crouch_fire": {
+  "frames": 10,
+  "length_s": 0.3,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -2.9,
+   -2.9
+  ],
+  "rifle_min_z_mm": 735.4
+ },
+ "die": {
+  "frames": 46,
+  "length_s": 1.5,
+  "loop": false,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 101.0,
+   "LeftLeg": 28.2
+  },
+  "ik_worst_frame": {
+   "RightLeg": 42,
+   "LeftLeg": 38
+  },
+  "body_min_z_mm": [
+   -4.5,
+   0.2
+  ],
+  "rifle_min_z_mm": -4.2,
+  "final_body_min_z_mm": 0.0
+ },
+ "para_descend": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -1.0,
+   10.3
+  ],
+  "rifle_min_z_mm": 672.0
+ },
+ "para_land": {
+  "frames": 73,
+  "length_s": 2.4,
+  "loop": false,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -4.6,
+   138.5
+  ],
+  "rifle_min_z_mm": 98.1
+ },
+ "stride_m": {
+  "walk": 1.4,
+  "run": 3.15
+ },
+ "speed_mps": {
+  "walk": 1.4,
+  "run": 4.5
+ },
+ "triangles": {
+  "Paratrooper_Body": 3666,
+  "Rifle": 360,
+  "total": 4026
+ },
+ "chute_attach_rest": [
+  0.0,
+  0.0,
+  1.4900000095367432
+ ],
+ "chute_attach_para_descend_m": [
+  0.0,
+  0.0,
+  1.525
+ ],
+ "chute_attach_at_1p3_scale_m": 1.98,
+ "notes": "para_descend loops (2 s); para_land is one-shot (2.4 s) and its last frame equals idle frame 0. Attach parachute_personnel.glb (origin = harness point) to the ChuteAttach node; detach/hide it when para_land starts. unit.gd currently puts the canopy at vis y=2.0, which matches the harness height (1.525 m x 1.3 infantry scale = 1.98 m) if the canopy itself is not scaled.",
+ "role": "paratrooper",
+ "weapon": {
+  "object": "Rifle",
+  "muzzle_local": [
+   0.0,
+   0.905,
+   0.008
+  ]
+ },
+ "palette_rgb": {
+  "base": [
+   158,
+   138,
+   104
+  ],
+  "khaki": [
+   126,
+   108,
+   80
+  ],
+  "olive": [
+   98,
+   97,
+   62
+  ],
+  "brown": [
+   108,
+   82,
+   58
+  ],
+  "dark": [
+   50,
+   41,
+   29
+  ],
+  "cream": [
+   198,
+   182,
+   148
+  ]
+ },
+ "materials": [
+  "SA_Camo",
+  "SA_CamoGear",
+  "SA_Canvas",
+  "SA_Skin",
+  "SA_Metal",
+  "SA_Rubber",
+  "SA_Glass",
+  "SA_Team",
+  "SA_Olive",
+  "SA_Webbing"
+ ]
+}

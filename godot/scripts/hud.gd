@@ -418,7 +418,7 @@ func _draw_status() -> void:
 		_text(r2.position + Vector2(104, 29), "-%d/min" % int(tr.y), 11, Color(1.0, 0.6, 0.5))
 		var g: int = battle.power_gen(t); var c: int = battle.power_use(t)
 		_text(r2.position + Vector2(196, 23), "Power %d / %d" % [c, g], 15, Color(0.6, 0.95, 0.6) if g >= c else Color(1.0, 0.4, 0.3))
-		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: production and construction at half speed", 12, Color(1.0, 0.45, 0.35))
+		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: half-speed build", 12, Color(1.0, 0.45, 0.35))
 	if msg_t > 0.0:
 		var s := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)
 		_text(Vector2((size.x - s.x) / 2, 96), msg, 16, Color(1, 0.85, 0.5, minf(1.0, msg_t)))

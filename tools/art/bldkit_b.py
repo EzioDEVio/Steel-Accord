@@ -680,6 +680,28 @@ class Kit:
         return glb
 
 
+# ====================================================================== normals
+def orient_islands(bm):
+    """Recalculate normals ONLY for closed (manifold) islands, where Blender's recalc is reliable.
+    Open islands (single ground quads, slab skirts, open shells, primitives whose bottom face was dropped) keep
+    their construction winding, which every constructor here makes outward / upward. (A blanket recalc flipped
+    lone quads - e.g. the painted ground plane - to face down, which back-face culling in Godot then hid.)"""
+    seen = set()
+    for f in bm.faces:
+        if f in seen:
+            continue
+        isl, stack = [], [f]
+        seen.add(f)
+        while stack:
+            g = stack.pop(); isl.append(g)
+            for e in g.edges:
+                for h in e.link_faces:
+                    if h not in seen:
+                        seen.add(h); stack.append(h)
+        if all(len(e.link_faces) == 2 for g in isl for e in g.edges):
+            bmesh.ops.recalc_face_normals(bm, faces=isl)
+
+
 # ====================================================================== geometry accumulator
 class Part:
     """Accumulates primitives per (surface, bevel) into bmeshes; build() makes one joined object.
@@ -838,7 +860,7 @@ class Part:
         kit = self.kit
         objs = []
         for (sname, bev), bm in sorted(self.bms.items()):
-            bmesh.ops.recalc_face_normals(bm, faces=[f for f in bm.faces])
+            orient_islands(bm)
             uv = bm.loops.layers.uv["tile"]; pre = bm.faces.layers.int["preset"]
             if sname == "plan":
                 pl = kit.plan
@@ -998,6 +1020,9 @@ def previews(glb, outdir, prefix, shots, only=None, concept=None, res=(640, 400)
     """Render shots of the *exported* GLB. shots: list of dicts(name, az, el, dist, lens=50, ortho=None, target).
     Preview-only: light objects are tinted by group (status green, beacon red, flood warm, runway amber)."""
     os.makedirs(outdir, exist_ok=True)
+    if not only or "cull" in only.split(","):
+        cs = [s for s in shots if s["name"] in ("rts", "front", "top")]
+        cull_check(glb, os.path.join(outdir, f"{prefix}_cull.png"), cs)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     bpy.ops.import_scene.gltf(filepath=glb)
@@ -1045,7 +1070,7 @@ def previews(glb, outdir, prefix, shots, only=None, concept=None, res=(640, 400)
         bpy.ops.render.render(write_still=True)
         done.append(path)
         print("rendered", path)
-    if concept and (not only or "rts" in only.split(",")):
+    if concept and (not only or "rts" in only.split(",")) and os.path.exists(os.path.join(outdir, f"{prefix}_rts.png")):
         a = Image.open(os.path.join(outdir, f"{prefix}_rts.png")).convert("RGB")
         b = Image.open(concept).convert("RGB")
         b = b.resize((int(b.width * a.height / b.height), a.height), Image.LANCZOS)
@@ -1064,3 +1089,48 @@ def std_shots(span, h, top_ortho=None, tz=None, dmul=1.0):
             dict(name="front", az=0, el=20, dist=d, target=(0, 0, tz)),
             dict(name="side", az=-90, el=14, dist=d, target=(0, 0, tz)),
             dict(name="top", az=0, el=89.9, dist=d + 40, ortho=top_ortho or span * 1.15, target=(0, 0, 0))]
+
+
+def cull_check(glb, out_png, shots, res=(640, 400)):
+    """Re-import the GLB and render it in Workbench with BACK-FACE CULLING ON (as Godot draws it), textured,
+    from the given shots; the images are tiled into one PNG. Also prints every object's transform and the
+    number of up-facing vs down-facing faces near ground level (z < 0.6 m, area > 1 m^2) as a sanity check."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    scene = bpy.context.scene
+    bpy.ops.import_scene.gltf(filepath=glb)
+    for o in scene.objects:
+        if o.type == "MESH":
+            big_dn = sum(1 for p in o.data.polygons if (o.matrix_world @ p.center).z < 0.6 and p.area > 1.0 and p.normal.z < -0.5)
+            big_up = sum(1 for p in o.data.polygons if (o.matrix_world @ p.center).z < 0.6 and p.area > 1.0 and p.normal.z > 0.5)
+            print(f"  {o.name:16s} loc={tuple(round(v, 2) for v in o.location)} rot={tuple(round(v, 3) for v in o.rotation_euler)}"
+                  f" scale={tuple(round(v, 3) for v in o.scale)} parent={o.parent.name if o.parent else '-'}"
+                  f" ground_faces_up={big_up} down={big_dn}")
+    scene.render.engine = "BLENDER_WORKBENCH"
+    sh = scene.display.shading
+    sh.light = "STUDIO"; sh.color_type = "TEXTURE"; sh.show_backface_culling = True
+    sh.show_shadows = True; sh.show_cavity = False
+    scene.render.resolution_x, scene.render.resolution_y = res
+    w = bpy.data.worlds.new("w"); scene.world = w
+    cam_d = bpy.data.cameras.new("cam"); cam = bpy.data.objects.new("cam", cam_d); scene.collection.objects.link(cam)
+    scene.camera = cam; cam_d.clip_end = 2000
+    tiles = []
+    for i, s in enumerate(shots):
+        tgt = V(s.get("target", (0, 0, 2))); az, el = math.radians(s["az"]), math.radians(s["el"])
+        d = V((math.sin(az) * math.cos(el), -math.cos(az) * math.cos(el), math.sin(el)))
+        cam.location = tgt + d * s["dist"]
+        cam.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()
+        if s.get("ortho"):
+            cam_d.type = "ORTHO"; cam_d.ortho_scale = s["ortho"]
+        else:
+            cam_d.type = "PERSP"; cam_d.lens = s.get("lens", 50)
+        p = out_png + f".{i}.png"
+        scene.render.filepath = p
+        bpy.ops.render.render(write_still=True)
+        tiles.append(Image.open(p).convert("RGB")); os.remove(p)
+    W = sum(t.width for t in tiles)
+    sheet = Image.new("RGB", (W, tiles[0].height))
+    x = 0
+    for t in tiles:
+        sheet.paste(t, (x, 0)); x += t.width
+    sheet.save(out_png)
+    print("cull check", out_png)

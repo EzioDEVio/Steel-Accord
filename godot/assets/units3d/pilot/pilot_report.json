@@ -1,0 +1,197 @@
+{
+ "idle": {
+  "frames": 91,
+  "length_s": 3.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 780.0
+ },
+ "walk": {
+  "frames": 31,
+  "length_s": 1.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 2.2,
+   "LeftLeg": 2.2
+  },
+  "ik_worst_frame": {
+   "RightLeg": 0,
+   "LeftLeg": 15
+  },
+  "body_min_z_mm": [
+   -1.4,
+   0.0
+  ],
+  "rifle_min_z_mm": 694.8
+ },
+ "run": {
+  "frames": 22,
+  "length_s": 0.7,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -1.8,
+   66.8
+  ],
+  "rifle_min_z_mm": 647.3
+ },
+ "aim": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1243.5
+ },
+ "fire": {
+  "frames": 10,
+  "length_s": 0.3,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1250.4
+ },
+ "crouch_fire": {
+  "frames": 10,
+  "length_s": 0.3,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 4.7,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {
+   "RightArm": 0
+  },
+  "body_min_z_mm": [
+   -2.9,
+   -2.9
+  ],
+  "rifle_min_z_mm": 820.6
+ },
+ "die": {
+  "frames": 46,
+  "length_s": 1.5,
+  "loop": false,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 98.3,
+   "LeftLeg": 22.6
+  },
+  "ik_worst_frame": {
+   "RightLeg": 38,
+   "LeftLeg": 38
+  },
+  "body_min_z_mm": [
+   -4.5,
+   0.0
+  ],
+  "rifle_min_z_mm": 1.0,
+  "final_body_min_z_mm": -2.8
+ },
+ "stride_m": {
+  "walk": 1.4,
+  "run": 3.15
+ },
+ "speed_mps": {
+  "walk": 1.4,
+  "run": 4.5
+ },
+ "triangles": {
+  "Pilot_Body": 2718,
+  "Pistol": 60,
+  "total": 2778
+ },
+ "notes": "Flight suit (near-plain sage camo texture), survival vest, flight helmet with visor; pistol one-handed at the side when moving, two-handed aim.",
+ "role": "pilot",
+ "weapon": {
+  "object": "Pistol",
+  "muzzle_local": [
+   0.0,
+   0.405,
+   -0.006
+  ]
+ },
+ "palette_rgb": {
+  "dark": [
+   86,
+   87,
+   70
+  ],
+  "brown": [
+   94,
+   93,
+   75
+  ],
+  "olive": [
+   93,
+   96,
+   76
+  ],
+  "khaki": [
+   96,
+   97,
+   78
+  ],
+  "base": [
+   100,
+   100,
+   81
+  ],
+  "cream": [
+   104,
+   105,
+   87
+  ]
+ },
+ "materials": [
+  "SA_Camo",
+  "SA_CamoGear",
+  "SA_Canvas",
+  "SA_Skin",
+  "SA_Metal",
+  "SA_Rubber",
+  "SA_Glass",
+  "SA_Team",
+  "SA_Vest",
+  "SA_Helmet"
+ ]
+}

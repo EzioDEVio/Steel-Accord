@@ -263,4 +263,4 @@ if not O["skip_build"]:
     kit, B, P = build()
     kit.finish(B, P, O["out"])
 if O["previews"]:
-    K.previews(GLB, O["previews"], ID, extent=26.0, concept=O["concept"], only=O["only"], target_z=3.5)
+    K.previews(GLB, O["previews"], ID, extent=26.0, concept=O["concept"], only=O["only"], target_z=5.0)

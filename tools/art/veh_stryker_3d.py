@@ -60,9 +60,9 @@ def V_stryker():
         H.box((0.0, S.y(40), S.z(300)), (1.9, 0.12, 0.3))                                 # bow plate
     wy = 369
     return dict(
-        S=S, T=T, front_wheel=(175, wy), rear_wheel=(604, wy), wheel_r_px=65, arch_pad=5,
+        S=S, T=T, front_wheel=(175, wy), rear_wheel=(604, wy), wheel_r_px=65, arch_pad=5, wheel_scale=1.0,
         wheels=[("FL", (175, wy)), ("ML", (308, wy)), ("M2L", (471, wy)), ("RL", (604, wy))], steer=("F", "M"),
-        body_clip=(0, 182, 770, 448), open_px=3, tyre_seg=30,
+        body_clip=(0, 182, 770, 448), open_px=3, tyre_seg=30, hmmwv_details=False,
         plan=[(60, 10), (320, 10), (345, 60), (347, 700), (330, 737), (60, 737), (43, 700), (43, 60)],
         half_w=T.x(347), wheel_x=1.31, tyre_w=0.42, rim_frac=0.5, nose_px=15, tail_px=755, headlight_py=255,
         taillight_py=250, front_bumper=(14, 40, 310, 330), rear_bumper=(740, 757, 300, 330), mirror=None,

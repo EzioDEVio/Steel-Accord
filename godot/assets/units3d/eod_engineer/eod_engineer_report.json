@@ -1,0 +1,212 @@
+{
+ "idle": {
+  "frames": 91,
+  "length_s": 3.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 151.5
+ },
+ "walk": {
+  "frames": 31,
+  "length_s": 1.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 2.2,
+   "LeftLeg": 2.2
+  },
+  "ik_worst_frame": {
+   "RightLeg": 0,
+   "LeftLeg": 15
+  },
+  "body_min_z_mm": [
+   -1.4,
+   0.0
+  ],
+  "rifle_min_z_mm": 44.9
+ },
+ "run": {
+  "frames": 22,
+  "length_s": 0.7,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -1.8,
+   66.8
+  ],
+  "rifle_min_z_mm": 70.7
+ },
+ "aim": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 51.2
+ },
+ "fire": {
+  "frames": 31,
+  "length_s": 1.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 0.1
+ },
+ "crouch_fire": {
+  "frames": 46,
+  "length_s": 1.5,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -2.9,
+   -2.9
+  ],
+  "rifle_min_z_mm": -0.1
+ },
+ "die": {
+  "frames": 46,
+  "length_s": 1.5,
+  "loop": false,
+  "ik_err_mm": {
+   "RightArm": 13.4,
+   "LeftArm": 0.0,
+   "RightLeg": 99.5,
+   "LeftLeg": 25.9
+  },
+  "ik_worst_frame": {
+   "RightArm": 24,
+   "RightLeg": 38,
+   "LeftLeg": 38
+  },
+  "body_min_z_mm": [
+   -4.5,
+   0.0
+  ],
+  "rifle_min_z_mm": 0.5,
+  "final_body_min_z_mm": -0.5
+ },
+ "work": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -2.9,
+   -2.9
+  ],
+  "rifle_min_z_mm": 18.2
+ },
+ "stride_m": {
+  "walk": 1.4,
+  "run": 3.15
+ },
+ "speed_mps": {
+  "walk": 1.4,
+  "run": 4.5
+ },
+ "triangles": {
+  "EOD_Body": 3258,
+  "Detector": 152,
+  "total": 3410
+ },
+ "notes": "Hand item is a mine detector (object `Detector`); `Muzzle` = search-coil centre (effect / sweep point), not a gun bore. aim = slow search sweep, fire = fast sweep (1.0 s), crouch_fire = kneeling sweep (1.5 s), work = kneeling device work loop. Tool kit is the back unit (not hand-held).",
+ "role": "eod_engineer",
+ "weapon": {
+  "object": "Detector",
+  "muzzle_local": [
+   0.0,
+   1.3,
+   -0.11
+  ]
+ },
+ "palette_rgb": {
+  "dark": [
+   15,
+   14,
+   14
+  ],
+  "brown": [
+   51,
+   46,
+   41
+  ],
+  "olive": [
+   52,
+   61,
+   48
+  ],
+  "khaki": [
+   78,
+   78,
+   62
+  ],
+  "base": [
+   111,
+   108,
+   81
+  ],
+  "cream": [
+   151,
+   149,
+   120
+  ]
+ },
+ "materials": [
+  "SA_Camo",
+  "SA_CamoGear",
+  "SA_Canvas",
+  "SA_Skin",
+  "SA_Metal",
+  "SA_Rubber",
+  "SA_Glass",
+  "SA_Team",
+  "SA_Olive"
+ ]
+}
