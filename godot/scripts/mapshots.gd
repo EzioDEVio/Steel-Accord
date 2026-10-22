@@ -74,10 +74,13 @@ func _run() -> void:
 	battle.issue({"type": "move", "team": 0, "ids": col.map(func(u): return u.uid), "points": col.map(func(u): return u.position + Vector3(0, 0, -120))})
 	await _wait(2.0)
 	if "infonly" in battle.args:
-		var inf1: Array = battle.units.filter(func(u): return u.team == 1 and u.def.get("visual") == "infantry")
-		var cc := Vector3.ZERO
-		for u in inf1: cc += u.position
-		cc /= maxf(inf1.size(), 1)
+		# a squad on open ground in the basin, facing the camera
+		var cc := battle.grounded(Vector3(60, 0, -150))
+		var kinds := ["ir_rifleman", "ir_rpg", "ir_mg", "irgc_sf", "ir_sniper", "ir_medic", "ir_engineer", "ir_rifleman", "ir_rifleman", "irgc_sf"]
+		for i in kinds.size():
+			var u: Unit = battle._spawn(kinds[i], 1, cc + Vector3(-8 + (i % 5) * 4.0, 0, -2 + (i / 5) * 4.0), PI * 0.85)
+			u.reset_physics_interpolation()
+		await _wait(1.0)
 		_cam(cc, 26.0, 200.0, 34.0); await _shot("zb_iran_infantry")
 		_cam(cc, 16.0, 160.0, 28.0); await _shot("zb_iran_infantry_close")
 		get_tree().quit()
