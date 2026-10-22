@@ -137,6 +137,7 @@ func _run() -> void:
 	for u in squad: u.take_damage(9999.0, null)
 	var foes: Array = []
 	for i in 2: foes.append(battle._spawn("rifleman", 1, dk.pos + Vector3(4, 0, 4 + i * 2), 0.0))
+	if battle.base_ai: battle.base_ai.capturing["_test"] = foes.map(func(u): return u.uid)   # keep the AI from re-tasking them
 	var flipped := await _until(func(): return dk.owner == 1, 30.0)
 	_log("derrick_changes_owner", flipped, "owner=%d" % dk.owner)
 	for u in foes: u.take_damage(9999.0, null)

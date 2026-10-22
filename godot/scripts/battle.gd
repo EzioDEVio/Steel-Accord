@@ -151,6 +151,10 @@ func _ready() -> void:
 		var bs: Node = load("res://scripts/baseshots.gd").new()
 		bs.battle = self
 		add_child(bs)
+	elif "mapshots" in args:
+		var ms: Node = load("res://scripts/mapshots.gd").new()
+		ms.battle = self
+		add_child(ms)
 	elif "maptest" in args:
 		var mt: Node = load("res://scripts/autotest_map.gd").new()
 		mt.battle = self
@@ -217,7 +221,7 @@ func grounded(p: Vector3) -> Vector3:
 
 
 func _automated() -> bool:
-	return "test" in args or "maptest" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
+	return "test" in args or "maptest" in args or "mapshots" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).
