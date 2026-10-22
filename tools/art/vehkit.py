@@ -662,7 +662,7 @@ class ShadeCfg:
     def __init__(self, side, top, cams=None, k=3.0, k34=4.0, w34=1.0, mud_h=1.0, mud=(0.33, 0.29, 0.21),
                  mud_amt=0.55, rubber_objs=(), rubber_col=(0.075, 0.072, 0.068), tyre_axis_r=None,
                  overrides=None, under=(0.10, 0.10, 0.075), side_weight=1.0, top_weight=1.0, hubs=None,
-                 hub_period=40.0, hub_angle=-90.0):
+                 hub_period=40.0, hub_angle=-90.0, side_only=()):
         self.side, self.top = side, top
         self.cams = cams or {}
         self.k, self.k34, self.w34 = k, k34, w34
@@ -679,6 +679,7 @@ class ShadeCfg:
         # never shows skirt / fender colours baked into its hidden half.
         self.hubs = hubs or {}
         self.hub_period, self.hub_angle = hub_period, hub_angle
+        self.side_only = set(side_only)     # objects textured from the side view only (e.g. guns drawn rotated in the top view)
 
 
 def shade_generic(P, N, names, refs, depth, cfg):
@@ -691,9 +692,12 @@ def shade_generic(P, N, names, refs, depth, cfg):
     v_top = visible(depth["top"], P, tol + 0.03 * np.sqrt(np.clip(1 - nz ** 2, 0, 1)) / np.maximum(nz, 0.25))
     v_l = visible(depth["left"], P, tol); v_r = visible(depth["right"], P, tol)
     v_side = np.where(nx < 0, v_l, v_r)
-    w_t = np.clip(nz, 0, 1) ** k * v_top * cfg.tw
+    so = np.isin(names, list(cfg.side_only)) if cfg.side_only else np.zeros(len(P), bool)
+    w_t = np.clip(nz, 0, 1) ** k * v_top * cfg.tw * (~so)
+    v_side = v_side | so
     w_s = np.abs(nx) ** k * v_side * cfg.sw
     w_b = np.clip(-nz, 0, 1) ** k
+    w_s = w_s + so * 0.15
     num = c_top * w_t[:, None] + c_side * w_s[:, None] + cfg.under * (w_b * 0.5)[:, None]
     den = w_t + w_s + w_b * 0.5
     num0 = c_top * (np.clip(nz, 0, 1) ** k)[:, None] + c_side * (np.abs(nx) ** k)[:, None] + cfg.under * w_b[:, None]
@@ -708,7 +712,7 @@ def shade_generic(P, N, names, refs, depth, cfg):
         c = sample(ref, uv[:, 0], uv[:, 1])
         ndv = np.clip((N * cam.view_dirs(P)).sum(1), 0, 1)
         vis = cam_visible(depth[key], P, 0.07)
-        w = ndv ** cfg.k34 * vis * inside * cfg.w34
+        w = ndv ** cfg.k34 * vis * inside * cfg.w34 * (~so)
         # 3/4 views only take over faces that point mostly front / rear (+-Y) or are not covered by ortho views
         fr = np.clip(np.abs(ny) * 1.6 - 0.25, 0, 1)
         w = w * np.maximum(fr, 0.15)
@@ -1035,3 +1039,41 @@ def run_vehicle(vid, side, top, build, title, qa_dir=None, argv=None):
         os.makedirs(prev_dir, exist_ok=True)
         preview_sheet(vid, title, prev_dir, quick=opts["quick"], **pv)
     return objs
+
+
+def patch_copy(ref, rect, dy=0, dx=0):
+    """Overwrite ref rgb in rect (x0,y0,x1,y1) with the block offset by (dx,dy) - removes painted parts
+    (e.g. a gun drawn rotated across a roof) from a projection source."""
+    x0, y0, x1, y1 = rect
+    ref["rgb"][y0:y1, x0:x1] = ref["rgb"][y0 + dy:y1 + dy, x0 + dx:x1 + dx].copy()
+
+
+def silhouette_poly(ref, clip, discs=(), open_px=3, tol=1.5, keep="largest", extra_remove=()):
+    """Outline polygon (list of (px,py)) of the concept alpha inside clip=(x0,y0,x1,y1) after removing
+    discs [(cx,cy,r)] and rects in extra_remove, a morphological opening (drops antennas/rods) and keeping the
+    largest component. Pixel coordinates are in the (possibly flipped) reference frame."""
+    from skimage import measure
+    m = ref["a_full"].copy()
+    H, W = m.shape
+    x0, y0, x1, y1 = clip
+    keepm = np.zeros_like(m); keepm[max(y0, 0):min(y1, H), max(x0, 0):min(x1, W)] = True
+    m &= keepm
+    yy, xx = np.mgrid[0:H, 0:W]
+    for cx, cy, r in discs:
+        m &= (xx - cx) ** 2 + (yy - cy) ** 2 > r * r
+    for rx0, ry0, rx1, ry1 in extra_remove:
+        m[ry0:ry1, rx0:rx1] = False
+    if open_px:
+        m = ndimage.binary_opening(m, iterations=open_px)
+    m = ndimage.binary_fill_holes(m)
+    lab, n = ndimage.label(m)
+    if n > 1:
+        sizes = ndimage.sum(m, lab, range(1, n + 1))
+        m = lab == (1 + int(np.argmax(sizes)))
+    pad = np.pad(m, 1).astype(float)
+    cs = measure.find_contours(pad, 0.5)
+    c = max(cs, key=len)
+    c = measure.approximate_polygon(c, tolerance=tol)
+    pts = [(float(x) - 1, float(y) - 1) for y, x in c[:-1]]
+    # orientation-independent; Part.side recalculates normals
+    return pts

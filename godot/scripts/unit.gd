@@ -150,6 +150,10 @@ func _build_model3d(path: String) -> void:
 					mi.set_surface_override_material(si, dm)
 					track_mats.append(dm)
 	if not rotors.is_empty(): rotor = rotors[0]
+	turret = model.find_child("Turret", true, false) as Node3D
+	gun = model.find_child("Gun", true, false) as Node3D
+	muzzle = model.find_child("Muzzle", true, false) as Node3D
+	if gun: gun_rest = gun.position
 	track_m_per_v = float(def.get("track_m_per_v", 1.0))
 	wheel_r = float(def.get("wheel_radius", 0.0))
 	if wheel_r <= 0.0:
@@ -189,10 +193,12 @@ func _update_model3d(dt: float) -> void:
 	if anim:
 		var spd := speed_cur
 		if dead: _play("die")
+		elif para_alt > 0.0: _play("para_descend")
+		elif anim_cur == "para_land" and anim.is_playing(): pass
 		elif spd > 0.3:
 			var k := "run" if spd > def.speed * 0.6 else "walk"
 			_play(k, spd / (float(stride.get(k, 1.4)) * vis_scale))
-		elif target != null: _play("fire")
+		elif target != null: _play("fire" if battle.sim_time - last_fire_t < 0.7 else "aim")
 		else: _play("idle")
 
 
@@ -573,6 +579,7 @@ func _plan(p: Vector3) -> void:
 # ------------------------------------------------------------------ simulation
 func sim_tick(dt: float) -> void:
 	if dead: return
+	if _para_tick(dt): return
 	for i in w_reload.size(): w_reload[i] = maxf(0.0, w_reload[i] - dt)
 	if target and (target.dead or not is_instance_valid(target)):
 		target = null; forced_target = false
@@ -695,7 +702,11 @@ func _surface_tick(dt: float) -> void:
 		bank = move_toward(bank, 0.0, dt)
 	vel = forward() * speed_cur
 	if domain == "heli":
-		altitude = move_toward(altitude, def.altitude, dt * 5.0)   # lift-off / cruise height
+		var want_alt: float = 1.6 if (unload_pending or _loading_nearby()) and speed_cur < 2.0 else def.altitude
+		altitude = move_toward(altitude, want_alt, dt * 5.0)   # lift-off / cruise height (low hover to load / unload)
+		if unload_pending and can_exchange():
+			unload_pending = false
+			battle.unload_all(self)
 		body.rotation.x = -clampf(speed_cur / def.speed, 0.0, 1.0) * 0.12   # nose-down when cruising
 	_aim_turret(dt)
 
@@ -786,6 +797,72 @@ func _haul_tick(dt: float) -> void:
 
 
 var heal_t := 0.0
+var last_fire_t := -99.0
+# ---- transports (data-configured: def.transport = {capacity, accepts}); passengers leave battle.units while aboard
+var passengers: Array = []      # Unit nodes aboard
+var board_target: Unit = null   # infantry: the transport it is walking to
+var unload_pending := false     # helicopter: descend, then unload everyone
+
+
+func _loading_nearby() -> bool:
+	if not is_transport() or state != S.IDLE: return false
+	for u in battle.units:
+		if u.board_target == self and u.flat_dist(position) < 25.0: return true
+	return false
+
+
+# ---- paratroopers: descend under a canopy, then land and fight
+var para_alt := 0.0
+var canopy: Node3D
+const PARA_MODEL := "res://assets/units3d/paratrooper/parachute_personnel.glb"
+
+
+func start_parachute(h: float) -> void:
+	para_alt = h
+	if ResourceLoader.exists(PARA_MODEL):
+		canopy = (load(PARA_MODEL) as PackedScene).instantiate()
+		canopy.position.y = 2.0
+	else:
+		canopy = MeshInstance3D.new()
+		var sm := SphereMesh.new(); sm.radius = 2.6; sm.height = 1.8; sm.is_hemisphere = true
+		var m := StandardMaterial3D.new(); m.albedo_color = Color(0.42, 0.45, 0.33)
+		sm.material = m
+		(canopy as MeshInstance3D).mesh = sm
+		canopy.position.y = 5.5
+	vis.add_child(canopy)
+	body.position.y = para_alt
+	_play("para_descend")
+
+
+func _para_tick(dt: float) -> bool:
+	if para_alt <= 0.0: return false
+	para_alt = maxf(0.0, para_alt - 4.5 * dt)
+	position += vel * dt
+	body.position.y = para_alt
+	if para_alt <= 0.0:
+		if canopy: canopy.queue_free(); canopy = null
+		_play("para_land")
+		order_stop()
+	return true
+
+
+func is_transport() -> bool:
+	return def.has("transport")
+
+
+func capacity_left() -> int:
+	return int(def.transport.capacity) - passengers.size() if is_transport() else 0
+
+
+func accepts(u: Unit) -> bool:
+	if not is_transport() or u.team != team or u.dead: return false
+	return "infantry" in def.transport.accepts and u.def.get("visual", "") == "infantry"
+
+
+## Heli transports load and unload only while hovering low and slow (fast-rope); ground ones when stopped.
+func can_exchange() -> bool:
+	if domain == "heli": return altitude <= 3.0 and speed_cur < 2.0
+	return speed_cur < 1.5
 
 
 ## Support units (ambulance, medic): restore health to nearby friendly units of the listed kinds.
@@ -1096,7 +1173,8 @@ func _fire_weapons() -> void:
 			if facing_err > deg_to_rad(w.get("facing_deg", 15.0)): continue
 		w_reload[i] = w.reload
 		if w_ammo[i] > 0: w_ammo[i] -= 1
-		if w.id == "120mm": recoil = 0.55
+		if w.proj in ["shell", "arty"]: recoil = 0.55
+		last_fire_t = battle.sim_time
 		battle.fire(self, w, tunit, tpos)
 
 

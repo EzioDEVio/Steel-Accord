@@ -160,7 +160,9 @@ func _process(dt: float) -> void:
 		var l := b.get_node("L") as Label
 		l.text = "%s\n%s" % [UnitDefs.POWERS[id].name, "READY" if left <= 0.0 else "%d s" % int(ceil(left))]
 		l.add_theme_color_override("font_color", ACCENT if left <= 0.0 else Color(0.7, 0.72, 0.7))
-		b.disabled = left > 0.0
+		var why: String = battle.power_problem(commander.team, id)
+		b.disabled = left > 0.0 or why != ""
+		if why != "": l.text = "%s\n%s" % [UnitDefs.POWERS[id].name, why]
 	queue_redraw()
 
 

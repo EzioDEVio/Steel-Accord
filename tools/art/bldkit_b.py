@@ -250,7 +250,7 @@ def t_camonet():       # bundled parachute / camo net: blotchy greens
 def t_dish():          # olive dish face: concentric / radial panel seams come from geometry, here plates + grime
     k = (1 + 0.04 * noise(30, 30, 211) + 0.025 * noise(2, 2, 212) - 0.05 * np.clip(noise(4, 50, 213), 0, None))
     k *= 1 - 0.3 * np.maximum(lines(UU, 3, 0.012), lines(VV, 3, 0.012))
-    return shade(col(104, 108, 78), k)
+    return shade(col(90, 95, 68), k)
 
 
 def t_strap():         # cargo webbing
@@ -733,14 +733,15 @@ class Part:
         bmesh.ops.create_cone(self.bm(m), cap_ends=True, cap_tris=False, segments=seg, radius1=r, radius2=r,
                               depth=d.length, matrix=M)
 
-    def prism(self, m, pts, axis, a0, a1, bev=False, arc_uv=False, caps=True):
+    def prism(self, m, pts, axis, a0, a1, bev=False, arc_uv=False, caps=True, M=None):
         """Extrude a closed 2D profile. axis 'x': pts are (y, z) extruded over x; axis 'y': pts are (x, z).
         arc_uv: side faces get u = extrusion coordinate, v = profile arc length (ribs follow the profile)."""
         bm = self.bm(m, bev)
+        T = (lambda p: M @ V(p)) if M is not None else (lambda p: p)
         if axis == "x":
-            A = [bm.verts.new((a0, p, q)) for p, q in pts]; B = [bm.verts.new((a1, p, q)) for p, q in pts]
+            A = [bm.verts.new(T((a0, p, q))) for p, q in pts]; B = [bm.verts.new(T((a1, p, q))) for p, q in pts]
         else:
-            A = [bm.verts.new((p, a0, q)) for p, q in pts]; B = [bm.verts.new((p, a1, q)) for p, q in pts]
+            A = [bm.verts.new(T((p, a0, q))) for p, q in pts]; B = [bm.verts.new(T((p, a1, q))) for p, q in pts]
         n = len(A)
         fs = [bm.faces.new(A[::-1]), bm.faces.new(B)] if caps else []
         side = []
@@ -1055,9 +1056,9 @@ def previews(glb, outdir, prefix, shots, only=None, concept=None, res=(640, 400)
     return done
 
 
-def std_shots(span, h, top_ortho=None, tz=None):
+def std_shots(span, h, top_ortho=None, tz=None, dmul=1.0):
     """Default camera set scaled to a structure of footprint `span` metres and height `h`."""
-    d = span * 1.55 + h
+    d = (span * 1.55 + h) * dmul
     tz = h * 0.35 if tz is None else tz
     return [dict(name="rts", az=-38, el=52, dist=d, target=(0, 0, tz)),
             dict(name="front", az=0, el=20, dist=d, target=(0, 0, tz)),

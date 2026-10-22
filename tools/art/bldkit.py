@@ -535,6 +535,15 @@ class Part:
 
     def __init__(self, kit, name):
         self.kit, self.name, self.bms = kit, name, {}
+        self._once = set()
+
+    def once(self, *key):
+        """True the first time a key is seen (avoids coincident duplicate posts, which bake black AO)."""
+        k = tuple(round(v, 3) if isinstance(v, float) else v for v in key)
+        if k in self._once:
+            return False
+        self._once.add(k)
+        return True
 
     def bm(self, m, bev=False):
         return self.bms.setdefault((m, bev), bmesh.new())
@@ -603,6 +612,26 @@ class Part:
         bm.faces.new(B)
         for i in range(4):
             bm.faces.new((A[i], A[(i + 1) % 4], B[(i + 1) % 4], B[i]))
+
+    def quad(self, m, pts):
+        """One planar face from 4 points; winding defines the visible side (counter-clockwise = front)."""
+        bm = self.bm(m, "in")                              # 'in' = keep winding (no normal recalculation)
+        bm.faces.new([bm.verts.new(p) for p in pts])
+
+    def room(self, wall, floor, ceil, x0, x1, y0, y1, z0, z1, open_side="-y"):
+        """Inward-facing interior box (seen from inside through the open side), e.g. an open vehicle bay."""
+        a = (x0, y0, z0); b = (x1, y0, z0); c = (x1, y1, z0); d = (x0, y1, z0)
+        e = (x0, y0, z1); f = (x1, y0, z1); g = (x1, y1, z1); h = (x0, y1, z1)
+        self.quad(floor, (a, b, c, d))                     # normal +z
+        self.quad(ceil, (e, h, g, f))                      # normal -z
+        if open_side != "+y":
+            self.quad(wall, (d, c, g, h))                  # back wall, normal -y
+        if open_side != "-y":
+            self.quad(wall, (a, e, f, b))
+        if open_side != "-x":
+            self.quad(wall, (a, d, h, e))                  # normal +x
+        if open_side != "+x":
+            self.quad(wall, (b, f, g, c))                  # normal -x
 
     def lathe(self, m, prof, c=(0, 0, 0), axis=(0, 0, 1), seg=12):
         M = Matrix.Translation(c) @ V(axis).to_track_quat("Z", "Y").to_matrix().to_4x4()
@@ -688,10 +717,13 @@ class Part:
     def build(self):
         kit = self.kit
         objs = []
-        for (sname, bev), bm in sorted(self.bms.items()):
+        for (sname, bev), bm in sorted(self.bms.items(), key=lambda kv: (kv[0][0], str(kv[0][1]))):
             if not bm.faces:
                 bm.free(); continue
-            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+            if bev != "in":
+                bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+            else:
+                bm.normal_update()
             S = SURF[sname][1]
             uv = bm.loops.layers.uv.new("tile")
             for f in bm.faces:
@@ -700,11 +732,11 @@ class Part:
                     p = lp.vert.co
                     u, v = ((p.x, p.y) if ax == 2 else (p.y, p.z) if ax == 0 else (p.x, p.z))
                     lp[uv].uv = (u / S, v / S)
-            me = bpy.data.meshes.new(f"{self.name}_{sname}")
+            me = bpy.data.meshes.new(f"{self.name}_{sname}_{bev}")
             bm.to_mesh(me); bm.free()
             o = bpy.data.objects.new(me.name, me); kit.scene.collection.objects.link(o)
             me.materials.append(kit.mat(sname))
-            if bev:
+            if bev is True:
                 b = o.modifiers.new("bv", "BEVEL")
                 b.width = 0.035; b.segments = 1; b.limit_method = "ANGLE"; b.angle_limit = math.radians(40)
                 b.harden_normals = True; b.use_clamp_overlap = True

@@ -97,9 +97,9 @@ def build(ctx):
     # commander's remote weapon station (CROWS-like): base, sensor box, MG
     rx, ry = 0.75, (S.y(474) + S.y(555)) / 2
     TP_.cyl((rx, ry, 2.82), 0.42, 0.1, seg=18)
-    TP_.box((rx, ry, (S.z(122) + 2.9) / 2), (0.55, 0.9, S.z(122) - 2.9))
-    TP_.box((rx + 0.32, ry + 0.15, S.z(105)), (0.22, 0.4, 0.26))
-    TP_.box((rx - 0.05, ry + 0.05, S.z(95)), (0.2, 0.75, 0.16))
+    TP_.box((rx, ry, (S.z(100) + 2.8) / 2), (0.55, 0.9, S.z(100) - 2.8))
+    TP_.box((rx + 0.36, ry + 0.15, S.z(100)), (0.22, 0.4, 0.3))
+    TP_.box((rx - 0.05, ry + 0.05, S.z(93)), (0.2, 0.75, 0.16))
     TP_.cyl((rx - 0.05, (ry + 0.4 + S.y(396)) / 2, S.z(91)), 0.03, S.y(396) - ry - 0.4, (PI / 2, 0, 0), seg=6)
     # antennas on the rack corners (thin)
     for s, px in ((-1, 645), (1, 695)):

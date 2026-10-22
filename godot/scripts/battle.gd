@@ -276,6 +276,11 @@ func _execute(cmd: Dictionary) -> void:
 	if cmd.type == "power":
 		launch_power(cmd.team, cmd.id, cmd.pos)
 		return
+	if cmd.type == "unload_one":
+		var tr: Unit = by_id.get(cmd.id)
+		var pu: Unit = by_id.get(cmd.passenger)
+		if tr and pu and not tr.dead and tr.team == cmd.team and tr.can_exchange(): unload_one(tr, pu)
+		return
 	if cmd.type in ["place", "produce", "cancel_unit", "rally", "sell", "cancel_build", "repair"]:
 		_execute_econ(cmd)
 		return
@@ -296,6 +301,16 @@ func _execute(cmd: Dictionary) -> void:
 			"force_ground": u.order_force_ground(cmd.pos)
 			"guard": u.order_guard(cmd.points[i], by_id.get(cmd.get("unit", -1)))
 			"stop": u.order_stop()
+			"board":
+				var tr: Unit = by_id.get(cmd.target)
+				if tr and tr.accepts(u):
+					u.board_target = tr
+					u.order_move(tr.position)
+			"unload":
+				if u.is_transport() and not u.passengers.is_empty():
+					if u.domain == "heli": u.unload_pending = true
+					elif u.can_exchange(): unload_all(u)
+					else: u.unload_pending = true
 			"build":
 				var b: Node = by_id.get(cmd.site)
 				if b is Building and not b.dead and not b.built and b.team == u.team and u.def.get("builder", false):
@@ -320,6 +335,7 @@ func sim_tick(dt: float) -> void:
 	if base_ai and not game_over: base_ai.tick(dt)
 	for u in units:
 		u.sim_tick(dt)
+	_update_boarding()
 	_separate()
 	_update_shots(dt)
 	_update_flights(dt)
@@ -512,8 +528,16 @@ func power_cooldown_left(team: int, id: String) -> float:
 	return maxf(0.0, float(power_ready[team].get(id, 0.0)) - sim_time)
 
 
+## Support powers that need a structure (e.g. Paratroopers need an Airfield) in the base scenario.
+func power_problem(team: int, id: String) -> String:
+	var p: Dictionary = UnitDefs.POWERS[id]
+	if scenario == "base" and p.has("requires") and structures(team, p.requires).is_empty():
+		return "Requires " + BuildingDefs.DEFS[p.requires].name
+	return ""
+
+
 func launch_power(team: int, id: String, target: Vector3) -> void:
-	if power_cooldown_left(team, id) > 0.0: return
+	if power_cooldown_left(team, id) > 0.0 or power_problem(team, id) != "": return
 	var p: Dictionary = UnitDefs.POWERS[id]
 	power_ready[team][id] = sim_time + float(p.cooldown)
 	var edge_z := map_bounds.end.y + 120.0 if team == 0 else map_bounds.position.y - 120.0
@@ -548,6 +572,13 @@ func _update_flights(dt: float) -> void:
 		f.pos += f.dir * float(p.speed) * dt
 		f.node.position = f.pos
 		var along: float = (f.pos - f.target).dot(f.dir)   # <0 before the target, >0 after
+		if p.has("troops"):
+			var nt := int(p.troops)
+			while int(f.dropped) < nt and along >= -14.0 + int(f.dropped) * 5.0:
+				var u := _spawn(str(p.unit), f.team, f.pos + Vector3(0, 0, 0), atan2(-f.dir.x, -f.dir.z))
+				u.start_parachute(float(p.altitude) - 4.0)
+				u.reset_physics_interpolation()
+				f.dropped += 1
 		if not f.has("snd") and along > -float(p.speed) * 3.5:
 			f["snd"] = true
 			SFX.play(f.node, "jet_flyby", f.pos, 4.0, 0.8 if f.id == "carpet" else 1.0, true)
@@ -591,6 +622,7 @@ func _update_bombs(dt: float) -> void:
 
 # ------------------------------------------------------------------ deaths and visibility
 func on_unit_died(u: Unit) -> void:
+	if not u.passengers.is_empty(): _lose_passengers(u)
 	if u.engine_snd: u.engine_snd.stop()
 	if u.team == 0: losses += 1
 	else: kills += 1
@@ -1170,3 +1202,76 @@ func _make_crate() -> Dictionary:
 func _fade_node(n: Node, after: float) -> void:
 	await get_tree().create_timer(after, false).timeout
 	if is_instance_valid(n): n.queue_free()
+
+
+# ------------------------------------------------------------------ transports
+## Boarding: an infantry unit ordered to board walks to its transport and enters when close and the transport is
+## stopped (helicopters: hovering low). Aboard, it leaves the unit list (not targetable, does not see), keeping its
+## health. Rule when a transport is destroyed: all passengers are lost (documented in docs/M4_TRANSPORT.md).
+func _update_boarding() -> void:
+	for u in units.duplicate():
+		if u.dead:
+			continue
+		if u.board_target:
+			var tr: Unit = u.board_target
+			if tr.dead or not is_instance_valid(tr) or tr.capacity_left() <= 0:
+				u.board_target = null; continue
+			if u.state == Unit.S.IDLE and u.flat_dist(tr.position) > 6.0:
+				u.order_move(tr.position)             # transport moved: follow it
+			if u.flat_dist(tr.position) < tr.def.radius + 4.0 and tr.can_exchange():
+				_board(u, tr)
+		if u.is_transport() and u.unload_pending and u.domain != "heli" and u.can_exchange():
+			u.unload_pending = false
+			unload_all(u)
+
+
+func _board(u: Unit, tr: Unit) -> void:
+	u.board_target = null
+	u.set_selected(false)
+	if u in commander.selected: commander.selected.erase(u); commander.selection_changed.emit()
+	units.erase(u)
+	u.visible = false
+	u.process_mode = Node.PROCESS_MODE_DISABLED
+	tr.passengers.append(u)
+	if tr.team == 0 and hud: hud.flash_message("%s boarded %s (%d/%d)" % [u.def.name, tr.def.name, tr.passengers.size(), tr.def.transport.capacity])
+
+
+func unload_all(tr: Unit) -> void:
+	var n := 0
+	for p in tr.passengers.duplicate():
+		if unload_one(tr, p): n += 1
+	if tr.team == 0 and hud and n > 0: hud.flash_message("%d unloaded from %s" % [n, tr.def.name])
+
+
+## Places a passenger on a free grid cell in a ring around the transport (never inside structures or rocks).
+func unload_one(tr: Unit, p: Unit) -> bool:
+	if not p in tr.passengers: return false
+	var spot := Vector3.INF
+	for ring in range(1, 6):
+		for k in 8:
+			var a := TAU * float(k) / 8.0 + float(tr.passengers.size()) * 0.7
+			var q: Vector3 = tr.position + Vector3(cos(a), 0, sin(a)) * (tr.def.radius + 2.0 + ring * 2.0)
+			if gnav.blocked_at(q) or not map_bounds.has_point(Vector2(q.x, q.z)): continue
+			var crowded := false
+			for o in units:
+				if not o.dead and not o.is_air() and o.flat_dist(q) < 1.6: crowded = true; break
+			if not crowded: spot = q; break
+		if spot != Vector3.INF: break
+	if spot == Vector3.INF: return false
+	tr.passengers.erase(p)
+	p.position = spot
+	p.process_mode = Node.PROCESS_MODE_INHERIT
+	p.visible = true
+	p.order_stop()
+	p.reset_physics_interpolation()
+	units.append(p)
+	return true
+
+
+func _lose_passengers(tr: Unit) -> void:
+	for p in tr.passengers:
+		p.dead = true
+		if p.team == 0: losses += 1
+		else: kills += 1
+		p.queue_free()
+	tr.passengers.clear()

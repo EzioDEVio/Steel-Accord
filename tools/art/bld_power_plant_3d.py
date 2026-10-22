@@ -32,8 +32,8 @@ def build():
     T = 0.35
     B.span("bconc", HX0, HX1, HY0, HY0 + T, SL, WT)
     B.span("bconc", HX0, HX1, HY1 - T, HY1, SL, WT)
-    B.span("bconc", HX0, HX0 + T, HY0, HY1, SL, WT)
-    B.span("bconc", HX1 - T, HX1, HY0, HY1, SL, WT)
+    B.span("bconc", HX0, HX0 + T, HY0 + T, HY1 - T, SL, WT)
+    B.span("bconc", HX1 - T, HX1, HY0 + T, HY1 - T, SL, WT)
     B.span("gconc", HX0 - 0.06, HX1 + 0.06, HY0 - 0.06, HY1 + 0.06, SL, SL + 0.75, bev=True)   # darker plinth band
     B.span("bconc", HX0 - 0.1, HX1 + 0.1, HY0 - 0.1, HY1 + 0.1, WT - 0.1, PZ, bev=True)        # parapet band
     B.span("roofg", HX0 + 0.25, HX1 - 0.25, HY0 + 0.25, HY1 - 0.25, PZ - 0.45, PZ - 0.35)
@@ -50,7 +50,6 @@ def build():
     for y in (3.9,):
         for sx in (-1, 1):
             x0, x1 = sorted((sx * 5.1, sx * 5.3))
-            B.span("bconc", x0, x1, y - 0.3, y + 0.3, SL, PZ, bev=True)
             B.span("bconc", x0, x1, y - 0.3, y + 0.3, SL, PZ, bev=True)
     B.span("team", HX0 + 0.5, HX1 - 0.5, HY0 - 0.12, HY0 - 0.1, PZ - 0.35, PZ - 0.15, bottom=True)   # team band
     # front louvres (2 big), side louvres, rear louvre
@@ -184,6 +183,8 @@ def build():
         for k in range(n + 1):
             t = k / n
             x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+            if not P.once("post", x, y):
+                continue
             P.span("conc", x - 0.2, x + 0.2, y - 0.2, y + 0.2, SL, FZ + FH + 0.15, bev=True)
             P.span("metal", x - 0.22, x + 0.22, y - 0.22, y + 0.22, FZ + FH + 0.15, FZ + FH + 0.2)
         for k in range(n):

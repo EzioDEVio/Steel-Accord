@@ -71,6 +71,7 @@ func _run_qa() -> void:
 	var wf := await _place("war_factory", ccp + Vector3(0, 0, -50))
 	await _until(func(): return wf != null and wf.built, 45.0)
 	await _qa_checks(ccp, bk, wf)
+	await _qa_m1(ccp)
 	_finish()
 
 
@@ -295,6 +296,76 @@ func _qa_checks(ccp: Vector3, bk: Building, wf: Building) -> void:
 		var drawn: float = float(ch[0].def.length) * ch[0].vis_scale
 		var depot: float = BuildingDefs.DEFS.supply_depot.size.x
 		_log("scale_ch47_vs_depot", drawn < depot and drawn > depot * 0.6, "CH-47 drawn %.1f m, depot %.1f m" % [drawn, depot])
+
+
+## Milestone M1/M4 systems: transports, air assault, paratroopers, supply drop zone, vehicle repair bay, artillery.
+func _qa_m1(ccp: Vector3) -> void:
+	battle.cash[0] += 20000
+	# --- ground transport: 3 riflemen board a HMMWV by clicking it, then unload with D
+	var hv: Unit = battle._spawn("hmmwv", 0, ccp + Vector3(30, 0, -70), 0.0)
+	var sq: Array = []
+	for i in 3: sq.append(battle._spawn("rifleman", 0, ccp + Vector3(10 + i * 3.0, 0, -80), 0.0))
+	await _wait_sim(0.3)
+	await _sel(sq)
+	battle.camera.focus(hv.position); await _frames(3)
+	_click(MOUSE_BUTTON_LEFT, _screen(hv.world_center())); await _frames(2)
+	await _until(func(): return hv.passengers.size() == 3, 20.0)
+	var gone := sq.all(func(u): return not (u in battle.units))
+	_log("board_transport", hv.passengers.size() == 3 and gone, "aboard=%d" % hv.passengers.size())
+	battle.issue({"type": "move", "ids": [hv.uid], "points": [hv.position + Vector3(-40, 0, -30)]})
+	await _wait_sim(6.0)
+	await _sel([hv]); _key(KEY_D); await _wait_sim(1.5)
+	var out_ok := hv.passengers.is_empty() and sq.all(func(u): return u in battle.units and u.visible and not battle.gnav.blocked_at(u.position))
+	_log("unload_transport", out_ok, "left aboard=%d" % hv.passengers.size())
+	# --- air assault: riflemen board a hovering UH-60, it flies, descends and unloads
+	var uh: Unit = battle._spawn("uh60", 0, ccp + Vector3(-30, 0, -90), 0.0)
+	await _wait_sim(0.5)
+	battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": uh.uid})
+	await _until(func(): return uh.passengers.size() == 3, 30.0)
+	_log("air_assault_board", uh.passengers.size() == 3, "aboard=%d alt=%.1f" % [uh.passengers.size(), uh.altitude])
+	battle.issue({"type": "move", "ids": [uh.uid], "points": [uh.position + Vector3(0, 0, -60)]})
+	await _wait_sim(8.0)
+	battle.issue({"type": "unload", "team": 0, "ids": [uh.uid]})
+	await _until(func(): return uh.passengers.is_empty(), 20.0)
+	_log("air_assault_unload", uh.passengers.is_empty() and sq.all(func(u): return u in battle.units), "alt at unload %.1f" % uh.altitude)
+	# --- paratroopers support power (needs an Airfield, which _qa_checks built)
+	var n0: int = _team(["rifleman"]).size()
+	var tgt: Vector3 = ccp + Vector3(0, 0, -110)
+	battle.issue({"type": "power", "team": 0, "id": "paradrop", "pos": tgt})
+	await _wait_sim(18.0)
+	var paras: Array = _team(["rifleman"]).filter(func(u): return u.position.distance_to(tgt) < 60.0 and u.para_alt <= 0.0)
+	_log("paratroopers_land", _team(["rifleman"]).size() >= n0 + 6 and paras.size() >= 6, "riflemen %d -> %d, landed near target %d" % [n0, _team(["rifleman"]).size(), paras.size()])
+	await _shot("paratroopers")
+	# --- supply drop zone: C-130 drops crates that add cash
+	var dz := await _place("drop_zone", ccp + Vector3(-60, 0, -95))
+	await _until(func(): return dz != null and dz.built, 70.0)
+	var inc0: int = battle.income[0]
+	await _until(func(): return battle.income[0] >= inc0 + 1000 or false, 70.0)
+	_log("supply_drop_zone_income", dz != null and battle.income[0] >= inc0 + 1000, "delivered %d" % (battle.income[0] - inc0))
+	# --- War Factory repair bay
+	var wf: Array = battle.structures(0, "war_factory")
+	if not wf.is_empty():
+		var t: Unit = battle._spawn("abrams", 0, wf[0].repair_point() + Vector3(0, 0, 20), 0.0)
+		t.take_damage(t.def.hp * 0.6, null)
+		await _wait_sim(0.2)
+		await _sel([t])
+		battle.camera.focus(wf[0].position); await _frames(3)
+		_click(MOUSE_BUTTON_LEFT, _screen(wf[0].position + Vector3(0, 3, 0))); await _frames(2)
+		var h0: float = t.hp
+		await _wait_sim(14.0)
+		_log("war_factory_repairs_vehicle", t.hp > h0 + t.def.hp * 0.2, "hp %.0f -> %.0f" % [h0, t.hp])
+	# --- artillery: Paladin fires beyond tank range but not inside its minimum range
+	var pal: Unit = battle._spawn("paladin", 0, ccp + Vector3(120, 0, -60), 0.0)
+	var dummy: Unit = battle._spawn("abrams", 1, pal.position + Vector3(0, 0, -150), PI)
+	dummy.order_stop()
+	await _wait_sim(10.0)
+	var shots_far: int = battle.shots_by.get(pal.uid, 0)
+	dummy.position = pal.position + Vector3(0, 0, -20); dummy.reset_physics_interpolation()
+	var s1: int = battle.shots_by.get(pal.uid, 0)
+	await _wait_sim(8.0)
+	var s2: int = battle.shots_by.get(pal.uid, 0)
+	_log("artillery_range_rules", shots_far >= 1 and s2 == s1, "fired at 150 m: %d, at 20 m: %d" % [shots_far, s2 - s1])
+	dummy.take_damage(1e9, null)
 
 
 func PAD_TOL(u: Unit) -> float:

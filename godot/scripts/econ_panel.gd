@@ -73,17 +73,26 @@ func _process(_dt: float) -> void:
 	var b: Building = commander.sel_building if is_instance_valid(commander.sel_building) and not commander.sel_building.dead else null
 	var dz: Array = commander.dozers()
 	var sig := ""
+	var trs: Array = commander.live_selection().filter(func(x): return x.is_transport())
 	if b: sig = "b%d:%s" % [b.uid, str(b.built)]
 	elif not dz.is_empty(): sig = "dozer"
+	elif trs.size() == 1: sig = "tr%d:%d" % [trs[0].uid, trs[0].passengers.size()]
 	if sig != _sig:
 		_sig = sig
 		_clear()
 		if b: _build_structure_menu(b)
 		elif sig == "dozer": _build_dozer_menu()
+		elif sig.begins_with("tr"): _build_transport_menu(trs[0])
 	visible = sig != ""
 	if not visible: return
 	# live state: affordability / requirements, queue, progress
-	if sig == "dozer":
+	if sig.begins_with("tr"):
+		var tr: Unit = trs[0]
+		info.text = "%s - passengers %d / %d. Select infantry and click this vehicle to board.%s" % [tr.def.name,
+			tr.passengers.size(), int(tr.def.transport.capacity), "  Unloading..." if tr.unload_pending else ""]
+		info.position = Vector2(0, -18)
+		_draw_queue([])
+	elif sig == "dozer":
 		for k in BuildingDefs.BUILD_MENU:
 			var why := ""
 			if not battle.requirements_met(team, k):
@@ -165,6 +174,23 @@ func _build_structure_menu(b: Building) -> void:
 	add_child(sb)
 	buttons["sell"] = sb
 	height = (_cell(i - 1).y + BTN.y if i > 0 else GRID_Y) + 32.0
+
+
+func _build_transport_menu(tr: Unit) -> void:
+	var team: int = commander.team
+	var ua := func(): battle.issue({"type": "unload", "team": team, "ids": [tr.uid]})
+	var ub: Button = hud._button("Unload all  D", ua, Vector2(BTN.x + 30, 28))
+	ub.disabled = tr.passengers.is_empty()
+	ub.tooltip_text = "Passengers get out around the vehicle (helicopters hover low first)"
+	add_child(ub); buttons["unload"] = ub
+	var i := 0
+	for p in tr.passengers:
+		var pu: Unit = p
+		var one := func(): battle.issue({"type": "unload_one", "team": team, "id": tr.uid, "passenger": pu.uid})
+		var icon := str(UsArt.infantry(pu.def.get("art", "")).get("icon", ""))
+		_make("p%d" % pu.uid, pu.def.name, 0, icon, one, _cell(i), "Unload this soldier")
+		i += 1
+	height = (_cell(i - 1).y + BTN.y) if i > 0 else 30.0
 
 
 func _cell(i: int) -> Vector2:

@@ -731,7 +731,12 @@ def solve(p):
         aimM.translation = C @ p["aim_pocket"]
         Wr = blend(Wr, aimM, p["aim"])
     if p["rw"] > 0:
-        Wr = blend(Wr, T(p["rifle_wp"]) @ p["rifle_wq"].to_matrix().to_4x4(), p["rw"])
+        Wg = T(p["rifle_wp"]) @ p["rifle_wq"].to_matrix().to_4x4()
+        if WPN.grip_local.length > 0:      # blend about the grip so the hand path stays reachable
+            g = T(WPN.grip_local)
+            Wr = blend(Wr @ g, Wg @ g, p["rw"]) @ T(-WPN.grip_local)
+        else:
+            Wr = blend(Wr, Wg, p["rw"])
     rc = p["recoil"]
     if rc:
         Wr = Wr @ T(V((0, -WPN.kick * rc, WPN.lift * rc))) @ Matrix.Rotation(D(WPN.rise) * rc, 4, "X")

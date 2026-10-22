@@ -30,7 +30,7 @@ PALETTE = {"base": (151, 135, 102), "khaki": (117, 104, 77), "olive": (89, 91, 5
 # contact point on the tube axis, +Y forward along the bore, +Z up; sights on the LEFT (-X) side)
 TUBE_R = 0.042
 REAR_Y, FRONT_Y = -0.43, 0.595
-GRIP = V((0, 0.20, -0.09))             # pistol grip = where the right hand's rest grip lands (rifle grip shifted)
+GRIP = V((0, 0.20, -0.105))             # pistol grip = where the right hand's rest grip lands (rifle grip shifted)
 
 
 def build_launcher(R, w):
@@ -48,7 +48,7 @@ def build_launcher(R, w):
     for y in (0.03, 0.45):                                                                 # sight mounting bands
         R.cyl("SA_Olive", w, (0, y, 0), TUBE_R + 0.004, 0.018, (-PI / 2, 0, 0), seg=12)
     R.box("SA_Rubber", w, (0, 0.0, -0.05), (0.05, 0.13, 0.02))                             # shoulder pad
-    R.box("SA_Rubber", w, GRIP, (0.032, 0.035, 0.09), (0.35, 0, 0))                       # pistol grip
+    R.box("SA_Rubber", w, GRIP + V((0, 0, 0.008)), (0.032, 0.035, 0.11), (0.35, 0, 0))     # pistol grip
     R.box("SA_Rubber", w, (0, 0.235, -0.047), (0.04, 0.11, 0.02))                          # grip housing
     R.box("SA_Rubber", w, (0.0, 0.22, 0.05), (0.034, 0.12, 0.02))                          # firing block on top
     R.box("SA_Metal", w, (0.022, 0.17, 0.062), (0.012, 0.045, 0.012), (0.3, 0, 0))         # cocking lever
@@ -65,8 +65,8 @@ def build_launcher(R, w):
 W_REST = K.RIFLE_REST @ Matrix.Translation(V((0, 0.255, -0.085)) - GRIP)
 weapon = K.Weapon("Launcher", build_launcher, W_REST, W_REST.translation.copy(), V((0, FRONT_Y, 0)),
                   empties={"Backblast": (V((0, REAR_Y, 0)), (0, 0, PI))},
-                  aim_pocket=(0.19, 0.035, 1.555), kick=0.055, lift=0.012, rise=5.0,
-                  lay=dict(gx=0.20, gy=0.12, grip=0.20, side=0.09, h=0.06), grip_local=GRIP)
+                  aim_pocket=(0.205, 0.035, 1.55), kick=0.055, lift=0.012, rise=5.0,
+                  lay=dict(gx=0.20, gy=0.12, grip=0.20, side=0.105, h=0.06), grip_local=GRIP)
 
 
 def body_extra(B):
@@ -107,8 +107,8 @@ def pose_extra(p):
 
 def aim_extra(p, kneel):
     p["lgrip"] = 1.0
-    p["lslide"], p["lroll"], p["ldrop"] = 0.03, 0.0, 0.02
-    p["head"] = V((D(-6), D(12), D(14))) if not kneel else V((D(-4), D(12), D(14)))
+    p["lslide"], p["lroll"], p["ldrop"] = 0.03, 0.0, 0.035
+    p["head"] = V((D(-6), D(7), D(14))) if not kneel else V((D(-4), D(7), D(14)))
     p["neck"] = V((D(-4), D(4), D(9)))
     p["elbow_pole"] = {1: V((0.5, -0.1, -0.35)), -1: V((-0.2, 0.1, -0.5))}
 
@@ -116,8 +116,9 @@ def aim_extra(p, kneel):
 def die_hook(keys):
     k0, k1, k2, k3, k4, k5 = keys
     k1["rifle_rot"] = V((D(-10), 0, 0))           # tube front dips as the hit lands
-    k2["rifle_rot"] = V((D(-5), D(10), D(-10)))
-    k3["rifle_rot"] = V((D(10), D(15), D(-15)))
+    k2["rifle_rot"] = V((D(10), D(0), D(20)))
+    k3["rifle_rot"] = V((D(40), D(0), D(35)))
+    k2["rifle_off"] = V((0.06, 0, 0)); k3["rifle_off"] = V((0.08, 0, 0))
 
 
 K.POSE_EXTRA = pose_extra
@@ -153,7 +154,7 @@ def act_run(t):
     K.run_torso(p)
     # tube pulled in tighter and flatter while running, swinging with the stride
     p["rifle_rot"] = V((D(20) + D(4) * math.sin(4 * PI * t + 0.8), D(-3), D(-4) + D(3) * math.sin(2 * PI * t)))
-    p["rifle_off"] = V((0.0, 0.02, 0.05))
+    p["rifle_off"] = V((0.035, 0.02, 0.05))
     c = math.cos(2 * PI * t)                          # left arm pumping, elbow ~90 deg
     p["lfree"] = V((-0.22, 0.10 + 0.17 * c, 1.08 + 0.07 * c))
     p["lfree_q"] = hand_q((0.25, 1.0 - 0.2 * c, 0.4 + 0.5 * c), (-1, 0.1, 0.4))

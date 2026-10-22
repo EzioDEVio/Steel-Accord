@@ -41,8 +41,8 @@ def build():
     T = 0.4
     B.span("gconc", MX0, MX1, MY0, MY0 + T, 2.2, RZ)
     B.span("gconc", MX0, MX1, MY1 - T, MY1, 2.2, RZ)
-    B.span("gconc", MX1 - T, MX1, MY0, MY1, 2.2, RZ)
-    B.span("gconc", MX0, MX0 + T, MY0, MY1, 2.2, RZ)
+    B.span("gconc", MX1 - T, MX1, MY0 + T, MY1 - T, 2.2, RZ)
+    B.span("gconc", MX0, MX0 + T, MY0 + T, MY1 - T, 2.2, RZ)
     B.span("gconc", MX0 - 0.12, MX1 + 0.12, MY0 - 0.12, MY1 + 0.12, RZ - 0.3, PZ, bev=True)      # parapet band
     B.span("roofg", MX0 + 0.3, MX1 - 0.3, MY0 + 0.3, MY1 - 0.3, RZ - 0.1, RZ)
     B.span("team", MX0 + 1.4, MX1 - 1.4, MY0 - 0.14, MY0 - 0.12, RZ + 0.05, RZ + 0.3, bottom=True)
@@ -166,7 +166,7 @@ def build():
     T = 0.35
     B.span("gconc", AX0, AX1, AY0, AY0 + T, SL, ARZ)
     B.span("gconc", AX0, AX1, AY1 - T, AY1, SL, ARZ)
-    B.span("gconc", AX0, AX0 + T, AY0, AY1, SL, ARZ)
+    B.span("gconc", AX0, AX0 + T, AY0 + T, AY1 - T, SL, ARZ)
     B.span("gconc", AX0 - 0.1, AX1, AY0 - 0.1, AY1 + 0.1, ARZ - 0.2, APZ, bev=True)
     B.span("roofg", AX0 + 0.25, AX1 - 0.05, AY0 + 0.25, AY1 - 0.25, ARZ - 0.1, ARZ)
     B.span("gconc", AX0 - 0.1, AX1, AY0 - 0.1, AY1 + 0.1, SL, SL + 0.8, bev=True)

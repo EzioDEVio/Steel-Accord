@@ -92,6 +92,8 @@ func _key(k: InputEventKey) -> void:
 			if has_sel: cmd_scatter()
 		KEY_R:
 			if has_sel: cmd_return()
+		KEY_D:
+			if has_sel: cmd_unload()
 		KEY_ESCAPE:
 			if mode != "": set_mode("")
 			elif not live_selection().is_empty(): _set_selection([])
@@ -261,6 +263,14 @@ func _left_release(mb: InputEventMouseButton) -> void:
 		return
 	var u := unit_at(p)
 	var own := u != null and u.team == team
+	# infantry + own transport: board it
+	if own and not (u is Building) and u.is_transport() and scheme == "classic" and not mb.shift_pressed:
+		var inf := live_selection().filter(func(x): return u.accepts(x))
+		if not inf.is_empty():
+			battle.issue({"type": "board", "team": team, "ids": inf.slice(0, maxi(u.capacity_left(), 0)).map(func(x): return x.uid), "target": u.uid})
+			FX.order_marker(battle, u.position, Color(0.5, 0.9, 1.0, 0.9))
+			if inf.size() > u.capacity_left() and battle.hud: battle.hud.flash_message("%s has room for %d" % [u.def.name, u.capacity_left()])
+			return
 	# vehicles + own War Factory: drive to its repair bay; aircraft + own Airfield: return to their pads
 	if own and u is Building and u.built and not live_selection().is_empty() and scheme == "classic" and not mb.shift_pressed:
 		var bld: Building = u
@@ -463,6 +473,11 @@ func cmd_scatter() -> void:
 	var live := live_selection()
 	for u in live: c += u.position
 	battle.issue({"type": "scatter", "ids": _ids(), "center": c / maxi(1, live.size())})
+
+
+func cmd_unload() -> void:
+	var trs := live_selection().filter(func(x): return x.is_transport() and not x.passengers.is_empty())
+	if not trs.is_empty(): battle.issue({"type": "unload", "team": team, "ids": trs.map(func(x): return x.uid)})
 
 
 func cmd_return() -> void:
