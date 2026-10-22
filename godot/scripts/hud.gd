@@ -37,6 +37,8 @@ func flash_message(t: String) -> void:
 
 
 func _process(dt: float) -> void:
+	size = get_viewport_rect().size   # CanvasLayer children don't inherit a parent rect; track the window
+	position = Vector2.ZERO
 	msg_t = maxf(0.0, msg_t - dt)
 	mini_rect = Rect2(14, size.y - 224, 210, 210)
 	mini_ctl.position = mini_rect.position; mini_ctl.size = mini_rect.size
