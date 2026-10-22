@@ -75,7 +75,7 @@ func _run() -> void:
 	await _wait(2.0)
 	if "infonly" in battle.args:
 		# a squad on open ground in the basin, facing the camera
-		var cc := battle.grounded(Vector3(60, 0, -150))
+		var cc: Vector3 = battle.grounded(Vector3(60, 0, -150))
 		var kinds := ["ir_rifleman", "ir_rpg", "ir_mg", "irgc_sf", "ir_sniper", "ir_medic", "ir_engineer", "ir_rifleman", "ir_rifleman", "irgc_sf"]
 		for i in kinds.size():
 			var u: Unit = battle._spawn(kinds[i], 1, cc + Vector3(-8 + (i % 5) * 4.0, 0, -2 + (i / 5) * 4.0), PI * 0.85)
