@@ -27,6 +27,8 @@ var help_btn: Button
 var menu_btn: Button
 var portraits := {}
 var econ: EconPanel
+var prod_strip: VBoxContainer
+var _strip_sig := ""
 
 
 func _ready() -> void:
@@ -46,6 +48,10 @@ func _ready() -> void:
 	add_child(help_btn)
 	menu_btn = _button("Menu (F10)", func(): battle.open_menu(), Vector2(120, 30))
 	add_child(menu_btn)
+	prod_strip = VBoxContainer.new()
+	prod_strip.add_theme_constant_override("separation", 3)
+	prod_strip.position = Vector2(14, 50)
+	add_child(prod_strip)
 	econ = EconPanel.new()
 	econ.battle = battle; econ.commander = commander; econ.hud = self
 	add_child(econ)
@@ -150,6 +156,7 @@ func _process(dt: float) -> void:
 	scheme_btn.position = Vector2(14, 10)
 	help_btn.position = Vector2(210, 10)
 	menu_btn.position = Vector2(346, 10)
+	_update_prod_strip()
 	var live := commander.live_selection()
 	card.visible = not live.is_empty() and not live.all(func(u): return u.def.get("builder", false) or u.def.get("hauler", false))
 	var any_air := live.any(func(u): return u.is_air())
@@ -164,6 +171,39 @@ func _process(dt: float) -> void:
 		b.disabled = left > 0.0 or why != ""
 		if why != "": l.text = "%s\n%s" % [UnitDefs.POWERS[id].name, why]
 	queue_redraw()
+
+
+## Persistent production strip: one row per producer with work queued (or a structure under construction).
+## Click a row: select that structure and centre the camera on it.
+func _update_prod_strip() -> void:
+	if battle.scenario != "base": return
+	var rows: Array = []
+	for b in battle.structures(commander.team, "", false):
+		if not b.built or not b.prod_queue.is_empty(): rows.append(b)
+	var sig := ",".join(rows.map(func(b): return "%d:%d:%s" % [b.uid, b.prod_queue.size(), str(b.built)]))
+	if sig != _strip_sig:
+		_strip_sig = sig
+		for c in prod_strip.get_children(): c.queue_free()
+		for b in rows:
+			var bb: Building = b
+			var btn := _button("", func(): commander._set_selection([bb]); camera.focus(bb.position), Vector2(230, 24))
+			btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			btn.add_theme_font_size_override("font_size", 11)
+			btn.set_meta("b", bb)
+			prod_strip.add_child(btn)
+	for c in prod_strip.get_children():
+		var b: Building = c.get_meta("b")
+		if c.is_queued_for_deletion() or not is_instance_valid(b) or b.dead: continue
+		if b.built and b.prod_queue.is_empty(): continue
+		if not b.built:
+			c.text = "%s  building %d%%" % [b.bdef.name, int(b.progress * 100.0)]
+		else:
+			var k: String = b.prod_queue[0]
+			var total := float(BuildingDefs.UNIT_COST[k][1])
+			var pct := int(100.0 * (1.0 - b.prod_left / total))
+			var state := "" if battle.power_ok(commander.team) else "  (low power)"
+			c.text = "%s: %s %d%%%s%s" % [b.bdef.name, UnitDefs.def_of(k).name.split(" (")[0], pct,
+				("  +%d" % (b.prod_queue.size() - 1)) if b.prod_queue.size() > 1 else "", state]
 
 
 func _mini_input(e: InputEvent) -> void:
@@ -370,11 +410,14 @@ func _draw_status() -> void:
 	_text(r.position + Vector2(250, 23), "RED %d" % battle.alive_count(1), 16, UnitDefs.TEAM_COLORS[1].lightened(0.45))
 	if battle.scenario == "base":
 		var t: int = commander.team
-		var r2 := Rect2(r.end.x + 8, 10, 250, 34)
+		var r2 := Rect2(r.end.x + 8, 10, 360, 34)
 		_panel(r2)
 		_text(r2.position + Vector2(14, 23), "$ %d" % battle.cash[t], 17, Color(0.95, 0.85, 0.4))
+		var tr: Vector2 = battle.cash_trend(t)
+		_text(r2.position + Vector2(104, 15), "+%d/min" % int(tr.x), 11, Color(0.6, 0.95, 0.6))
+		_text(r2.position + Vector2(104, 29), "-%d/min" % int(tr.y), 11, Color(1.0, 0.6, 0.5))
 		var g: int = battle.power_gen(t); var c: int = battle.power_use(t)
-		_text(r2.position + Vector2(120, 23), "Power %d / %d" % [c, g], 15, Color(0.6, 0.95, 0.6) if g >= c else Color(1.0, 0.4, 0.3))
+		_text(r2.position + Vector2(196, 23), "Power %d / %d" % [c, g], 15, Color(0.6, 0.95, 0.6) if g >= c else Color(1.0, 0.4, 0.3))
 		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: production and construction at half speed", 12, Color(1.0, 0.45, 0.35))
 	if msg_t > 0.0:
 		var s := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)

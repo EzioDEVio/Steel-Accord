@@ -109,7 +109,23 @@ func _process(_dt: float) -> void:
 			info.text = "%s - under construction %d%%  (a Dozer must work on it)" % [b.bdef.name, int(b.progress * 100.0)]
 		else:
 			var pw: int = b.bdef.power
-			info.text = "%s   power %+d   %s" % [b.bdef.name, pw, "" if b.bdef.produces.is_empty() else "Click the map to set the rally point."]
+			var extra := ""
+			if not b.pads.is_empty():
+				var used := 0
+				for p in b.pads:
+					var pu: Unit = battle.by_id.get(int(p.uid))
+					if pu and not pu.dead: used += 1
+				extra += "  pads %d/%d" % [used, b.pads.size()]
+			if b.bkind == "supply_depot":
+				var hauling := 0
+				for u in battle.units:
+					if u.team == team and not u.dead and u.state == Unit.S.HAUL: hauling += 1
+				var stock := 0
+				for pl in battle.piles: stock += int(pl.cash)
+				extra += "  CH-47s hauling %d  piles $%d" % [hauling, stock]
+			if b.bdef.has("drop"): extra += "  next drop %d s" % int(b.drop_t)
+			if b.bdef.power < 0 and not battle.power_ok(team): extra += "  LOW POWER"
+			info.text = "%s  %+d power%s" % [b.bdef.name, pw, extra]
 		info.position = Vector2(2 * (BTN.x + 4) + 6, 6) if b.built else Vector2(270, 6)
 		for k in b.bdef.produces:
 			if not buttons.has(k): continue

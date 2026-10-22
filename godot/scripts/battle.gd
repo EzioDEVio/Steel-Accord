@@ -341,6 +341,9 @@ func sim_tick(dt: float) -> void:
 	_update_flights(dt)
 	_update_bombs(dt)
 	_update_supply_drops(dt)
+	if tick_n % 150 == 0:
+		trend_samples.append([sim_time, income[0], spent[0], income[1], spent[1]])
+		while trend_samples.size() > 13: trend_samples.pop_front()
 	_update_debris(dt)
 	_update_visibility()
 	sim_time += dt
@@ -947,7 +950,7 @@ func _execute_econ(cmd: Dictionary) -> void:
 			if dz == null or dz.dead or dz.team != team or not dz.def.get("builder", false): return
 			if placement_problem(team, k, cmd.pos) != "":
 				return
-			cash[team] -= int(BuildingDefs.DEFS[k].cost)
+			spend(team, int(BuildingDefs.DEFS[k].cost))
 			_clear_rubble(cmd.pos, BuildingDefs.DEFS[k].size * 0.5)
 			var b := add_structure(k, team, cmd.pos, false)
 			dz.order_build(b)
@@ -961,7 +964,7 @@ func _execute_econ(cmd: Dictionary) -> void:
 			var k: String = cmd.kind
 			if b == null or b.dead or not b.built or b.team != team or not (k in b.bdef.produces): return
 			if produce_problem(b, k) != "": return
-			cash[team] -= int(BuildingDefs.UNIT_COST[k][0])
+			spend(team, int(BuildingDefs.UNIT_COST[k][0]))
 			b.queue_unit(k)
 		"cancel_unit":
 			var b: Building = by_id.get(cmd.id)
@@ -1059,6 +1062,24 @@ func deliver(team: int, amount: int) -> void:
 	income[team] += amount
 
 
+## All spending goes through here so the HUD can show a spending trend (refunds are not counted as income).
+var spent := [0, 0]
+var trend_samples: Array = []      # [sim_time, income0, spent0]
+
+
+func spend(team: int, amount: int) -> void:
+	cash[team] -= amount
+	spent[team] += amount
+
+
+## Cash per minute delivered and spent over the last 60 s (player team), for the top bar.
+func cash_trend(team: int) -> Vector2:
+	if trend_samples.is_empty(): return Vector2.ZERO
+	var old: Array = trend_samples[0]
+	var dt := maxf(sim_time - float(old[0]), 1.0)
+	return Vector2((income[team] - int(old[1 + team * 2])) * 60.0 / dt, (spent[team] - int(old[2 + team * 2])) * 60.0 / dt)
+
+
 ## Radar: enemy units (not structures) appear on the minimap only with a powered radar.
 func radar_online(team: int) -> bool:
 	return not structures(team, "radar").is_empty() and power_ok(team)
@@ -1109,7 +1130,8 @@ func rubble_at(p: Vector3, team: int) -> Dictionary:
 
 # ------------------------------------------------------------------ supply drops (Supply Drop Zone)
 var drop_flights: Array = []    # {"node", "pos", "dir", "target", "team", "left", "value", "released"}
-var drop_crates: Array = []     # {"node", "pos", "vy", "team", "value", "canopy"}
+var drop_crates: Array = []
+var drop_income := [0, 0]     # {"node", "pos", "vy", "team", "value", "canopy"}
 const C130_SPRITE := "res://assets/aircraft/c130/c130_top.png"
 const C130_MODEL := "res://assets/units3d/c130/c130.glb"
 const CRATE_MODEL := "res://assets/units3d/props/supply_crate_chute.glb"
@@ -1173,6 +1195,7 @@ func _update_supply_drops(dt: float) -> void:
 			c.node.position = c.pos
 			if c.canopy: c.canopy.visible = false
 			deliver(c.team, c.value)
+			drop_income[c.team] += c.value
 			FX.impact(self, c.pos, false)
 			if c.team == 0 and hud: hud.flash_message("Supply crate +$%d" % c.value)
 			drop_crates.erase(c)

@@ -339,9 +339,8 @@ func _qa_m1(ccp: Vector3) -> void:
 	# --- supply drop zone: C-130 drops crates that add cash
 	var dz := await _place("drop_zone", ccp + Vector3(-60, 0, -95))
 	await _until(func(): return dz != null and dz.built, 70.0)
-	var inc0: int = battle.income[0]
-	await _until(func(): return battle.income[0] >= inc0 + 1000 or false, 70.0)
-	_log("supply_drop_zone_income", dz != null and battle.income[0] >= inc0 + 1000, "delivered %d" % (battle.income[0] - inc0))
+	await _until(func(): return battle.drop_income[0] >= 1000, 70.0)
+	_log("supply_drop_zone_income", dz != null and battle.drop_income[0] >= 1000, "air-dropped $%d" % battle.drop_income[0])
 	# --- War Factory repair bay
 	var wf: Array = battle.structures(0, "war_factory")
 	if not wf.is_empty():

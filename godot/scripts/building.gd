@@ -461,7 +461,7 @@ func _repair_tick(dt: float) -> void:
 	repair_debt += cost
 	var whole := int(repair_debt)
 	if whole > 0:
-		battle.cash[team] -= whole
+		battle.spend(team, whole)
 		repair_debt -= whole
 
 
