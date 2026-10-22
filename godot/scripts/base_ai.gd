@@ -13,6 +13,7 @@ var attack_size := 7
 var attack_after := 150.0
 var waves := 0
 var attacking: Array = []      # uids sent on the current attack
+var capturing := {}            # derrick id -> uids sent to capture it
 
 # build order (kind, local x, local forward offset from the Command Center; forward = toward the map centre)
 const ORDER := [
@@ -23,6 +24,9 @@ const ORDER := [
 const BARRACKS_MIX := ["rifleman", "rifleman", "at4"]
 const FACTORY_MIX := ["abrams", "hmmwv_50cal", "bradley", "avenger", "abrams", "paladin"]
 const AIR_MIX := ["ah64", "a10"]
+var barracks_mix: Array = BARRACKS_MIX
+var factory_mix: Array = FACTORY_MIX
+var air_mix: Array = AIR_MIX
 
 
 func _init(b: Node, t: int, difficulty: String) -> void:
@@ -31,6 +35,10 @@ func _init(b: Node, t: int, difficulty: String) -> void:
 		"Easy": think_every = 3.0; attack_size = 10; attack_after = 300.0
 		"Hard": think_every = 1.0; attack_size = 6; attack_after = 120.0
 		_: think_every = 1.5; attack_size = 8; attack_after = 200.0
+	var nat: String = battle.nation_of(team)
+	barracks_mix = Nations.mix(nat, "barracks", BuildingDefs.DEFS.barracks.produces, BARRACKS_MIX + (["special_forces"] if nat != "usa" else []))
+	factory_mix = Nations.mix(nat, "war_factory", BuildingDefs.DEFS.war_factory.produces, FACTORY_MIX)
+	air_mix = Nations.mix(nat, "airfield", BuildingDefs.DEFS.airfield.produces, AIR_MIX)
 	if battle._automated() and "aifast" in battle.args:
 		attack_after = 60.0; attack_size = 4
 
@@ -56,6 +64,7 @@ func tick(dt: float) -> void:
 	var anchor: Vector3 = cc.position if cc else battle.start_pos[team]
 	_construct(anchor)
 	_produce(cc)
+	_capture_derricks()
 	_army()
 
 
@@ -77,10 +86,12 @@ func _construct(anchor: Vector3) -> void:
 		var count: int = battle.structures(team, e[0], false).size()
 		if count >= int(need[e[0]]): continue
 		var k: String = e[0]
+		if k == "airfield" and air_mix.is_empty(): continue     # nothing to fly yet for this nation
 		if battle.cash[team] < int(BuildingDefs.DEFS[k].cost) + 200: return   # keep a small reserve for units
 		if not battle.requirements_met(team, k): return
 		var pos := _slot(anchor, float(e[1]), float(e[2]))
-		for tries in 12:
+		var n_try := 40 if battle.terrain else 12      # hills: search wider for flat ground
+		for tries in n_try:
 			if battle.placement_problem(team, k, pos) == "": break
 			var a := tries * 0.9
 			pos = _slot(anchor, float(e[1]) + cos(a) * (6.0 + tries * 2.0), float(e[2]) + sin(a) * (6.0 + tries * 2.0))
@@ -106,15 +117,15 @@ func _produce(cc: Node) -> void:
 	var army := _mine(func(u): return not (u is Building) and u.def.get("weapons", []).size() > 0).size()
 	for b in battle.structures(team, "barracks"):
 		if b.prod_queue.size() < 2 and cash >= 400:
-			battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": BARRACKS_MIX[army % BARRACKS_MIX.size()]})
+			battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": barracks_mix[army % barracks_mix.size()]})
 			cash -= 300
 	for b in battle.structures(team, "war_factory"):
-		if b.prod_queue.size() < 1 and cash >= 1100:
-			battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": FACTORY_MIX[army % FACTORY_MIX.size()]})
+		if b.prod_queue.size() < 1 and cash >= 1100 and not factory_mix.is_empty():
+			battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": factory_mix[army % factory_mix.size()]})
 			cash -= 900
 	for b in battle.structures(team, "airfield"):
-		if b.prod_queue.is_empty() and cash >= 2200 and battle.produce_problem(b, "ah64") == "":
-			battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": AIR_MIX[waves % AIR_MIX.size()]})
+		if b.prod_queue.is_empty() and cash >= 2200 and not air_mix.is_empty() and battle.produce_problem(b, air_mix[0]) == "":
+			battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": air_mix[waves % air_mix.size()]})
 
 
 func _army() -> void:
@@ -152,6 +163,34 @@ func _army() -> void:
 		if tgt != Vector3.INF:
 			var ids: Array = done.map(func(u): return u.uid)
 			battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": ids.map(func(_i): return tgt)})
+
+
+## Oil derricks: send a pair of idle infantry to the nearest derrick we do not own (one team at a time).
+func _capture_derricks() -> void:
+	if battle.derricks.is_empty(): return
+	for e in battle.derricks:
+		if e.owner == team: capturing.erase(e.id)
+	for id in capturing.keys():
+		capturing[id] = capturing[id].filter(func(x): return battle.by_id.has(x) and not battle.by_id[x].dead)
+	var inf := _mine(func(u): return u.def.get("visual") == "infantry" and u.state == Unit.S.IDLE and not (u.uid in attacking))
+	var busy := {}
+	for id in capturing:
+		for x in capturing[id]: busy[x] = true
+	inf = inf.filter(func(u): return not busy.has(u.uid))
+	if inf.size() < 2: return
+	var home: Vector3 = battle.start_pos[team]
+	var best: Dictionary = {}
+	var bd := INF
+	for e in battle.derricks:
+		if e.owner == team: continue
+		if not capturing.get(e.id, []).is_empty(): continue
+		var d := home.distance_to(e.pos)
+		if d < bd: bd = d; best = e
+	if best.is_empty(): return
+	inf.sort_custom(func(a, b): return a.flat_dist(best.pos) < b.flat_dist(best.pos))
+	var ids: Array = [inf[0].uid, inf[1].uid]
+	capturing[best.id] = ids
+	battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": [best.pos + Vector3(3, 0, 3), best.pos + Vector3(-3, 0, 3)]})
 
 
 func _enemy_target(from: Vector3) -> Vector3:

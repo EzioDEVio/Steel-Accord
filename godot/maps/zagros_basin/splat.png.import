@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://csyn4pnobadcc"
+path="res://.godot/imported/splat.png-2dda2f3a81c41f9fcfb678fc1845d0f4.image"
+
+[deps]
+
+source_file="res://maps/zagros_basin/splat.png"
+dest_files=["res://.godot/imported/splat.png-2dda2f3a81c41f9fcfb678fc1845d0f4.image"]
+
+[params]
+

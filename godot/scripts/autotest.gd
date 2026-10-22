@@ -20,7 +20,7 @@ func _ready() -> void:
 
 func _log(name: String, ok: bool, detail := "") -> void:
 	checks.append([name, ok, detail])
-	print("TEST %s %s %s" % [name, "PASS" if ok else "FAIL", detail])
+	printerr("TEST %s %s %s" % [name, "PASS" if ok else "FAIL", detail])
 
 
 func _wait_sim(t: float) -> void:

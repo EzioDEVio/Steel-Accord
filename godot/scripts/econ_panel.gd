@@ -127,13 +127,14 @@ func _process(_dt: float) -> void:
 			if b.bdef.power < 0 and not battle.power_ok(team): extra += "  LOW POWER"
 			info.text = "%s  %+d power%s" % [b.bdef.name, pw, extra]
 		info.position = Vector2(2 * (BTN.x + 4) + 6, 6) if b.built else Vector2(270, 6)
-		for k in b.bdef.produces:
+		for k in b.produces_list():
 			if not buttons.has(k): continue
 			var why: String = battle.produce_problem(b, k)
 			buttons[k].disabled = why != "" and why != "Queue full"
 			var d: Dictionary = UnitDefs.def_of(k)
 			buttons[k].tooltip_text = "%s - $%d, %d s\n%s%s" % [d.name, BuildingDefs.UNIT_COST[k][0], int(BuildingDefs.UNIT_COST[k][1]),
 				d.get("role", ""), ("\n" + why) if why != "" else ""]
+			if Nations.is_placeholder(battle.nation_of(team), k): buttons[k].tooltip_text += "\n(Shared placeholder model until the Iran art pack arrives)"
 		if buttons.has("sell"): buttons["sell"].disabled = not b.built or b.bkind == "command_center"
 		if buttons.has("repair"):
 			var rb: Button = buttons["repair"]
@@ -168,7 +169,13 @@ func _build_structure_menu(b: Building) -> void:
 		add_child(cb); buttons["cancel"] = cb
 		height = 30.0
 		return
-	for k in b.bdef.produces:
+	if b.produces_list().is_empty() and not b.bdef.produces.is_empty():
+		var note := Label.new()
+		note.text = "%s aircraft arrive with the %s art pack." % [Nations.name_of(battle.nation_of(team)), Nations.name_of(battle.nation_of(team))]
+		note.position = Vector2(4, 36)
+		note.add_theme_font_size_override("font_size", 12)
+		add_child(note)
+	for k in b.produces_list():
 		var d: Dictionary = UnitDefs.def_of(k)
 		var icon: String = str(d.get("icon", ""))
 		if d.get("visual", "") == "vehicle_art": icon = str(UsArt.vehicle(d.art).get("icon", ""))

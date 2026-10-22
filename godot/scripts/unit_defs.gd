@@ -12,6 +12,9 @@ const W_TANK_GUN := {"id": "120mm", "range": 60.0, "reload": 2.4, "damage": 170.
 const W_RWS := {"id": "rws_mg", "range": 45.0, "reload": 0.3, "damage": 9.0, "splash": 0.0, "proj": "bullet",
 	"speed": 400.0, "spread": 1.0, "targets": ["ground", "heli"], "turret": true}
 
+## Tracked vehicles (heightfield maps: steeper climbs than wheels, no road bonus).
+const TRACKED := ["dozer", "vanguard", "abrams", "bradley", "m113", "paladin"]
+
 const DEFS := {
 	"vanguard": {
 		"name": "Vanguard MBT", "role": "Main battle tank - anti-armour", "domain": "ground",
@@ -115,7 +118,51 @@ static func scale_for(d: Dictionary) -> float:
 
 
 static func def_of(k: String) -> Dictionary:
-	return DEFS[k] if DEFS.has(k) else BASE_UNITS[k]
+	if DEFS.has(k): return DEFS[k]
+	if BASE_UNITS.has(k): return BASE_UNITS[k]
+	return derived(k)
+
+
+## Iranian infantry: same movement, animation set and mechanics as the U.S. counterpart (the user's direction), with
+## their own 3D models, names and small stat differences. PROVISIONAL values.
+const IRAN_INFANTRY := {
+	"ir_rifleman": ["rifleman", {"name": "Rifleman (Iran)", "role": "Infantry - effective vs infantry, weak vs armour", "weapon_id": "g3"}],
+	"ir_rpg": ["at4", {"name": "RPG Gunner", "role": "Anti-tank rocket launcher - effective vs vehicles", "weapon_id": "rpg7"}],
+	"ir_mg": ["m240_gunner", {"name": "Machine Gunner (Iran)", "role": "Belt-fed machine gun - heavy anti-infantry fire", "weapon_id": "pkm"}],
+	"ir_medic": ["medic", {"name": "Medic (Iran)", "role": "Heals nearby infantry; light carbine"}],
+	"ir_sniper": ["sniper", {"name": "Sniper (Iran)", "role": "Long-range marksman - deadly vs infantry", "weapon_id": "sniper_rifle"}],
+	"ir_engineer": ["eod_engineer", {"name": "Combat Engineer (Iran)", "role": "Repairs nearby friendly vehicles and structures; unarmed"}],
+	"irgc_sf": ["special_forces", {"name": "IRGC Special Forces", "role": "Elite IRGC operator - tough, long-range rifle, high damage",
+		"hp": 190.0, "sight": 72.0, "weapon_id": "irgc_rifle", "damage_mult": 1.1}],
+	"ir_paratrooper": ["paratrooper", {"name": "Paratrooper (Iran)", "role": "Airborne rifleman - arrives by parachute"}],
+}
+static var _derived := {}
+
+
+static func derived(k: String) -> Dictionary:
+	if _derived.has(k): return _derived[k]
+	if not IRAN_INFANTRY.has(k):
+		push_error("unknown unit kind " + k)
+		return BASE_UNITS.rifleman
+	var e: Array = IRAN_INFANTRY[k]
+	var d: Dictionary = def_of(e[0]).duplicate(true)
+	var o: Dictionary = e[1]
+	for key in o:
+		if key in ["weapon_id", "damage_mult"]: continue
+		d[key] = o[key]
+	var path := "res://assets/units3d/%s/%s.glb" % [k, k]
+	if ResourceLoader.exists(path): d["model3d"] = path
+	for w in d.get("weapons", []):
+		if o.has("weapon_id"): w["id"] = o.weapon_id
+		if o.has("damage_mult"): w["damage"] = float(w.damage) * float(o.damage_mult)
+	d["nation"] = "iran"
+	d["base_kind"] = e[0]
+	_derived[k] = d
+	return d
+
+
+static func all_kinds() -> Array:
+	return DEFS.keys() + BASE_UNITS.keys() + IRAN_INFANTRY.keys()
 
 
 static func armor_of(d: Dictionary) -> String:

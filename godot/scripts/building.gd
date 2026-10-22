@@ -70,7 +70,7 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 			for p in pad_positions(pos, bdef):
 				pads.append({"pos": p, "uid": -1})
 			_build_pads()
-	battle.gnav.set_structure(position, half + Vector2(1.0, 1.0), true)
+	battle.nav_set_structure(position, half + Vector2(1.0, 1.0), true)
 
 
 ## Structures face the map centre (their doors, exits and the airfield apron are on that side).
@@ -216,6 +216,11 @@ func _service_vehicles(dt: float, powered: bool) -> void:
 
 func drop_point_world() -> Vector3:
 	return drop_point.global_position * Vector3(1, 0, 1) if drop_point else position
+
+
+## Units this structure offers to its owner's nation.
+func produces_list() -> Array:
+	return Nations.produces(battle.nation_of(team), bkind, bdef.produces)
 
 
 func exit_point() -> Vector3:
@@ -514,7 +519,7 @@ func die() -> void:
 	set_selected(false)
 	if card_mat: card_mat.set_shader_parameter("burnt", 1.0)
 	if build_snd: build_snd.queue_free(); build_snd = null
-	battle.gnav.set_structure(position, half + Vector2(1.0, 1.0), false)
+	battle.nav_set_structure(position, half + Vector2(1.0, 1.0), false)
 	outline.visible = false
 	repairing = false
 	battle.on_unit_died(self)

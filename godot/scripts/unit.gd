@@ -130,6 +130,7 @@ var stride := {"walk": 1.4, "run": 4.5}
 func _build_model3d(path: String) -> void:
 	model = (load(path) as PackedScene).instantiate()
 	body.add_child(model)
+	_apply_grooming()
 	for n in model.find_children("*", "Node3D", true, false):
 		var nm := String(n.name)
 		if nm.begins_with("Wheel") or nm.begins_with("Sprocket") or nm.begins_with("Idler"):
@@ -496,6 +497,25 @@ func forward() -> Vector3:
 	return Vector3(-sin(heading), 0, -cos(heading))
 
 
+## Iranian infantry models carry separate Beard and Moustache meshes: soldiers get a deterministic mix of full beard,
+## moustache only and clean-shaven (by unit id, so it is identical in every replay). IRGC operators are bearded.
+func _apply_grooming() -> void:
+	var beard := model.find_child("Beard", true, false) as Node3D
+	var tache := model.find_child("Moustache", true, false) as Node3D
+	if beard == null and tache == null: return
+	var v := 0 if kind == "irgc_sf" else (uid * 7 + 3) % 5     # 0-2 full beard, 3 moustache only, 4 clean-shaven
+	if beard: beard.visible = v <= 2
+	if tache: tache.visible = v <= 3
+	set_meta("grooming", ["beard", "beard", "beard", "moustache", "shaven"][v])
+
+
+## Terrain movement class for heightfield maps: "infantry", "wheeled" or "tracked" (slope limits and costs differ).
+func move_class() -> String:
+	if def.has("move_class"): return str(def.move_class)
+	if def.get("visual") == "infantry": return "infantry"
+	return "tracked" if def.has("track_m_per_v") or kind in UnitDefs.TRACKED else "wheeled"
+
+
 func flat_dist(p: Vector3) -> float:
 	return Vector2(p.x - position.x, p.z - position.z).length()
 
@@ -585,7 +605,7 @@ func order_return() -> void:
 
 func _plan(p: Vector3) -> void:
 	if domain == "ground":
-		path = battle.find_path(position, p)
+		path = battle.find_path(position, p, move_class())
 	else:
 		path = PackedVector3Array([position, p])
 	path_i = 1 if path.size() > 1 else 0
@@ -920,7 +940,7 @@ func _chase(dt: float) -> void:
 		_steer_to(target.position, dt); return
 	repath_t -= dt
 	if repath_t <= 0.0 or path_i >= path.size():
-		path = battle.find_path(position, target.position)
+		path = battle.find_path(position, target.position, move_class())
 		path_i = 1 if path.size() > 1 else 0
 		repath_t = 1.0
 	_follow(dt)
@@ -942,6 +962,7 @@ func _steer_to(p: Vector3, dt: float) -> void:
 	heading = wrapf(heading + clampf(diff, -step, step), -PI, PI)
 	var align := clampf(cos(diff), 0.0, 1.0)
 	var ts: float = def.speed * align * align
+	if domain == "ground": ts *= battle.terrain_speed_mult(self)
 	ts = minf(ts, maxf(2.0, to.length() * 1.2))
 	speed_cur = move_toward(speed_cur, ts, def.accel * dt)
 	position += forward() * speed_cur * dt

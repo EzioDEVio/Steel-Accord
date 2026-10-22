@@ -4,7 +4,7 @@
 class_name GridNav
 extends RefCounted
 
-const CELL := 2.0
+var CELL := 2.0
 var origin := Vector2(-330, -330)
 var n := 330
 var astar := AStarGrid2D.new()
@@ -12,7 +12,12 @@ var static_solid := {}      # Vector2i -> true (terrain obstacles)
 var owners := {}            # Vector2i -> count of structures covering the cell
 
 
-func _init(half_size: float) -> void:
+var move_class := "any"
+var slope_cells := 0         # cells made impassable by terrain slope (diagnostics)
+
+
+func _init(half_size: float, cell := 2.0) -> void:
+	CELL = cell
 	n = int(ceil(half_size * 2.0 / CELL))
 	origin = Vector2(-half_size, -half_size)
 	astar.region = Rect2i(0, 0, n, n)
@@ -130,3 +135,45 @@ func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
 		while j > i + 1 and not line_clear(raw[i], raw[j]): j -= 1
 		out.append(raw[j]); i = j
 	return out
+
+
+## Heightfield maps: cells steeper than `max_slope_deg` become impassable for this movement class; passable cells
+## cost the class's material cost (map.json "movement".<class>.cost) and more the steeper they are (A* weights;
+## jumping is disabled so weights count).
+func apply_terrain(tm: TerrainMap, cls: String, rules: Dictionary) -> void:
+	move_class = cls
+	astar.jumping_enabled = false
+	var max_s: float = float(rules.get("max_slope_deg", 30.0))
+	var k_slope: float = float(rules.get("slope_cost", 1.0))
+	var cost: Dictionary = rules.get("cost", {})
+	for y in n:
+		for x in n:
+			var c := Vector2i(x, y)
+			var p := center_of(c)
+			# steepest baked sample slope inside the cell, so a narrow cliff band is not skipped
+			var s := tm.max_slope_in(p.x, p.z, CELL * 0.5)
+			if s > max_s:
+				static_solid[c] = true
+				astar.set_point_solid(c, true)
+				slope_cells += 1
+				continue
+			var w := tm.material_cost(p.x, p.z, cost) * (1.0 + k_slope * (s / max_s) * (s / max_s))
+			astar.set_point_weight_scale(c, maxf(w, 0.2))
+
+
+## Walls / boundaries supplied as polylines (map.json "blockers").
+func block_segment(a: Vector3, b: Vector3, r: float) -> void:
+	var steps := int(ceil(a.distance_to(b) / (CELL * 0.5))) + 1
+	for i in steps + 1:
+		block_circle(a.lerp(b, float(i) / steps), r)
+
+
+## A* travel cost between two points (cell steps x terrain weight, metres): the quantity the planner minimises, so
+## it is the fair measure of how far a site is for a movement class (string-pulled lengths depend on tie-breaking).
+func path_cost(from: Vector3, to: Vector3) -> float:
+	var ids := astar.get_id_path(nearest_free(cell_of(from)), nearest_free(cell_of(to)))
+	var c := 0.0
+	for i in range(1, ids.size()):
+		var step := Vector2(ids[i] - ids[i - 1]).length() * CELL
+		c += step * astar.get_point_weight_scale(ids[i])
+	return c

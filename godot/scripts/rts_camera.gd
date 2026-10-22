@@ -14,6 +14,7 @@ var bounds := Rect2(-150, -150, 300, 300)
 var edge_pan := true
 var speed_mult := 1.0
 var _mid_drag := false
+var terrain: TerrainMap = null   # heightfield maps: the pivot follows the ground and picking ray-marches the terrain
 
 
 func _ready() -> void:
@@ -34,8 +35,20 @@ func _apply() -> void:
 	cam.rotation = Vector3(-p, 0, 0)
 
 
-func focus(p: Vector3) -> void:
-	position = Vector3(clampf(p.x, bounds.position.x, bounds.end.x), 0, clampf(p.z, bounds.position.y, bounds.end.y))
+func focus(p: Vector3, instant := true) -> void:
+	var x := clampf(p.x, bounds.position.x, bounds.end.x)
+	var z := clampf(p.z, bounds.position.y, bounds.end.y)
+	var y := position.y if not instant else _pivot_h(x, z)
+	position = Vector3(x, y, z)
+
+
+## Pivot height: terrain averaged over a few metres around the focus so the view does not jitter over small bumps.
+func _pivot_h(x: float, z: float) -> float:
+	if terrain == null: return 0.0
+	var h := 0.0
+	for o in [Vector2.ZERO, Vector2(12, 0), Vector2(-12, 0), Vector2(0, 12), Vector2(0, -12)]:
+		h += terrain.height_at(x + o.x, z + o.y)
+	return h / 5.0
 
 
 func _process(dt: float) -> void:
@@ -57,7 +70,9 @@ func _process(dt: float) -> void:
 		var spd := zoom * 1.1 * dt * speed_mult
 		var right := Vector3(cos(yaw), 0, -sin(yaw))
 		var fwd := Vector3(-sin(yaw), 0, -cos(yaw))
-		focus(position + (right * mv.x - fwd * mv.y).normalized() * spd)
+		focus(position + (right * mv.x - fwd * mv.y).normalized() * spd, false)
+	if terrain:
+		position.y = lerpf(position.y, _pivot_h(position.x, position.z), minf(1.0, dt * 6.0))
 	if Input.is_key_pressed(KEY_COMMA): yaw += dt * 1.5; _apply()
 	if Input.is_key_pressed(KEY_PERIOD): yaw -= dt * 1.5; _apply()
 
@@ -85,13 +100,14 @@ func drag_pan(rel: Vector2) -> void:
 	var k := zoom * 0.0022
 	var right := Vector3(cos(yaw), 0, -sin(yaw))
 	var fwd := Vector3(-sin(yaw), 0, -cos(yaw))
-	focus(position - right * rel.x * k + fwd * rel.y * k)
+	focus(position - right * rel.x * k + fwd * rel.y * k, false)
 
 
-## Ground point (y = 0 plane) under a screen position, or null.
+## Ground point under a screen position (terrain surface, or the y = 0 plane on flat maps), or null.
 func ground_at(screen: Vector2) -> Variant:
 	var o := cam.project_ray_origin(screen)
 	var d := cam.project_ray_normal(screen)
+	if terrain: return terrain.raycast(o, d, cam.far)
 	if absf(d.y) < 1e-4: return null
 	var t := -o.y / d.y
 	if t < 0: return null

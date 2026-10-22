@@ -9,7 +9,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	# automated runs (tests / diagnostics / evidence) skip the menu
 	for a in OS.get_cmdline_user_args():
-		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots", "pilotshots", "m1shots"] or a.begins_with("test"):
+		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots", "pilotshots", "m1shots", "maptest", "mapshots"] or a.begins_with("test"):
 			Game.call_deferred("start_match")
 			return
 	var bg := TextureRect.new()
@@ -59,9 +59,29 @@ func _clear() -> void:
 func _show_skirmish() -> void:
 	_clear()
 	content.add_child(UIKit.label("SKIRMISH", 22, UIKit.ACCENT))
-	content.add_child(UIKit.label("Map: Proving Ground (600 x 600 m)", 16))
-	content.add_child(UIKit.label("You: Blue (U.S. development side)   vs   Red (AI, same side)", 15))
+	var maps: Array = Game.MAPS.keys().filter(func(m): return m == "proving_ground" or TerrainMap.exists(m))
+	var labels: Array = maps.map(func(m): return Game.MAPS[m])
+	if not (Game.settings.get("map", "") in maps): Game.settings.map = "proving_ground"
+	var rm := HBoxContainer.new()
+	rm.add_child(UIKit.label("Map  ", 15))
+	var om := UIKit.option(labels, Game.MAPS[Game.settings.map], func(x):
+		Game.settings.map = maps[labels.find(x)]
+		Game.save())
+	om.custom_minimum_size = Vector2(380, 34)
+	rm.add_child(om)
+	content.add_child(rm)
+	var nat_names: Array = Nations.ORDER.map(func(n): return Nations.name_of(n))
+	for t in 2:
+		var rn := HBoxContainer.new()
+		rn.add_child(UIKit.label(("You (Blue)  " if t == 0 else "AI (Red)    "), 15))
+		var key := "nation%d" % t
+		var tt := t
+		rn.add_child(UIKit.option(nat_names, Nations.name_of(str(Game.settings.get(key, "usa"))), func(x):
+			Game.settings["nation%d" % tt] = Nations.ORDER[nat_names.find(x)]
+			Game.save()))
+		content.add_child(rn)
 	content.add_child(UIKit.label("Start: Command Center, one Dozer, $10,000. Destroy every enemy structure and unit.", 13))
+	content.add_child(UIKit.label("Iran: own infantry (incl. IRGC Special Forces); vehicles are shared placeholders until the Iran art pack.", 12, Color(0.6, 0.66, 0.63)))
 	var r := HBoxContainer.new()
 	r.add_child(UIKit.label("AI difficulty  ", 15))
 	var set_diff := func(x):
@@ -70,7 +90,6 @@ func _show_skirmish() -> void:
 	r.add_child(UIKit.option(["Easy", "Normal", "Hard"], Game.settings.difficulty, set_diff))
 	content.add_child(r)
 	content.add_child(UIKit.label("Easy: AI attacks late with a big wave.  Hard: thinks faster, attacks early.", 12, Color(0.6, 0.66, 0.63)))
-	content.add_child(UIKit.label("The China faction, save/load and more maps arrive in B2. Both sides use the U.S. roster for now.", 12, Color(0.6, 0.66, 0.63)))
 	var sp := Control.new(); sp.custom_minimum_size = Vector2(0, 12)
 	content.add_child(sp)
 	content.add_child(UIKit.button("Start Match", func(): Game.start_match(), Vector2(260, 46), 19))

@@ -5,7 +5,7 @@ class_name Battle
 extends Node3D
 
 const TICK_HZ := 30
-const MAP_HALF := 300.0   # 600 x 600 m: real-world unit sizes need real-world room (aircraft, approaches)
+var MAP_HALF := 300.0   # half the playable size; 300 on the flat Proving Ground, read from map.json on terrain maps
 const PAD_SIZE := 28.0
 const PAD_POSITIONS := [Vector3(150, 0, 150), Vector3(184, 0, 150), Vector3(218, 0, 150), Vector3(252, 0, 150), Vector3(150, 0, 184), Vector3(184, 0, 184), Vector3(218, 0, 184)]
 
@@ -36,8 +36,18 @@ var pause_menu: PauseMenu
 var kills := 0
 var shots_by := {}   # shooter uid -> rounds fired (diagnostics / tests)
 var losses := 0
-const FOG_N := 80   # 8 m cells over 640 m; edges are smoothed by linear filtering in the shaders
-const FOG_RECT := Rect2(-320, -320, 640, 640)
+var FOG_N := 80   # 8 m cells over 640 m; edges are smoothed by linear filtering in the shaders
+var FOG_RECT := Rect2(-320, -320, 640, 640)
+# ---- heightfield maps (maps/<id>/map.json): terrain, per-movement-class navigation, oil derricks
+var map_id := "proving_ground"
+var terrain: TerrainMap = null
+var navs := {}                  # movement class ("infantry" / "wheeled" / "tracked") -> GridNav
+var move_rules := {}            # movement class -> rules from map.json
+var build_max_slope := 8.0
+var derricks: Array = []        # {"id", "pos", "owner", "progress": [t0, t1], "income", "every", "timer", "node", ...}
+var derrick_income := [0, 0]
+var minimap_tex: ImageTexture = null
+var prop_roots: Array = []      # world positions of placed map props (grounding checks)
 var fog_img: Image
 var fog_tex: ImageTexture
 var fog_mini_img: Image
@@ -63,20 +73,34 @@ var hud: HUD
 func _ready() -> void:
 	args = _args()
 	scenario = "army" if ("army" in args or ("test" in args and not "base" in args) or "airdiag" in args or "evidence" in args) else "base"
+	var _t0 := Time.get_ticks_msec()
+	_select_map()
+	print("LOAD select_map %d ms" % (Time.get_ticks_msec() - _t0))
 	_init_fog()
 	rng.seed = 20261021
 	Engine.physics_ticks_per_second = TICK_HZ
 	await World.environment(self)
-	await World.terrain(self, MAP_HALF + 30.0, 0.0)
 	props = World.props()
-	_build_map()
+	if terrain:
+		add_child(terrain)
+		await terrain.build_visual()
+		print("LOAD terrain visual %d ms" % (Time.get_ticks_msec() - _t0))
+		_build_terrain_map()
+		print("LOAD props %d ms" % (Time.get_ticks_msec() - _t0))
+	else:
+		await World.terrain(self, MAP_HALF + 30.0, 0.0)
+		_build_map()
 	await _bake_nav()
+	print("LOAD nav %d ms" % (Time.get_ticks_msec() - _t0))
 	_spawn_forces()
+	print("LOAD forces %d ms" % (Time.get_ticks_msec() - _t0))
 	for id in UnitDefs.POWERS:
 		power_ready[0][id] = 0.0
 		power_ready[1][id] = 0.0
 	camera = RTSCamera.new()
 	camera.bounds = map_bounds.grow(-10)
+	camera.terrain = terrain
+	if terrain: camera.zoom_max = 300.0
 	add_child(camera)
 	if scenario == "base": camera.focus(start_pos[0] + Vector3(0, 0, -25))
 	else: camera.focus(Vector3(30, 0, 140.0 if "close" in args else 205.0))
@@ -127,6 +151,10 @@ func _ready() -> void:
 		var bs: Node = load("res://scripts/baseshots.gd").new()
 		bs.battle = self
 		add_child(bs)
+	elif "maptest" in args:
+		var mt: Node = load("res://scripts/autotest_map.gd").new()
+		mt.battle = self
+		add_child(mt)
 	elif "basetest" in args:
 		var bt: Node = load("res://scripts/autotest_base.gd").new()
 		bt.battle = self
@@ -137,8 +165,59 @@ func _ready() -> void:
 		add_child(t)
 
 
+## Map choice: "map=<id>" on the command line, otherwise the menu setting. Automated test modes keep the flat
+## Proving Ground unless a map is named explicitly, so the existing regression tests are unchanged.
+func _select_map() -> void:
+	var want := str(args.get("map", "" if _automated() else str(Game.settings.get("map", "proving_ground"))))
+	if want == "" or want == "proving_ground" or not TerrainMap.exists(want):
+		map_id = "proving_ground"
+		return
+	var tm := TerrainMap.new()
+	tm.name = "Terrain"
+	if not tm.load_map(want):
+		push_error("map %s failed to load; using the Proving Ground" % want)
+		return
+	terrain = tm
+	map_id = want
+	var d: Dictionary = tm.data
+	var half := tm.half_size() - float(d.get("edge_margin_m", 24.0))
+	MAP_HALF = half
+	map_bounds = Rect2(-half, -half, half * 2.0, half * 2.0)
+	var fh := tm.half_size()
+	FOG_RECT = Rect2(-fh, -fh, fh * 2.0, fh * 2.0)
+	FOG_N = int(ceil(fh * 2.0 / 8.0))
+	build_max_slope = float(d.get("building_max_slope_deg", 8.0))
+	move_rules = d.get("movement", d.get("movement_classes", {}))
+	var sp: Array = []
+	for st in d.get("starts", []):
+		sp.append(map_point(st))
+	if sp.size() >= 2: start_pos = [sp[0], sp[1]]
+	print("MAP %s size=%.0f m playable=%.0f m samples=%d step=%.2f m" % [map_id, fh * 2.0, half * 2.0, tm.n, tm.step])
+
+
+## Reads a map.json point: [x, z], [x, y, z], {"x", "z"} or {"pos": ...}; returns it grounded on the terrain.
+func map_point(v: Variant) -> Vector3:
+	var p := Vector3.ZERO
+	if v is Dictionary:
+		if v.has("pos"): return map_point(v.pos)
+		p = Vector3(float(v.get("x", 0.0)), 0.0, float(v.get("z", 0.0)))
+	elif v is Array and v.size() == 2: p = Vector3(float(v[0]), 0.0, float(v[1]))
+	elif v is Array and v.size() >= 3: p = Vector3(float(v[0]), 0.0, float(v[2]))
+	p.y = ground_h(p.x, p.z)
+	return p
+
+
+## Terrain height (0 on the flat Proving Ground). The single source used for grounding everything.
+func ground_h(x: float, z: float) -> float:
+	return terrain.height_at(x, z) if terrain else 0.0
+
+
+func grounded(p: Vector3) -> Vector3:
+	return Vector3(p.x, ground_h(p.x, p.z), p.z)
+
+
 func _automated() -> bool:
-	return "test" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
+	return "test" in args or "maptest" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).
@@ -226,17 +305,62 @@ func _in_obstacle(p: Vector3, margin: float) -> bool:
 
 
 func _bake_nav() -> void:
-	gnav = GridNav.new(MAP_HALF + 30.0)
-	for o in obstacles_2d:
-		gnav.block_circle(Vector3(o.x, 0, o.y), o.z * 0.75 + 2.0)
-	var n_obs := obstacles_2d.size()
+	if terrain:
+		var cell: float = float(terrain.data.get("nav_cell_m", 4.0))
+		var t0 := Time.get_ticks_msec()
+		for cls in ["infantry", "wheeled", "tracked"]:
+			var g := GridNav.new(terrain.half_size(), cell)
+			g.apply_terrain(terrain, cls, move_rules.get(cls, {}))
+			navs[cls] = g
+		gnav = navs.tracked
+		for o in obstacles_2d:
+			nav_block_circle(Vector3(o.x, 0, o.y), o.z * 0.75 + 2.0)
+		for b in terrain.data.get("blockers", []):
+			var pts: Array = b.get("points", [])
+			for i in pts.size() - 1:
+				for g in navs.values(): g.block_segment(map_point(pts[i]), map_point(pts[i + 1]), float(b.get("radius_m", 3.0)))
+		print("NAV terrain cell=%.1f m grid=%d  steep cells: inf=%d wheeled=%d tracked=%d  (%d ms)" % [cell, gnav.n,
+			navs.infantry.slope_cells, navs.wheeled.slope_cells, navs.tracked.slope_cells, Time.get_ticks_msec() - t0])
+	else:
+		gnav = GridNav.new(MAP_HALF + 30.0)
+		navs = {"infantry": gnav, "wheeled": gnav, "tracked": gnav}
+		for o in obstacles_2d:
+			gnav.block_circle(Vector3(o.x, 0, o.y), o.z * 0.75 + 2.0)
+		print("NAV grid=", gnav.n, "x", gnav.n, " obstacles=", obstacles_2d.size())
 	nav_ready = true
-	print("NAV grid=", gnav.n, "x", gnav.n, " obstacles=", n_obs)
 
 
-func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
-	if gnav: return gnav.find_path(from, to)
+func nav_block_circle(p: Vector3, r: float) -> void:
+	for g in _nav_set(): g.block_circle(p, r)
+
+
+func nav_set_structure(p: Vector3, half: Vector2, on: bool) -> void:
+	for g in _nav_set(): g.set_structure(p, half, on)
+
+
+func _nav_set() -> Array:
+	var out: Array = []
+	for g in navs.values():
+		if not (g in out): out.append(g)
+	if out.is_empty() and gnav: out.append(gnav)
+	return out
+
+
+func find_path(from: Vector3, to: Vector3, move_class := "tracked") -> PackedVector3Array:
+	var g: GridNav = navs.get(move_class, gnav)
+	if g: return g.find_path(from, to)
 	return PackedVector3Array([from, to])
+
+
+## Terrain speed factor for a ground unit at its position (roads help wheels; rough ground and slopes slow).
+func terrain_speed_mult(u: Unit) -> float:
+	if terrain == null: return 1.0
+	var r: Dictionary = move_rules.get(u.move_class(), {})
+	var p := u.position
+	var s := terrain.slope_deg_at(p.x, p.z)
+	var m := 1.0 / sqrt(maxf(terrain.material_cost(p.x, p.z, r.get("cost", {})), 0.2))
+	m *= 1.0 - float(r.get("slope_slow", 0.3)) * clampf(s / float(r.get("max_slope_deg", 30.0)), 0.0, 1.0)
+	return clampf(m, 0.4, 1.25)
 
 
 func _spawn_forces() -> void:
@@ -263,7 +387,7 @@ func _spawn_forces() -> void:
 func _spawn(kind: String, team: int, pos: Vector3, yaw: float) -> Unit:
 	var u := Unit.new()
 	add_child(u)
-	u.setup(self, kind, team, units.size() + 1, pos, yaw)
+	u.setup(self, kind, team, units.size() + 1, grounded(pos), yaw)
 	u.reset_physics_interpolation()
 	units.append(u)
 	by_id[u.uid] = u
@@ -329,7 +453,9 @@ func _execute(cmd: Dictionary) -> void:
 # ------------------------------------------------------------------ simulation
 func _physics_process(dt: float) -> void:
 	if units.is_empty(): return
+	var _tt := Time.get_ticks_usec()
 	sim_tick(dt)
+	if "proftick" in args and tick_n % 30 == 0: printerr("TICK %d sim=%.1f %.1f ms" % [tick_n, sim_time, (Time.get_ticks_usec() - _tt) / 1000.0])
 
 
 func sim_tick(dt: float) -> void:
@@ -345,6 +471,8 @@ func sim_tick(dt: float) -> void:
 	_update_flights(dt)
 	_update_bombs(dt)
 	_update_supply_drops(dt)
+	_ground_units(dt)
+	_update_derricks(dt)
 	if tick_n % 150 == 0:
 		trend_samples.append([sim_time, income[0], spent[0], income[1], spent[1]])
 		while trend_samples.size() > 13: trend_samples.pop_front()
@@ -353,6 +481,26 @@ func sim_tick(dt: float) -> void:
 	sim_time += dt
 	tick_n += 1
 	_check_end()
+
+
+## Heightfield maps: every unit node stands on the terrain (aircraft altitude is above the local ground, smoothed so
+## jets do not bob over every ridge); ground vehicles pitch and roll with the slope (presentation only).
+func _ground_units(dt: float) -> void:
+	if terrain == null: return
+	for u in units:
+		if u is Building: continue
+		var h := terrain.height_at(u.position.x, u.position.z)
+		if u.domain == "ground" or u.altitude < 3.0 or u.state == Unit.S.LANDED:
+			u.position.y = h
+		else:
+			u.position.y = move_toward(u.position.y, h, dt * (12.0 if u.domain == "heli" else 30.0))
+		if u.domain == "ground" and u.def.get("visual") != "infantry" and not u.dead:
+			var nrm := terrain.normal_at(u.position.x, u.position.z)
+			var grad := Vector2(-nrm.x / nrm.y, -nrm.z / nrm.y)
+			var f := Vector2(-sin(u.heading), -cos(u.heading))
+			var r := Vector2(cos(u.heading), -sin(u.heading))
+			u.body.rotation.x = lerp_angle(u.body.rotation.x, atan(grad.dot(f)), minf(1.0, dt * 8.0))
+			u.body.rotation.z = lerp_angle(u.body.rotation.z, atan(grad.dot(r)), minf(1.0, dt * 8.0))
 
 
 func _separate() -> void:
@@ -411,7 +559,7 @@ func find_enemy_near_point(u: Unit, p: Vector3, r: float) -> Unit:
 func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 	shots_by[shooter.uid] = int(shots_by.get(shooter.uid, 0)) + 1
 	var from := shooter.muzzle_pos()
-	var aim: Vector3 = tunit.world_center() if tunit else Vector3(tpos.x, 0.3, tpos.z)
+	var aim: Vector3 = tunit.world_center() if tunit else Vector3(tpos.x, ground_h(tpos.x, tpos.z) + 0.3, tpos.z)
 	var dist := from.distance_to(aim)
 	if tunit:
 		aim += tunit.vel * (dist / float(w.speed))
@@ -507,15 +655,16 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 			var d := o.world_center().distance_to(p)
 			if d < s.splash:
 				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash) * _armor_mult(s, o), s.shooter)
-	var ground := p.y < 1.5
+	var gy := ground_h(p.x, p.z)
+	var ground := p.y < gy + 1.5
 	if s.kind == "arty":
-		FX.explosion(self, Vector3(p.x, 0.2, p.z), 1.1)
+		FX.explosion(self, Vector3(p.x, gy + 0.2, p.z), 1.1)
 	elif s.kind == "bullet":
-		FX.bullet_hit(self, Vector3(p.x, maxf(p.y, 0.1), p.z), direct, s.shooter != null and s.shooter.is_air())
+		FX.bullet_hit(self, Vector3(p.x, maxf(p.y, gy + 0.1), p.z), direct, s.shooter != null and s.shooter.is_air())
 	elif direct or not ground:
 		FX.impact(self, p, true)
 	else:
-		FX.impact(self, Vector3(p.x, 0.1, p.z), false)
+		FX.impact(self, Vector3(p.x, gy + 0.1, p.z), false)
 
 
 func _armor_mult(s: Dictionary, o: Unit) -> float:
@@ -548,7 +697,7 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 	var p: Dictionary = UnitDefs.POWERS[id]
 	power_ready[team][id] = sim_time + float(p.cooldown)
 	var edge_z := map_bounds.end.y + 120.0 if team == 0 else map_bounds.position.y - 120.0
-	var start := Vector3(target.x * 0.7, 0, edge_z)
+	var start := Vector3(target.x * 0.7, ground_h(target.x, target.z), edge_z)
 	var dir := Vector3(target.x - start.x, 0, target.z - start.z).normalized()
 	var node := Node3D.new()
 	add_child(node)
@@ -590,7 +739,7 @@ func _update_flights(dt: float) -> void:
 		if p.has("troops"):
 			var nt := int(p.troops)
 			while int(f.dropped) < nt and along >= -14.0 + int(f.dropped) * 5.0:
-				var u := _spawn(str(p.unit), f.team, f.pos + Vector3(0, 0, 0), atan2(-f.dir.x, -f.dir.z))
+				var u := _spawn(Nations.swap_unit(nation_of(f.team), str(p.unit)), f.team, f.pos + Vector3(0, 0, 0), atan2(-f.dir.x, -f.dir.z))
 				u.start_parachute(float(p.altitude) - 4.0)
 				u.reset_physics_interpolation()
 				f.dropped += 1
@@ -623,8 +772,9 @@ func _update_bombs(dt: float) -> void:
 		b.pos += b.vel * dt
 		b.node.global_position = b.pos
 		if b.vel.length() > 0.1: b.node.look_at(b.pos + b.vel, Vector3.RIGHT)
-		if b.pos.y <= 0.3:
-			var p := Vector3(b.pos.x, 0.2, b.pos.z)
+		var bgy := ground_h(b.pos.x, b.pos.z)
+		if b.pos.y <= bgy + 0.3:
+			var p := Vector3(b.pos.x, bgy + 0.2, b.pos.z)
 			bomb_log.append(p)
 			FX.explosion(self, p, clampf(b.splash / 7.0, 0.8, 2.2))
 			for o in units:
@@ -686,8 +836,9 @@ func _update_debris(dt: float) -> void:
 		d.vel.y -= 22.0 * dt
 		n.global_position += d.vel * dt
 		n.rotation += d.spin * dt
-		if n.global_position.y <= 0.4 and d.vel.y < 0:
-			n.global_position.y = 0.4
+		var dgy := ground_h(n.global_position.x, n.global_position.z) + 0.4
+		if n.global_position.y <= dgy and d.vel.y < 0:
+			n.global_position.y = dgy
 			if d.crash:
 				FX.explosion(self, n.global_position, 0.9)
 				var sp := n.find_child("Sprite", true, false) as Sprite3D
@@ -845,9 +996,16 @@ func _spawn_bases() -> void:
 	for t in 2:
 		cash[t] = BuildingDefs.START_CASH
 		var cc := add_structure("command_center", t, start_pos[t], true)
+		add_flag(t, cc.position + Vector3(cc.half.x + 4.0, 0, (cc.half.y - 2.0) * (1.0 if t == 0 else -1.0)))
 		var fwd := -1.0 if t == 0 else 1.0     # toward the map centre
 		var d := _spawn("dozer", t, cc.position + Vector3(-8, 0, fwd * (cc.half.y + 8.0)), 0.0 if t == 0 else PI)
 		d.order_stop()
+	if terrain:
+		for sp in terrain.data.get("supply_piles", []):
+			add_pile(map_point(sp), int(sp.get("cash", sp.get("amount", BuildingDefs.PILE_CASH))) if sp is Dictionary else BuildingDefs.PILE_CASH)
+		for od in terrain.data.get("oil_derricks", []):
+			add_derrick(od)
+		return
 	# neutral supply piles: two per side near each base, one larger contested pile in the centre (PROVISIONAL)
 	for p in [Vector3(-75, 0, 195), Vector3(80, 0, 250), Vector3(75, 0, -195), Vector3(-80, 0, -250)]:
 		add_pile(p, BuildingDefs.PILE_CASH)
@@ -855,6 +1013,7 @@ func _spawn_bases() -> void:
 
 
 func add_structure(k: String, team: int, pos: Vector3, built := false) -> Building:
+	pos = prepare_site(k, pos)
 	var b := Building.new()
 	add_child(b)
 	b.setup_structure(self, k, team, units.size() + 1, pos, built)
@@ -867,6 +1026,7 @@ func add_structure(k: String, team: int, pos: Vector3, built := false) -> Buildi
 
 func add_pile(p: Vector3, amount: int) -> void:
 	var n := Node3D.new()
+	p = grounded(p)
 	n.position = p
 	add_child(n)
 	var wood := StandardMaterial3D.new(); wood.albedo_color = Color(0.45, 0.36, 0.22); wood.roughness = 0.9
@@ -884,7 +1044,7 @@ func add_pile(p: Vector3, amount: int) -> void:
 		m.rotation.y = r.randf() * TAU
 		n.add_child(m)
 	piles.append({"pos": p, "cash": amount, "node": n, "start": amount})
-	gnav.block_circle(p, 8.0)
+	nav_block_circle(p, 8.0)
 	obstacles_2d.append(Vector3(p.x, p.z, 8.0))
 
 
@@ -927,7 +1087,13 @@ func placement_problem(team: int, k: String, pos: Vector3) -> String:
 	if not requirements_met(team, k): return "Requires " + ", ".join(d.requires.map(func(x): return BuildingDefs.DEFS[x].name))
 	var h: Vector2 = d.size * 0.5 + Vector2(1.0, 1.0)
 	if not map_bounds.grow(-10).has_point(Vector2(pos.x, pos.z)): return "Outside the map"
+	if terrain:
+		var st := terrain.footprint_stats(pos, d.size * 0.5)
+		if st.y > build_max_slope: return "Ground too steep (%.0f° > %.0f°)" % [st.y, build_max_slope]
 	if not gnav.box_free(pos, h): return "Blocked"
+	if terrain:
+		for od in derricks:
+			if absf(od.pos.x - pos.x) < h.x + 6.0 and absf(od.pos.z - pos.z) < h.y + 6.0: return "Blocked"
 	# airfield aprons: the new apron must be clear and on the map; nothing may be built on an existing apron
 	var ap := Building.apron_rect(pos, d)
 	if not ap.is_empty():
@@ -975,7 +1141,7 @@ func _execute_econ(cmd: Dictionary) -> void:
 		"produce":
 			var b: Building = by_id.get(cmd.id)
 			var k: String = cmd.kind
-			if b == null or b.dead or not b.built or b.team != team or not (k in b.bdef.produces): return
+			if b == null or b.dead or not b.built or b.team != team or not (k in b.produces_list()): return
 			if produce_problem(b, k) != "": return
 			spend(team, int(BuildingDefs.UNIT_COST[k][0]))
 			b.queue_unit(k)
@@ -1154,7 +1320,7 @@ func launch_supply_drop(b: Building) -> void:
 	var d: Dictionary = b.bdef.drop
 	var target: Vector3 = b.drop_point_world()
 	var edge_z: float = map_bounds.end.y + 140.0 if b.team == 0 else map_bounds.position.y - 140.0
-	var start := Vector3(target.x + 60.0, 0, edge_z)
+	var start := Vector3(target.x + 60.0, ground_h(target.x, target.z), edge_z)
 	var dir := (target - start); dir.y = 0.0; dir = dir.normalized()
 	var node := Node3D.new()
 	add_child(node)
@@ -1204,8 +1370,9 @@ func _update_supply_drops(dt: float) -> void:
 		c.drift = c.drift.move_toward(Vector3.ZERO, 6.0 * dt)
 		c.pos += Vector3(c.drift.x, c.vy, c.drift.z) * dt
 		c.node.position = c.pos
-		if c.pos.y <= 0.0:
-			c.pos.y = 0.0
+		var cgy := ground_h(c.pos.x, c.pos.z)
+		if c.pos.y <= cgy:
+			c.pos.y = cgy
 			c.node.position = c.pos
 			if c.canopy: c.canopy.visible = false
 			deliver(c.team, c.value)
@@ -1312,3 +1479,218 @@ func _lose_passengers(tr: Unit) -> void:
 		else: kills += 1
 		p.queue_free()
 	tr.passengers.clear()
+
+
+# ------------------------------------------------------------------ heightfield maps (Zagros Basin and later maps)
+## Flattens the footprint of a structure about to be placed (skirted) and returns the grounded position.
+func prepare_site(k: String, pos: Vector3) -> Vector3:
+	if terrain == null: return Vector3(pos.x, 0.0, pos.z)
+	var half: Vector2 = BuildingDefs.DEFS[k].size * 0.5
+	var st := terrain.footprint_stats(pos, half)
+	terrain.flatten(pos, half + Vector2(2.0, 2.0), st.z, 8.0)
+	return Vector3(pos.x, st.z, pos.z)
+
+
+const PROP_DIRS := ["res://assets/units3d/props/%s.glb", "res://assets/map_props/%s/%s.glb", "res://maps/props/%s.glb"]
+
+
+func _prop_path(kind: String) -> String:
+	if terrain:
+		var g: Variant = terrain.data.get("prop_types", {}).get(kind, {}).get("glb")
+		if g is String and ResourceLoader.exists(g): return g
+	for f in PROP_DIRS:
+		var p: String = f % ([kind, kind] if f.count("%s") == 2 else [kind])
+		if ResourceLoader.exists(p): return p
+	return ""
+
+
+## Places map.json props on the terrain. Each prop kind becomes one MultiMesh per mesh part (hundreds of scrub
+## bushes cost a few draw calls); "block_r" adds a navigation obstacle.
+func _build_terrain_map() -> void:
+	var d: Dictionary = terrain.data
+	var per_kind := {}
+	var missing := {}
+	for pr in d.get("props", []):
+		var kind := str(pr.get("kind", pr.get("type", "")))
+		if _prop_path(kind) == "":
+			missing[kind] = true
+			continue
+		var p := map_point(pr)
+		var yaw := deg_to_rad(float(pr.get("yaw_deg", pr.get("yaw", 0.0))))
+		var sc := float(pr.get("scale", 1.0))
+		var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * sc), p + Vector3(0, float(pr.get("sink_m", 0.0)) * -1.0, 0))
+		if not per_kind.has(kind): per_kind[kind] = []
+		per_kind[kind].append(xf)
+		prop_roots.append(xf.origin)
+		var br := float(pr.get("block_r", pr.get("block_radius_m", 0.0)))
+		var pt: Dictionary = d.get("prop_types", {}).get(kind, {})
+		if br == 0.0 and pt.get("blocks", false):
+			var fp: Array = pt.get("footprint_m", [2.0, 2.0])
+			br = maxf(float(fp[0]), float(fp[1])) * 0.5 * sc
+		if br > 0.0: obstacles_2d.append(Vector3(p.x, p.z, br))
+	for kind in per_kind:
+		var scene: Node3D = (load(_prop_path(kind)) as PackedScene).instantiate()
+		add_child(scene)     # temporarily, to read global transforms of the parts
+		for mi in scene.find_children("*", "MeshInstance3D", true, false):
+			var part: MeshInstance3D = mi
+			var local := scene.global_transform.affine_inverse() * part.global_transform
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = part.mesh
+			var xs: Array = per_kind[kind]
+			mm.instance_count = xs.size()
+			for i in xs.size(): mm.set_instance_transform(i, xs[i] * local)
+			var mmi := MultiMeshInstance3D.new()
+			mmi.multimesh = mm
+			mmi.name = "Props_%s_%s" % [kind, part.name]
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			if part.material_override: mmi.material_override = part.material_override
+			add_child(mmi)
+		scene.queue_free()
+	if not missing.is_empty(): push_warning("map props without a model: %s" % ", ".join(missing.keys()))
+	print("MAP props: %s" % ", ".join(per_kind.keys().map(func(k): return "%s x%d" % [k, per_kind[k].size()])))
+
+
+const DERRICK_MODEL := "res://assets/units3d/props/oil_derrick.glb"
+
+
+## Neutral oil derrick: infantry standing next to it, uncontested, capture it in capture_s seconds; the owner then
+## receives `income` every `every_s` seconds. Values come from map.json (PROVISIONAL).
+func add_derrick(od: Dictionary) -> void:
+	var p := map_point(od)
+	if terrain: terrain.flatten(p, Vector2(7, 7), p.y, 5.0)
+	var n: Node3D
+	if ResourceLoader.exists(DERRICK_MODEL):
+		n = (load(DERRICK_MODEL) as PackedScene).instantiate()
+	else:
+		n = Node3D.new()
+		var mi := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(3, 6, 8); mi.mesh = bm; mi.position.y = 3.0
+		n.add_child(mi)
+	n.position = p
+	n.rotation.y = deg_to_rad(float(od.get("yaw_deg", 0.0)))
+	add_child(n)
+	var flag_anchor: Node3D = n.find_child("Flag", true, false)
+	if flag_anchor == null:
+		flag_anchor = Node3D.new(); flag_anchor.position = Vector3(4, 6, 0); n.add_child(flag_anchor)
+	var e := {"id": str(od.get("id", "derrick_%d" % derricks.size())), "pos": p, "owner": -1, "progress": [0.0, 0.0],
+		"income": int(od.get("income", 100)), "every": float(od.get("every_s", 10.0)), "capture_s": float(od.get("capture_s", 8.0)),
+		"radius": float(od.get("radius_m", 12.0)), "timer": 0.0, "phase": 0.0, "node": n,
+		"beam": n.find_child("WalkingBeam", true, false), "crank": n.find_child("Crank", true, false),
+		"flag_anchor": flag_anchor, "flag": null, "paid": [0, 0]}
+	derricks.append(e)
+	_set_derrick_flag(e)
+	nav_block_circle(p, 5.0)
+	obstacles_2d.append(Vector3(p.x, p.z, 4.5))
+
+
+func _set_derrick_flag(e: Dictionary) -> void:
+	if e.flag: e.flag.queue_free()
+	var path := "res://assets/units3d/props/flag_%s.glb" % nation_of(e.owner) if e.owner >= 0 else ""
+	var f: Node3D
+	if path != "" and ResourceLoader.exists(path):
+		f = (load(path) as PackedScene).instantiate()
+		f.scale = Vector3.ONE * 0.6
+		e.flag_anchor.add_child(f)
+		play_loop(f, "wave")
+		e.flag = f
+		return
+	else:
+		f = MeshInstance3D.new()
+		var q := QuadMesh.new(); q.size = Vector2(2.4, 1.5)
+		var m := StandardMaterial3D.new(); m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		m.albedo_color = UnitDefs.TEAM_COLORS[e.owner].lightened(0.2) if e.owner >= 0 else Color(0.85, 0.85, 0.82)
+		q.material = m
+		(f as MeshInstance3D).mesh = q
+		f.position = Vector3(1.2, 0, 0)
+	e.flag_anchor.add_child(f)
+	e.flag = f
+
+
+func _update_derricks(dt: float) -> void:
+	for e in derricks:
+		var present := [0, 0]
+		for u in units:
+			if u.dead or u.domain != "ground" or u.def.get("visual") != "infantry" or u.para_alt > 0.0: continue
+			if u.flat_dist(e.pos) <= e.radius: present[u.team] += 1
+		var cap := -1
+		if present[0] > 0 and present[1] == 0: cap = 0
+		elif present[1] > 0 and present[0] == 0: cap = 1
+		if cap >= 0 and cap != e.owner:
+			e.progress[cap] = minf(1.0, e.progress[cap] + dt / e.capture_s)
+			e.progress[1 - cap] = maxf(0.0, e.progress[1 - cap] - dt / e.capture_s)
+			if e.progress[cap] >= 1.0:
+				var prev: int = e.owner
+				e.owner = cap; e.progress = [0.0, 0.0]; e.timer = 0.0
+				_set_derrick_flag(e)
+				print("DERRICK %s captured by team %d (was %d) t=%.1f" % [e.id, cap, prev, sim_time])
+				if hud:
+					if cap == 0: hud.flash_message("Oil derrick captured: +$%d every %.0f s" % [e.income, e.every])
+					elif prev == 0: hud.flash_message("Oil derrick lost")
+		elif cap < 0 and present[0] == 0 and present[1] == 0:
+			for t in 2: e.progress[t] = maxf(0.0, e.progress[t] - dt / (e.capture_s * 2.0))
+		if e.owner >= 0:
+			e.timer += dt
+			if e.timer >= e.every:
+				e.timer -= e.every
+				deliver(e.owner, e.income)
+				derrick_income[e.owner] += e.income
+				e.paid[e.owner] += e.income
+			e.phase += dt * 2.4
+			# crank turns; the walking beam follows the crank through the pitman (ratio from the model: 1.0 / 2.2)
+			if e.crank: (e.crank as Node3D).rotation.x = e.phase
+			if e.beam: (e.beam as Node3D).rotation.x = asin(sin(e.phase) / 2.2)
+
+
+## Nation of a team: "nationN=<id>" on the command line, otherwise the menu choice (U.S. by default).
+func nation_of(team: int) -> String:
+	if team < 0: return ""
+	var k := "nation%d" % team
+	if args.has(k): return str(args[k])
+	if _automated(): return "usa"
+	return str(Game.settings.get(k, "usa"))
+
+
+## Minimap background for heightfield maps: hill-shaded terrain colour over the playable area, built once.
+func make_minimap_texture() -> ImageTexture:
+	var res := 256
+	var img := Image.create(res, res, false, Image.FORMAT_RGB8)
+	var mb := map_bounds
+	var light := Vector3(-0.5, 0.75, -0.45).normalized()
+	for j in res:
+		for i in res:
+			var x := mb.position.x + (i + 0.5) / res * mb.size.x
+			var z := mb.position.y + (j + 0.5) / res * mb.size.y
+			var sp := terrain.splat_at(x, z)
+			var c := Color(0.62, 0.53, 0.39)
+			c = c.lerp(Color(0.55, 0.52, 0.46), sp.g)
+			c = c.lerp(Color(0.40, 0.42, 0.25), sp.b)
+			c = c.lerp(Color(0.72, 0.68, 0.60), sp.a)
+			c = c.lerp(Color(0.45, 0.40, 0.35), clampf(sp.r + terrain.slope_deg_at(x, z) / 40.0, 0.0, 1.0))
+			c = c.lerp(Color(0.33, 0.30, 0.26), clampf(terrain.road_at(x, z) * 1.4, 0.0, 1.0))
+			var shade := clampf(terrain.normal_at(x, z).dot(light) * 1.25, 0.35, 1.15)
+			img.set_pixel(i, j, Color(c.r * shade, c.g * shade, c.b * shade))
+	return ImageTexture.create_from_image(img)
+
+
+## Nation flag on a pole beside a team's Command Center.
+func add_flag(team: int, p: Vector3) -> void:
+	var path := str(Nations.DEFS.get(nation_of(team), Nations.DEFS.usa).flag)
+	if not ResourceLoader.exists(path): return
+	var f: Node3D = (load(path) as PackedScene).instantiate()
+	f.position = grounded(p)
+	f.name = "Flag_team%d" % team
+	add_child(f)
+	play_loop(f, "wave")
+
+
+## Starts a looping animation in an imported model (flags wave).
+func play_loop(n: Node, anim_name: String) -> void:
+	var ap := n.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if ap == null: return
+	var nm := anim_name
+	if not ap.has_animation(nm):
+		for a in ap.get_animation_list():
+			if a.contains(anim_name): nm = a
+	if not ap.has_animation(nm): return
+	ap.get_animation(nm).loop_mode = Animation.LOOP_LINEAR
+	ap.play(nm)

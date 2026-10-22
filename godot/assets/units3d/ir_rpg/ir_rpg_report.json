@@ -1,0 +1,222 @@
+{
+ "idle": {
+  "frames": 91,
+  "length_s": 3.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 590.9
+ },
+ "walk": {
+  "frames": 31,
+  "length_s": 1.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 2.2,
+   "LeftLeg": 2.2
+  },
+  "ik_worst_frame": {
+   "RightLeg": 0,
+   "LeftLeg": 15
+  },
+  "body_min_z_mm": [
+   -1.4,
+   0.0
+  ],
+  "rifle_min_z_mm": 483.6
+ },
+ "run": {
+  "frames": 22,
+  "length_s": 0.7,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -1.8,
+   66.8
+  ],
+  "rifle_min_z_mm": 508.7
+ },
+ "aim": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1352.3
+ },
+ "fire": {
+  "frames": 19,
+  "length_s": 0.6,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1354.6
+ },
+ "crouch_fire": {
+  "frames": 19,
+  "length_s": 0.6,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -2.9,
+   -2.9
+  ],
+  "rifle_min_z_mm": 892.1
+ },
+ "die": {
+  "frames": 46,
+  "length_s": 1.5,
+  "loop": false,
+  "ik_err_mm": {
+   "RightArm": 29.0,
+   "LeftArm": 0.0,
+   "RightLeg": 98.0,
+   "LeftLeg": 22.9
+  },
+  "ik_worst_frame": {
+   "RightLeg": 42,
+   "LeftLeg": 38,
+   "RightArm": 24
+  },
+  "body_min_z_mm": [
+   -4.5,
+   0.0
+  ],
+  "rifle_min_z_mm": -0.5,
+  "final_body_min_z_mm": -2.0
+ },
+ "stride_m": {
+  "walk": 1.4,
+  "run": 3.15
+ },
+ "speed_mps": {
+  "walk": 1.4,
+  "run": 4.5
+ },
+ "triangles": {
+  "IR_RPG_Body": 3238,
+  "Launcher": 564,
+  "total": 4190,
+  "Beard": 324,
+  "Moustache": 64
+ },
+ "notes": "AT4 conventions: one-handed side carry (idle/walk/run), shouldered aim, fire/crouch_fire = 0.6 s launch (kick 50 mm + 5 deg rise, starts/ends in the aim pose). Launcher = generic RPG-7-family tube with the warhead loaded; Muzzle at the warhead tip, Backblast at the venturi (rotated 180 deg so +Y points out of the rear). Two spare rockets on the back.",
+ "camo": "camo_woodland",
+ "role": "ir_rpg",
+ "weapon": {
+  "object": "Launcher",
+  "muzzle_local": [
+   0.0,
+   0.86,
+   0.0
+  ],
+  "Backblast_local": [
+   0.0,
+   -0.58,
+   0.0
+  ]
+ },
+ "palette_rgb": {
+  "base": [
+   160,
+   143,
+   106
+  ],
+  "light": [
+   192,
+   178,
+   142
+  ],
+  "green": [
+   92,
+   97,
+   63
+  ],
+  "brown": [
+   114,
+   86,
+   60
+  ],
+  "dark": [
+   44,
+   40,
+   33
+  ]
+ },
+ "materials": [
+  "SA_Camo",
+  "SA_CamoGear",
+  "SA_Canvas",
+  "SA_Skin",
+  "SA_Metal",
+  "SA_Rubber",
+  "SA_Glass",
+  "SA_Team",
+  "SA_Rig",
+  "SA_Wood",
+  "SA_Olive",
+  "SA_Lip",
+  "SA_Eye",
+  "SA_Coyote",
+  "SA_Brass",
+  "SA_Webbing",
+  "SA_Marking",
+  "SA_FlagIR",
+  "SA_Beard"
+ ],
+ "face_variants": {
+  "objects": [
+   "Beard",
+   "Moustache"
+  ],
+  "beard_style": "trim",
+  "looks": {
+   "bearded": "Beard + Moustache visible",
+   "moustache": "hide Beard",
+   "clean_shaven": "hide Beard and Moustache"
+  },
+  "skinning": "100 % Head (separate skinned meshes on the same Skeleton3D)"
+ },
+ "flag_patch": "left upper sleeve, material SA_FlagIR (texture <role>_flagpatch.png, embedded)"
+}

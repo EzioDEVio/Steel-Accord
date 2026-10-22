@@ -24,7 +24,7 @@ func _place(k: String, at: Vector3) -> Building:
 	await _frames(2)
 	var btn: Button = battle.hud.econ.buttons.get(k)
 	if btn == null or btn.disabled:
-		print("TESTDBG build button %s missing/disabled" % k)
+		printerr("TESTDBG build button %s missing/disabled" % k)
 		return null
 	_press_button(btn)
 	await _frames(2)
@@ -38,7 +38,7 @@ func _place(k: String, at: Vector3) -> Building:
 	battle.commander.mouse_override = Vector2(-1, -1)
 	var now: Array = battle.structures(0, k, false)
 	if now.size() <= before:
-		print("TESTDBG place %s at %s refused: %s" % [k, str(at), battle.placement_problem(0, k, battle.commander.ghost_pos)])
+		printerr("TESTDBG place %s at %s refused: %s" % [k, str(at), battle.placement_problem(0, k, battle.commander.ghost_pos)])
 		return null
 	return now[now.size() - 1]
 
@@ -62,8 +62,7 @@ func _run_qa() -> void:
 	await _wait_sim(0.5)
 	# every 3D model the game references must load from this build (catches missing / skipped textures)
 	var paths: Array = []
-	for k in UnitDefs.DEFS: paths.append(str(UnitDefs.DEFS[k].get("model3d", "")))
-	for k in UnitDefs.BASE_UNITS: paths.append(str(UnitDefs.BASE_UNITS[k].get("model3d", "")))
+	for k in UnitDefs.all_kinds(): paths.append(str(UnitDefs.def_of(k).get("model3d", "")))
 	for k in UnitDefs.POWERS: paths.append(str(UnitDefs.POWERS[k].get("model3d", "")))
 	for k in BuildingDefs.DEFS: paths.append(str(BuildingDefs.DEFS[k].get("model3d", "")))
 	paths += [Unit.PARA_MODEL, battle.CRATE_MODEL, battle.C130_MODEL]

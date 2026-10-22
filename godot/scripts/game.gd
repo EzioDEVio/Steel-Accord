@@ -14,7 +14,13 @@ var settings := {
 	"edge_pan": true,
 	"fullscreen": false,
 	"cam_speed": 1.0,
+	"map": "proving_ground",
+	"nation0": "usa",
+	"nation1": "iran",
 }
+
+## Skirmish maps offered in the menu (id -> label). Heightfield maps live in res://maps/<id>/.
+const MAPS := {"proving_ground": "Proving Ground (flat test range, 600 m)", "zagros_basin": "Zagros Basin (foothills, oil derricks)"}
 var last_result := {}
 
 

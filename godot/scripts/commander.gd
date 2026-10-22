@@ -168,6 +168,7 @@ func _process(_dt: float) -> void:
 	if g == null: return
 	var k: String = ghost.get_meta("kind")
 	ghost_pos = Vector3(snappedf(g.x, 2.0), 0, snappedf(g.z, 2.0))
+	ghost_pos.y = battle.ground_h(ghost_pos.x, ghost_pos.z)
 	ghost.position = ghost_pos
 	var c := ghost.get_node_or_null("Card") as Node3D
 	if c:
@@ -321,7 +322,7 @@ func _left_release(mb: InputEventMouseButton) -> void:
 
 func _set_rally(p: Vector2) -> void:
 	var g: Variant = camera.ground_at(p)
-	if g == null or sel_building == null or sel_building.bdef.produces.is_empty(): return
+	if g == null or sel_building == null or sel_building.produces_list().is_empty(): return
 	battle.issue({"type": "rally", "team": team, "id": sel_building.uid, "pos": g})
 	FX.order_marker(battle, g, Color(0.5, 0.8, 1.0, 0.9))
 

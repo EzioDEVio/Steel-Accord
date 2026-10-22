@@ -1,0 +1,236 @@
+{
+ "idle": {
+  "frames": 91,
+  "length_s": 3.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 1.7,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 781.3
+ },
+ "walk": {
+  "frames": 31,
+  "length_s": 1.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 6.2,
+   "RightLeg": 2.2,
+   "LeftLeg": 2.2
+  },
+  "ik_worst_frame": {
+   "LeftArm": 25,
+   "RightLeg": 0,
+   "LeftLeg": 15
+  },
+  "body_min_z_mm": [
+   -1.4,
+   0.0
+  ],
+  "rifle_min_z_mm": 679.3
+ },
+ "run": {
+  "frames": 22,
+  "length_s": 0.7,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 9.5,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {
+   "LeftArm": 17
+  },
+  "body_min_z_mm": [
+   -1.8,
+   66.8
+  ],
+  "rifle_min_z_mm": 524.7
+ },
+ "aim": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1194.0
+ },
+ "fire": {
+  "frames": 10,
+  "length_s": 0.3,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   0.0,
+   0.0
+  ],
+  "rifle_min_z_mm": 1199.9
+ },
+ "crouch_fire": {
+  "frames": 10,
+  "length_s": 0.3,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -2.9,
+   -2.9
+  ],
+  "rifle_min_z_mm": 732.0
+ },
+ "die": {
+  "frames": 46,
+  "length_s": 1.5,
+  "loop": false,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 98.1,
+   "LeftLeg": 22.8
+  },
+  "ik_worst_frame": {
+   "RightLeg": 38,
+   "LeftLeg": 38
+  },
+  "body_min_z_mm": [
+   -4.5,
+   0.0
+  ],
+  "rifle_min_z_mm": -0.0,
+  "final_body_min_z_mm": -2.2
+ },
+ "heal": {
+  "frames": 61,
+  "length_s": 2.0,
+  "loop": true,
+  "ik_err_mm": {
+   "RightArm": 0.0,
+   "LeftArm": 0.0,
+   "RightLeg": 0.0,
+   "LeftLeg": 0.0
+  },
+  "ik_worst_frame": {},
+  "body_min_z_mm": [
+   -2.9,
+   -2.9
+  ],
+  "rifle_min_z_mm": -0.3
+ },
+ "stride_m": {
+  "walk": 1.4,
+  "run": 3.15
+ },
+ "speed_mps": {
+  "walk": 1.4,
+  "run": 4.5
+ },
+ "triangles": {
+  "IR_Medic_Body": 3002,
+  "Rifle": 308,
+  "total": 3698,
+  "Beard": 324,
+  "Moustache": 64
+ },
+ "notes": "Rifleman actions + heal (2 s kneeling treatment loop). Aid bag, hip pouch and the wide right armband are SA_Team neutral patches; NO red crescent / red cross emblem is modelled (the client must supply an approved emblem before release). AK with folding stock.",
+ "camo": "camo_woodland",
+ "role": "ir_medic",
+ "weapon": {
+  "object": "Rifle",
+  "muzzle_local": [
+   0.0,
+   0.89,
+   0.0
+  ]
+ },
+ "palette_rgb": {
+  "base": [
+   160,
+   143,
+   106
+  ],
+  "light": [
+   192,
+   178,
+   142
+  ],
+  "green": [
+   92,
+   97,
+   63
+  ],
+  "brown": [
+   114,
+   86,
+   60
+  ],
+  "dark": [
+   44,
+   40,
+   33
+  ]
+ },
+ "materials": [
+  "SA_Camo",
+  "SA_CamoGear",
+  "SA_Canvas",
+  "SA_Skin",
+  "SA_Metal",
+  "SA_Rubber",
+  "SA_Glass",
+  "SA_Team",
+  "SA_Rig",
+  "SA_Wood",
+  "SA_Olive",
+  "SA_Lip",
+  "SA_Eye",
+  "SA_Coyote",
+  "SA_Brass",
+  "SA_Webbing",
+  "SA_Marking",
+  "SA_FlagIR",
+  "SA_Beard"
+ ],
+ "face_variants": {
+  "objects": [
+   "Beard",
+   "Moustache"
+  ],
+  "beard_style": "trim",
+  "looks": {
+   "bearded": "Beard + Moustache visible",
+   "moustache": "hide Beard",
+   "clean_shaven": "hide Beard and Moustache"
+  },
+  "skinning": "100 % Head (separate skinned meshes on the same Skeleton3D)"
+ },
+ "flag_patch": "left upper sleeve, material SA_FlagIR (texture <role>_flagpatch.png, embedded)"
+}

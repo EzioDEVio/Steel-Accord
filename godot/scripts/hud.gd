@@ -328,11 +328,20 @@ func _draw_waypoints() -> void:
 
 func _draw_minimap() -> void:
 	_panel(mini_rect.grow(4))
-	draw_rect(mini_rect, Color(0.17, 0.22, 0.11))
-	for o in battle.obstacles_2d:
-		draw_circle(_world_to_mini(Vector3(o.x, 0, o.y)), maxf(1.5, o.z / battle.map_bounds.size.x * mini_rect.size.x), Color(0.35, 0.33, 0.3))
+	if battle.terrain:
+		if battle.minimap_tex == null: battle.minimap_tex = battle.make_minimap_texture()
+		draw_texture_rect(battle.minimap_tex, mini_rect, false)
+	else:
+		draw_rect(mini_rect, Color(0.17, 0.22, 0.11))
+		for o in battle.obstacles_2d:
+			draw_circle(_world_to_mini(Vector3(o.x, 0, o.y)), maxf(1.5, o.z / battle.map_bounds.size.x * mini_rect.size.x), Color(0.35, 0.33, 0.3))
 	for pl in battle.piles:
 		if pl.cash > 0: draw_circle(_world_to_mini(pl.pos), 3.5, Color(0.95, 0.8, 0.3))
+	for e in battle.derricks:
+		var dc: Color = UnitDefs.TEAM_COLORS[e.owner].lightened(0.3) if e.owner >= 0 else Color(0.9, 0.9, 0.85)
+		var dp := _world_to_mini(e.pos)
+		draw_rect(Rect2(dp - Vector2(3.5, 3.5), Vector2(7, 7)), Color(0.05, 0.05, 0.05))
+		draw_rect(Rect2(dp - Vector2(2.5, 2.5), Vector2(5, 5)), dc)
 	for q: Vector3 in (battle.PAD_POSITIONS if battle.scenario == "army" else []):
 		draw_rect(Rect2(_world_to_mini(q) - Vector2(4, 4), Vector2(8, 8)), Color(0.5, 0.5, 0.48))
 	if battle.fog_mini_tex:
