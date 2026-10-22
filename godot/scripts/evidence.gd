@@ -49,11 +49,11 @@ func _run() -> void:
 		battle.issue({"type": "move", "ids": [u.uid], "points": [Vector3(-60 + i * 22, 0, 40)]})
 	cmd._set_selection([])
 	await _wait_sim(7.0)
-	cam.zoom = 34.0; cam._apply()
+	cam.zoom = 46.0; cam._apply()
 	for k in kinds:
 		var u := _u(k)
 		if u == null: continue
-		cam.focus(u.position + Vector3(0, 0, 4))
+		cam.focus(u.position - Vector3(0, 0, u.altitude * 0.75))   # aim at the airframe, not its ground point
 		cmd._set_selection([u])
 		await _shot("air_10_%s_in_flight" % k)
 	cmd._set_selection([])

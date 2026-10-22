@@ -74,7 +74,11 @@ func setup(b: Node, unit_kind: String, t: int, id: int, pos: Vector3, yaw: float
 		_build_sprite()
 		altitude = def.altitude
 	ring = _make_ring()
-	add_child(ring)
+	if domain == "ground":
+		add_child(ring)
+	else:
+		body.add_child(ring)   # aircraft: ring flies with the airframe so it surrounds what the player sees
+		ring.position.y = -0.2
 	position = pos
 	home = pos
 	heading = yaw

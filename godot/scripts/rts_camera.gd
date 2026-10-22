@@ -6,7 +6,7 @@ extends Node3D
 
 var cam: Camera3D
 var zoom := 70.0
-var zoom_min := 30.0
+var zoom_min := 44.0   # camera height >= ~35 m keeps every aircraft below the camera
 var zoom_max := 140.0
 var pitch_deg := 52.0
 var yaw := 0.0
