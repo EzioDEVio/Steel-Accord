@@ -8,13 +8,14 @@ uniform sampler2D n_normal : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform float height = 14.0;
 uniform vec2 flat_center = vec2(0.0, -20.0);
 uniform float flat_radius = 60.0;
+uniform float road_on = 1.0;
 varying vec3 wpos;
 varying float slope;
 
 float road_center(float z) { return -sin(z * 0.035) * 9.0; }
 float hgt(vec2 p) {
 	float f = smoothstep(flat_radius, flat_radius + 90.0, length(p - flat_center));
-	float road = 1.0 - smoothstep(4.0, 10.0, abs(p.x - road_center(p.y)));
+	float road = (1.0 - smoothstep(4.0, 10.0, abs(p.x - road_center(p.y)))) * road_on;
 	return (texture(n_macro, p / 330.0).r - 0.4) * height * f * (1.0 - road * 0.8);
 }
 void vertex() {
@@ -39,9 +40,9 @@ void fragment() {
 	grass *= 0.8 + 0.4 * d1;
 	// road: compacted dirt, gravel speckle, two wheel/track ruts, worn verges
 	float dist = abs(p.x - road_center(p.y));
-	float road = 1.0 - smoothstep(2.8, 3.7 + d2 * 1.2, dist);
+	float road = (1.0 - smoothstep(2.8, 3.7 + d2 * 1.2, dist)) * road_on;
 	float rut = (1.0 - smoothstep(0.2, 0.55, abs(dist - 1.3))) * road;
-	float verge = (1.0 - smoothstep(3.5, 6.5 + d2 * 3.0, dist)) * (1.0 - road);
+	float verge = (1.0 - smoothstep(3.5, 6.5 + d2 * 3.0, dist)) * (1.0 - road) * road_on;
 	vec3 dirt = mix(vec3(0.23, 0.205, 0.165), vec3(0.31, 0.28, 0.22), d1);
 	dirt = mix(dirt, vec3(0.36, 0.34, 0.30), smoothstep(0.72, 0.8, texture(n_detail, p * 1.7).r) * 0.6);
 	vec3 rutc = vec3(0.13, 0.10, 0.07);

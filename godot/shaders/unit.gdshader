@@ -12,6 +12,7 @@ uniform vec3 camo_green : source_color = vec3(0.26, 0.30, 0.17);
 uniform vec3 camo_brown : source_color = vec3(0.27, 0.21, 0.14);
 uniform vec3 camo_black : source_color = vec3(0.08, 0.08, 0.07);
 uniform vec3 dust_color : source_color = vec3(0.50, 0.43, 0.32);
+uniform float burnt = 0.0;
 uniform sampler2D ao_tex : hint_default_white, filter_linear_mipmap;
 varying vec3 lp;
 varying vec3 ln;
@@ -49,6 +50,8 @@ void fragment() {
 		c = mix(c, dust_color, clamp(amt, 0.0, 0.85));
 		rough = mix(rough, 0.95, clamp(amt, 0.0, 1.0));
 	}
+	c = mix(c, vec3(0.035, 0.03, 0.028) * (0.6 + 0.8 * sa_noise(lp * 5.0)), burnt * 0.9);
+	rough = mix(rough, 0.95, burnt);
 	ALBEDO = c * mix(0.4, 1.0, ao);
 	ROUGHNESS = rough;
 	METALLIC = kind == 5 ? 0.3 : metallic_v;
