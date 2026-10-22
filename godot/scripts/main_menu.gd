@@ -9,7 +9,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	# automated runs (tests / diagnostics / evidence) skip the menu
 	for a in OS.get_cmdline_user_args():
-		if a in ["test", "airdiag", "evidence", "uishots"] or a.begins_with("test"):
+		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots"] or a.begins_with("test"):
 			Game.call_deferred("start_match")
 			return
 	var bg := TextureRect.new()
@@ -27,7 +27,7 @@ func _ready() -> void:
 	left.add_theme_constant_override("separation", 12)
 	add_child(left)
 	left.add_child(UIKit.label("STEEL ACCORD", 64, Color(0.95, 0.97, 0.95)))
-	left.add_child(UIKit.label("Development build G1.3 - prototype", 16, UIKit.ACCENT))
+	left.add_child(UIKit.label("Development build B1.2 - base-building prototype", 16, UIKit.ACCENT))
 	var spacer := Control.new(); spacer.custom_minimum_size = Vector2(0, 30)
 	left.add_child(spacer)
 	left.add_child(UIKit.button("Skirmish", func(): _show_skirmish()))
@@ -60,7 +60,8 @@ func _show_skirmish() -> void:
 	_clear()
 	content.add_child(UIKit.label("SKIRMISH", 22, UIKit.ACCENT))
 	content.add_child(UIKit.label("Map: Proving Ground (600 x 600 m)", 16))
-	content.add_child(UIKit.label("You: Blue (U.S. development forces)   vs   Red (AI)", 15))
+	content.add_child(UIKit.label("You: Blue (U.S. development side)   vs   Red (AI, same side)", 15))
+	content.add_child(UIKit.label("Start: Command Center, one Dozer, $10,000. Destroy every enemy structure and unit.", 13))
 	var r := HBoxContainer.new()
 	r.add_child(UIKit.label("AI difficulty  ", 15))
 	var set_diff := func(x):
@@ -68,12 +69,8 @@ func _show_skirmish() -> void:
 		Game.save()
 	r.add_child(UIKit.option(["Easy", "Normal", "Hard"], Game.settings.difficulty, set_diff))
 	content.add_child(r)
-	content.add_child(UIKit.label("Easy: AI attacks late, -20% damage.  Hard: attacks early, +15% damage.", 12, Color(0.6, 0.66, 0.63)))
-	var set_air := func(on):
-		Game.settings.air_wing = on
-		Game.save()
-	content.add_child(UIKit.check("Start with air wing (2 F-16, AH-64, A-10)", Game.settings.air_wing, set_air))
-	content.add_child(UIKit.label("Base building, economy and the China faction arrive in the next milestone.", 12, Color(0.6, 0.66, 0.63)))
+	content.add_child(UIKit.label("Easy: AI attacks late with a big wave.  Hard: thinks faster, attacks early.", 12, Color(0.6, 0.66, 0.63)))
+	content.add_child(UIKit.label("The China faction, save/load and more maps arrive in B2. Both sides use the U.S. roster for now.", 12, Color(0.6, 0.66, 0.63)))
 	var sp := Control.new(); sp.custom_minimum_size = Vector2(0, 12)
 	content.add_child(sp)
 	content.add_child(UIKit.button("Start Match", func(): Game.start_match(), Vector2(260, 46), 19))
@@ -94,6 +91,9 @@ func _show_controls() -> void:
 		"Command bar (bottom): Attack-Move, Guard, Force Fire, Waypoints, Stop, Scatter, Return, Select All",
 		"Keys: A attack-move  G guard  F force fire  W waypoints  S stop  X scatter  R return to pad",
 		"Ctrl+click force fire   Alt+click waypoint   Ctrl+A select all   Ctrl+1..9 / 1..9 groups",
+		"Base: select the Dozer, pick a structure on the build panel, click the map to place it",
+		"Select a structure to queue units (click the queue to cancel); click the map to set its rally point",
+		"CH-47s from the Supply Depot haul cash from supply piles automatically. Keep Power above use.",
 		"Support powers (right): click a power, then click the target on the map",
 		"Esc: cancel / deselect / pause menu     F10: pause menu     F1: controls overlay",
 	]:
@@ -110,7 +110,8 @@ func _show_credits() -> void:
 		"Steel Accord - original RTS by Mohammed Aldaraji (EzioDEVio).",
 		"Design, programming and procedural art: Claude (Anthropic) as development lead.",
 		"Engine: Godot 4.5 (MIT licence). 3D art scripted in Blender (bpy).",
-		"U.S. aircraft concept art: AI-generated, supplied by the client (development use; release review pending).",
+		"U.S. aircraft, vehicle, structure and personnel concept art: AI-generated, supplied by the client (development use; release review pending).",
+		"Sound effects: Pixabay contributors (Pixabay Content License), selected by the client; trimmed and mixed for the game.",
 		"Not affiliated with or endorsed by Electronic Arts. No Command & Conquer assets are used.",
 	]:
 		var l := UIKit.label(t, 13)

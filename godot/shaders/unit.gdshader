@@ -13,6 +13,7 @@ uniform vec3 camo_brown : source_color = vec3(0.27, 0.21, 0.14);
 uniform vec3 camo_black : source_color = vec3(0.08, 0.08, 0.07);
 uniform vec3 dust_color : source_color = vec3(0.50, 0.43, 0.32);
 uniform float burnt = 0.0;
+uniform float team_rim = 0.5;
 uniform float y_offset = 0.0;     // this mesh's height above the unit root (segmented models)
 uniform float dust_amount = 1.0;
 uniform sampler2D ao_tex : hint_default_white, filter_linear_mipmap;
@@ -40,7 +41,7 @@ void fragment() {
 		c = mix(c, vec3(0.012), chip * 0.7);
 		rough = mix(rough, 0.45, chip);
 	} else if (kind == 2) {
-		c = team_color * 0.7;
+		c = team_color;
 		rough = 0.7;
 	}
 	if (kind != 5) {
@@ -60,4 +61,7 @@ void fragment() {
 	SPECULAR = kind == 5 ? 0.8 : 0.45;
 	AO = ao;
 	AO_LIGHT_AFFECT = 0.5;
+	// team-coloured rim light: keeps vehicles readable against terrain of any colour
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+	EMISSION = team_color * (rim * team_rim + (kind == 2 ? 0.35 : 0.0)) * (1.0 - burnt);
 }

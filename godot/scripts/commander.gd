@@ -21,7 +21,13 @@ var team := 0
 var scheme := "classic"
 var selected: Array[Unit] = []
 var groups := {}
-var mode := ""                  # "", attack_move, guard, force, waypoint, power:<id>
+var mode := ""                  # "", attack_move, guard, force, waypoint, power:<id>, place:<structure>
+var sel_building: Building = null   # a single selected own structure (production / rally / sell)
+var ghost: Node3D = null            # placement preview
+var ghost_mat: ShaderMaterial
+var ghost_ok := false
+var ghost_reason := ""
+var ghost_pos := Vector3.ZERO
 var dragging := false
 var drag_from := Vector2.ZERO
 var drag_to := Vector2.ZERO
@@ -101,7 +107,78 @@ func _key(k: InputEventKey) -> void:
 
 func set_mode(m: String) -> void:
 	mode = m
+	if ghost:
+		ghost.queue_free(); ghost = null
+	if m.begins_with("place:"):
+		_make_ghost(m.substr(6))
 	_update_cursor()
+
+
+func dozers() -> Array:
+	return live_selection().filter(func(u): return u.def.get("builder", false))
+
+
+## Placement preview: the structure's own art in a dithered green / red card plus its footprint.
+func _make_ghost(k: String) -> void:
+	var d: Dictionary = BuildingDefs.DEFS[k]
+	ghost = Node3D.new()
+	battle.add_child(ghost)
+	var b := BoxMesh.new()
+	b.size = Vector3(d.size.x, 0.2, d.size.y)
+	var fm := StandardMaterial3D.new()
+	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	fm.albedo_color = Color(0.3, 1.0, 0.4, 0.35)
+	b.material = fm
+	var foot := MeshInstance3D.new()
+	foot.mesh = b; foot.name = "Foot"; foot.position.y = 0.15
+	ghost.add_child(foot)
+	var art := UsArt.building(d.art)
+	if not art.is_empty():
+		var tex: Texture2D = load(art.main)
+		var q := QuadMesh.new()
+		var px: float = d.size.x / float(art.base_width_px)
+		var w := float(tex.get_width()); var h := float(tex.get_height())
+		var pivot := Vector2(float(art.anchor_px[0]), float(art.anchor_px[1]) + d.size.y * 0.5 / px * 0.62)
+		q.size = Vector2(w, h) * px
+		q.center_offset = Vector3((w * 0.5 - pivot.x) * px, (pivot.y - h * 0.5) * px, 0.0)
+		ghost_mat = ShaderMaterial.new()
+		ghost_mat.shader = Building.STRUCTURE_SHADER
+		ghost_mat.set_shader_parameter("art", tex)
+		ghost_mat.set_shader_parameter("ghost", 1.0)
+		q.material = ghost_mat
+		var c := MeshInstance3D.new()
+		c.mesh = q; c.name = "Card"
+		c.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ghost.add_child(c)
+	ghost.set_meta("kind", k)
+
+
+var mouse_override := Vector2(-1, -1)   # automated tests position the virtual cursor here
+
+
+func _process(_dt: float) -> void:
+	if ghost == null: return
+	var mp := mouse_override if mouse_override.x >= 0.0 else get_viewport().get_mouse_position()
+	var g: Variant = camera.ground_at(mp)
+	if g == null: return
+	var k: String = ghost.get_meta("kind")
+	ghost_pos = Vector3(snappedf(g.x, 2.0), 0, snappedf(g.z, 2.0))
+	ghost.position = ghost_pos
+	var c := ghost.get_node_or_null("Card") as Node3D
+	if c:
+		var to_cam: Vector3 = camera.cam.global_position - ghost_pos
+		to_cam.y = 0.0
+		to_cam = to_cam.normalized()
+		var hs: Vector2 = BuildingDefs.DEFS[k].size * 0.5
+		c.position = to_cam * (absf(to_cam.x) * hs.x + absf(to_cam.z) * hs.y) * 0.9
+	ghost_reason = battle.placement_problem(team, k, ghost_pos)
+	if dozers().is_empty(): ghost_reason = "Select a Dozer"
+	ghost_ok = ghost_reason == ""
+	var col := Color(0.4, 1.0, 0.5) if ghost_ok else Color(1.0, 0.35, 0.3)
+	if ghost_mat: ghost_mat.set_shader_parameter("ghost_color", col)
+	var fm := ((ghost.get_node("Foot") as MeshInstance3D).mesh as BoxMesh).material as StandardMaterial3D
+	fm.albedo_color = Color(col.r, col.g, col.b, 0.35)
 
 
 func live_selection() -> Array:
@@ -123,7 +200,9 @@ func _is_double() -> bool:
 
 func _update_cursor() -> void:
 	var shape := Input.CURSOR_ARROW
-	if mode != "" or (hover and hover.team != team and not selected.is_empty()):
+	if mode.begins_with("place:"):
+		shape = Input.CURSOR_ARROW
+	elif mode != "" or (hover and hover.team != team and not selected.is_empty()):
 		shape = Input.CURSOR_CROSS
 	elif hover and hover.team == team:
 		shape = Input.CURSOR_POINTING_HAND
@@ -144,9 +223,28 @@ func unit_at(screen: Vector2) -> Unit:
 		var edge := camera.cam.unproject_position(c + camera.cam.global_basis.x * u.def.radius * 1.2)
 		var r := maxf(14.0, sp.distance_to(edge))
 		var d := sp.distance_to(screen)
+		if u is Building: continue
 		if d < r and d < best_d:
 			best = u; best_d = d
-	return best
+	if best: return best
+	return building_at(screen)
+
+
+## Structures are picked by the ground point under the cursor: inside the footprint, or in the strip behind it
+## (away from the camera) that the standing art covers on screen.
+func building_at(screen: Vector2) -> Building:
+	var g: Variant = camera.ground_at(screen)
+	if g == null: return null
+	var away := -camera.cam.global_basis.z
+	away.y = 0.0; away = away.normalized()
+	for u in battle.units:
+		if not (u is Building) or u.dead or not battle.is_visible_to(team, u): continue
+		var b: Building = u
+		for k in 4:
+			var q: Vector3 = g - away * (float(k) * maxf(b.half.x, b.half.y) * 0.45)
+			if absf(q.x - b.position.x) < b.half.x + 1.0 and absf(q.z - b.position.z) < b.half.y + 1.0:
+				return b
+	return null
 
 
 # ------------------------------------------------------------------ mouse
@@ -161,6 +259,15 @@ func _left_release(mb: InputEventMouseButton) -> void:
 		return
 	var u := unit_at(p)
 	var own := u != null and u.team == team
+	# dozer + own unfinished structure: (re)start construction
+	if own and u is Building and not u.built and not dozers().is_empty():
+		battle.issue({"type": "build", "team": team, "ids": dozers().map(func(d): return d.uid), "site": u.uid})
+		FX.order_marker(battle, u.position, Color(1, 0.8, 0.3, 0.9))
+		return
+	# selected structure: click ground (classic) sets its rally point
+	if scheme == "classic" and sel_building and live_selection().is_empty() and u == null:
+		_set_rally(p)
+		return
 	if scheme == "classic" and not live_selection().is_empty() and not own and not mb.shift_pressed:
 		_command_at(p, mb.ctrl_pressed, mb.alt_pressed)
 		return
@@ -170,9 +277,18 @@ func _left_release(mb: InputEventMouseButton) -> void:
 	_click_select(p, mb.shift_pressed, mb.double_click or _is_double())
 
 
+func _set_rally(p: Vector2) -> void:
+	var g: Variant = camera.ground_at(p)
+	if g == null or sel_building == null or sel_building.bdef.produces.is_empty(): return
+	battle.issue({"type": "rally", "team": team, "id": sel_building.uid, "pos": g})
+	FX.order_marker(battle, g, Color(0.5, 0.8, 1.0, 0.9))
+
+
 func _right_click(mb: InputEventMouseButton) -> void:
 	if mode != "":
 		set_mode(""); return
+	if scheme == "alternate" and sel_building and live_selection().is_empty():
+		_set_rally(mb.position); return
 	if scheme == "classic":
 		_set_selection([])
 	else:
@@ -184,6 +300,15 @@ func _apply_mode(p: Vector2, mb: InputEventMouseButton) -> void:
 	var u := unit_at(p)
 	var m := mode
 	if not mb.shift_pressed: set_mode("")   # Shift keeps the mode active for repeated orders
+	if m.begins_with("place:"):
+		var dz := dozers()
+		if ghost_ok and not dz.is_empty():
+			battle.issue({"type": "place", "team": team, "id": m.substr(6), "pos": ghost_pos, "builder": dz[0].uid})
+			FX.order_marker(battle, ghost_pos, Color(1, 0.8, 0.3, 0.9))
+		else:
+			if battle.hud: battle.hud.flash_message("Cannot build here: " + ghost_reason)
+			set_mode(m)   # keep placing
+		return
 	if m.begins_with("power:"):
 		if g != null:
 			battle.issue({"type": "power", "team": team, "id": m.substr(6), "pos": g})
@@ -229,7 +354,17 @@ func _set_selection(arr: Array) -> void:
 	for u in selected:
 		if is_instance_valid(u): u.set_selected(false)
 	selected.clear()
+	if sel_building and is_instance_valid(sel_building): sel_building.set_selected(false)
+	sel_building = null
+	var only_b: Array = arr.filter(func(x): return x is Building)
+	if not only_b.is_empty() and only_b.size() == arr.size():
+		sel_building = only_b[0]
+		sel_building.set_selected(true)
+		if mode != "" and not mode.begins_with("power:"): set_mode("")
+		selection_changed.emit()
+		return
 	for u in arr:
+		if u is Building: continue
 		if not u.dead:
 			selected.append(u); u.set_selected(true)
 	if mode != "" and not mode.begins_with("power:"): set_mode("")
@@ -237,13 +372,16 @@ func _set_selection(arr: Array) -> void:
 
 
 func select_all() -> void:
-	_set_selection(battle.units.filter(func(u): return u.team == team and not u.dead))
+	_set_selection(battle.units.filter(func(u): return u.team == team and not u.dead and not (u is Building)))
 
 
 func _click_select(p: Vector2, add: bool, dbl: bool) -> void:
 	var u := unit_at(p)
 	if u == null or u.team != team:
 		if not add: _set_selection([])
+		return
+	if u is Building:
+		_set_selection([u])
 		return
 	if dbl:
 		var same: Array = []
@@ -262,7 +400,7 @@ func _click_select(p: Vector2, add: bool, dbl: bool) -> void:
 func _box_select(r: Rect2, add: bool) -> void:
 	var arr: Array = selected.duplicate() if add else []
 	for u: Unit in battle.units:
-		if u.team != team or u.dead or u in arr: continue
+		if u.team != team or u.dead or u in arr or u is Building: continue
 		var c := u.world_center()
 		if camera.cam.is_position_behind(c): continue
 		if r.grow(6.0).has_point(camera.cam.unproject_position(c)):

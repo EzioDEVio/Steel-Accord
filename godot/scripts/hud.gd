@@ -26,6 +26,7 @@ var scheme_btn: Button
 var help_btn: Button
 var menu_btn: Button
 var portraits := {}
+var econ: EconPanel
 
 
 func _ready() -> void:
@@ -45,6 +46,9 @@ func _ready() -> void:
 	add_child(help_btn)
 	menu_btn = _button("Menu (F10)", func(): battle.open_menu(), Vector2(120, 30))
 	add_child(menu_btn)
+	econ = EconPanel.new()
+	econ.battle = battle; econ.commander = commander; econ.hud = self
+	add_child(econ)
 
 
 func _style(c: Color, border: Color) -> StyleBoxFlat:
@@ -141,12 +145,13 @@ func _process(dt: float) -> void:
 	mini_rect = Rect2(14, size.y - 224, 210, 210)
 	mini_ctl.position = mini_rect.position; mini_ctl.size = mini_rect.size
 	card.position = Vector2(maxf(632.0, size.x - 4 * 154 - 200), size.y - 82)
-	power_box.position = Vector2(size.x - 198, size.y - 4 * 66 - 96)
+	power_box.position = Vector2(size.x - 198, 56)
+	econ.position = Vector2(card.position.x, size.y - 82 - 2 * 68 - 40)
 	scheme_btn.position = Vector2(14, 10)
 	help_btn.position = Vector2(210, 10)
 	menu_btn.position = Vector2(346, 10)
 	var live := commander.live_selection()
-	card.visible = not live.is_empty()
+	card.visible = not live.is_empty() and not live.all(func(u): return u.def.get("builder", false) or u.def.get("hauler", false))
 	var any_air := live.any(func(u): return u.is_air())
 	card_buttons["return"].disabled = not any_air
 	for id in power_buttons:
@@ -204,7 +209,7 @@ func _text(p: Vector2, t: String, sz := 14, col := Color(0.88, 0.92, 0.9)) -> vo
 
 
 func _portrait(u: Unit) -> Texture2D:
-	if not u.def.has("icon"): return null
+	if str(u.def.get("icon", "")) == "": return null
 	if not portraits.has(u.kind): portraits[u.kind] = load(u.def.icon)
 	return portraits[u.kind]
 
@@ -240,6 +245,8 @@ func _draw() -> void:
 	if commander.mode != "":
 		var label: String = {"attack_move": "ATTACK-MOVE", "guard": "GUARD - click ground or a friendly unit", "force": "FORCE FIRE",
 			"waypoint": "WAYPOINTS - right click to finish"}.get(commander.mode, "")
+		if commander.mode.begins_with("place:"):
+			label = "PLACE %s - %s" % [String(BuildingDefs.DEFS[commander.mode.substr(6)].name).to_upper(), "click to build" if commander.ghost_ok else commander.ghost_reason]
 		if commander.mode.begins_with("power:"): label = String(UnitDefs.POWERS[commander.mode.substr(6)].name).to_upper() + " - click target"
 		_text(get_local_mouse_position() + Vector2(18, 26), label, 13, Color(1, 0.65, 0.3))
 	if banner != "":
@@ -282,7 +289,9 @@ func _draw_minimap() -> void:
 	draw_rect(mini_rect, Color(0.17, 0.22, 0.11))
 	for o in battle.obstacles_2d:
 		draw_circle(_world_to_mini(Vector3(o.x, 0, o.y)), maxf(1.5, o.z / battle.map_bounds.size.x * mini_rect.size.x), Color(0.35, 0.33, 0.3))
-	for q: Vector3 in battle.PAD_POSITIONS:
+	for pl in battle.piles:
+		if pl.cash > 0: draw_circle(_world_to_mini(pl.pos), 3.5, Color(0.95, 0.8, 0.3))
+	for q: Vector3 in (battle.PAD_POSITIONS if battle.scenario == "army" else []):
 		draw_rect(Rect2(_world_to_mini(q) - Vector2(4, 4), Vector2(8, 8)), Color(0.5, 0.5, 0.48))
 	if battle.fog_mini_tex:
 		# fog texture covers FOG_RECT; draw only the part that lies inside the playable map
@@ -293,11 +302,16 @@ func _draw_minimap() -> void:
 		draw_texture_rect_region(battle.fog_mini_tex, mini_rect, src)
 	for z in battle.reveal_zones:
 		draw_line(_world_to_mini(z.a), _world_to_mini(z.b), Color(1, 1, 0.6, 0.25), z.w / battle.map_bounds.size.x * mini_rect.size.x)
+	var radar_ok: bool = battle.scenario != "base" or battle.radar_online(commander.team)
 	for u: Unit in battle.units:
 		if u.dead or not battle.is_visible_to(commander.team, u): continue
+		if u.team != commander.team and not radar_ok and not (u is Building): continue
 		var p := _world_to_mini(u.global_position)
 		var c: Color = UnitDefs.TEAM_COLORS[u.team].lightened(0.35 if u.selected else 0.1)
-		if u.domain == "ground":
+		if u is Building:
+			var hs: Vector2 = (u as Building).half / battle.map_bounds.size.x * mini_rect.size.x
+			draw_rect(Rect2(p - hs, hs * 2.0).grow(0.5), c)
+		elif u.domain == "ground":
 			draw_rect(Rect2(p - Vector2(2.5, 2.5), Vector2(5, 5)), c)
 		else:
 			draw_colored_polygon(PackedVector2Array([p + Vector2(0, -4), p + Vector2(3.5, 3), p + Vector2(-3.5, 3)]), c)
@@ -315,6 +329,9 @@ func _draw_selection_panel() -> void:
 	var r := Rect2(240, size.y - 104, 380, 90)
 	_panel(r)
 	var sel := commander.live_selection()
+	var sb: Building = commander.sel_building
+	if sel.is_empty() and sb and is_instance_valid(sb) and not sb.dead:
+		sel = [sb]
 	if sel.is_empty():
 		_text(r.position + Vector2(14, 30), "No units selected", 15, Color(0.6, 0.65, 0.62))
 		_text(r.position + Vector2(14, 54), "Drag a box or click a unit. Right drag scrolls.", 12, Color(0.5, 0.55, 0.52))
@@ -335,7 +352,9 @@ func _draw_selection_panel() -> void:
 		_text(r.position + Vector2(x0, y), "%d x %s" % [counts[k], k], 14)
 		y += 17.0
 		if y > 60: break
-	_text(r.position + Vector2(x0, 66), sel[0].def.role, 11, Color(0.65, 0.72, 0.68))
+	var role: String = sel[0].bdef.desc if sel[0] is Building else str(sel[0].def.get("role", ""))
+	if role.length() > 58: role = role.substr(0, 56) + "..."
+	_text(r.position + Vector2(x0, 66), role, 11, Color(0.65, 0.72, 0.68))
 	var bar := Rect2(r.position + Vector2(x0, 74), Vector2(r.size.x - x0 - 12, 7))
 	draw_rect(bar, Color(0, 0, 0, 0.6))
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * hp / mx, 7)), Color(0.3, 0.9, 0.4))
@@ -347,6 +366,14 @@ func _draw_status() -> void:
 	_text(r.position + Vector2(16, 23), "BLUE %d" % battle.alive_count(0), 16, UnitDefs.TEAM_COLORS[0].lightened(0.45))
 	_text(r.position + Vector2(140, 23), "%02d:%02d" % [int(battle.sim_time) / 60, int(battle.sim_time) % 60], 16)
 	_text(r.position + Vector2(250, 23), "RED %d" % battle.alive_count(1), 16, UnitDefs.TEAM_COLORS[1].lightened(0.45))
+	if battle.scenario == "base":
+		var t: int = commander.team
+		var r2 := Rect2(r.end.x + 8, 10, 250, 34)
+		_panel(r2)
+		_text(r2.position + Vector2(14, 23), "$ %d" % battle.cash[t], 17, Color(0.95, 0.85, 0.4))
+		var g: int = battle.power_gen(t); var c: int = battle.power_use(t)
+		_text(r2.position + Vector2(120, 23), "Power %d / %d" % [c, g], 15, Color(0.6, 0.95, 0.6) if g >= c else Color(1.0, 0.4, 0.3))
+		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: production and construction at half speed", 12, Color(1.0, 0.45, 0.35))
 	if msg_t > 0.0:
 		var s := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)
 		_text(Vector2((size.x - s.x) / 2, 70), msg, 16, Color(1, 0.85, 0.5, minf(1.0, msg_t)))

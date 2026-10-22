@@ -83,6 +83,7 @@ static func muzzle_flash(parent: Node, pos: Vector3, dir: Vector3) -> void:
 
 
 static func impact(parent: Node, pos: Vector3, hit_armour: bool) -> void:
+	SFX.play(parent, "explosion_big", pos, -10.0 if hit_armour else -13.0, 1.45 if hit_armour else 1.6)
 	_flash(parent, pos + Vector3.UP, 5.0 if hit_armour else 2.5, 10.0, Color(1.0, 0.65, 0.3), 0.2)
 	if hit_armour:
 		_particles(parent, pos, 16, 0.35, true, 0.7, Vector2(6, 16), 60.0,
@@ -93,6 +94,7 @@ static func impact(parent: Node, pos: Vector3, hit_armour: bool) -> void:
 
 ## Explosion scaled by `s` (1.0 = vehicle kill, ~2 = heavy bomb). Fireball, sparks, rolling smoke, dust ring, scorch.
 static func explosion(parent: Node, pos: Vector3, s := 1.0) -> void:
+	SFX.play(parent, "explosion_big", pos, -4.0 + 4.0 * minf(s, 2.0), clampf(1.15 / sqrt(s), 0.75, 1.3))
 	_flash(parent, pos + Vector3.UP * 2.0 * s, 18.0 * s, 30.0 * s, Color(1.0, 0.6, 0.25), 0.6 + 0.4 * s)
 	_particles(parent, pos + Vector3.UP * 1.2 * s, int(30 + 24 * s), 0.8 + 0.3 * s, true, 3.2 * s, Vector2(3, 9) * s, 70.0,
 		[Color(1, 0.95, 0.75, 1), Color(1, 0.6, 0.15, 0.9), Color(0.7, 0.2, 0.05, 0.5), Color(0.15, 0.05, 0.02, 0)], Vector3(0, 2, 0))

@@ -260,6 +260,11 @@ func _run() -> void:
 			"airborne=%s landed=%s %.2f m from pad, rounds fired while returning/landing: %d" % [up, heli.state == Unit.S.LANDED, heli.flat_dist(heli.home), s1 - s0])
 		cmd._set_selection([])
 	# 10. Support power by mouse: click the Carpet Bombing button, then click a target
+	if battle.alive_count(1) < 3:   # earlier fights may have finished the red force: add bombing targets
+		for i in 3:
+			var rt: Unit = battle._spawn("vanguard", 1, Vector3(-10 + i * 10, 0, -120), PI)
+			rt.order_stop()
+		await _wait_sim(0.5)
 	var reds: Array = battle.units.filter(func(u): return u.team == 1 and not u.dead)
 	var tgt: Vector3 = _centroid(reds) if not reds.is_empty() else Vector3(0, 0, -100)
 	cam.focus(tgt); await _frames(3)

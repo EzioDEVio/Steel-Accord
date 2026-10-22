@@ -25,7 +25,7 @@ var bombs: Array = []
 var reveal_zones: Array = []
 var power_ready := [{}, {}]    # per team: power id -> sim time when available
 var seen := {}
-var nav_map: RID
+var gnav: GridNav
 var nav_ready := false
 var game_over := false
 var ai: EnemyAI
@@ -45,7 +45,15 @@ var fog_mini_tex: ImageTexture
 var explored := PackedByteArray()
 var fog_t := 0.0
 var fog_stamps := {}
+var fog_vis := PackedByteArray()
 var bomb_log: Array = []
+# ---- economy (B1.2 base loop)
+var scenario := "base"          # "base": skirmish from a Command Center; "army": the G1 armour + air wing test scenario
+var cash := [0, 0]
+var income := [0, 0]            # total cash delivered by haulers (stats / tests)
+var piles: Array = []           # {"pos": Vector3, "cash": int, "node": Node3D}
+var start_pos := [Vector3(0, 0, 225), Vector3(0, 0, -225)]
+var base_ai: RefCounted = null
 
 var camera: RTSCamera
 var commander: Commander
@@ -54,6 +62,7 @@ var hud: HUD
 
 func _ready() -> void:
 	args = _args()
+	scenario = "army" if ("army" in args or ("test" in args and not "base" in args) or "airdiag" in args or "evidence" in args) else "base"
 	_init_fog()
 	rng.seed = 20261021
 	Engine.physics_ticks_per_second = TICK_HZ
@@ -69,7 +78,8 @@ func _ready() -> void:
 	camera = RTSCamera.new()
 	camera.bounds = map_bounds.grow(-10)
 	add_child(camera)
-	camera.focus(Vector3(30, 0, 140.0 if "close" in args else 205.0))
+	if scenario == "base": camera.focus(start_pos[0] + Vector3(0, 0, -25))
+	else: camera.focus(Vector3(30, 0, 140.0 if "close" in args else 205.0))
 	commander = Commander.new()
 	commander.battle = self; commander.camera = camera
 	add_child(commander)
@@ -79,12 +89,16 @@ func _ready() -> void:
 	hud.battle = self; hud.commander = commander; hud.camera = camera
 	layer.add_child(hud)
 	var diff: Dictionary = Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"])
-	ai = EnemyAI.new(self, 1, 30.0 if _automated() else float(diff.attack_after))
+	if scenario == "army":
+		ai = EnemyAI.new(self, 1, 30.0 if _automated() else float(diff.attack_after))
+	elif not "noai" in args:
+		base_ai = BaseAI.new(self, 1, Game.settings.difficulty)
 	pause_menu = PauseMenu.new()
 	pause_menu.battle = self
 	add_child(pause_menu)
 	apply_settings()
-	hud.flash_message("Enemy armour reported to the north. Destroy all hostile units.")
+	if scenario == "base": hud.flash_message("Build up: select your Dozer and place a Power Plant. The enemy base is to the north.")
+	else: hud.flash_message("Enemy armour reported to the north. Destroy all hostile units.")
 	if "uishots" in args:
 		var us: Node = load("res://scripts/evidence_ui.gd").new()
 		us.battle = self
@@ -97,6 +111,18 @@ func _ready() -> void:
 		var ev: Node = load("res://scripts/evidence.gd").new()
 		ev.battle = self
 		add_child(ev)
+	elif "vischeck" in args:
+		var vc: Node = load("res://scripts/vischeck.gd").new()
+		vc.battle = self
+		add_child(vc)
+	elif "baseshots" in args:
+		var bs: Node = load("res://scripts/baseshots.gd").new()
+		bs.battle = self
+		add_child(bs)
+	elif "basetest" in args:
+		var bt: Node = load("res://scripts/autotest_base.gd").new()
+		bt.battle = self
+		add_child(bt)
 	elif "test" in args:
 		var t: Node = load("res://scripts/autotest.gd").new()
 		t.battle = self
@@ -104,7 +130,7 @@ func _ready() -> void:
 
 
 func _automated() -> bool:
-	return "test" in args or "airdiag" in args or "evidence" in args
+	return "test" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).
@@ -191,40 +217,23 @@ func _in_obstacle(p: Vector3, margin: float) -> bool:
 
 
 func _bake_nav() -> void:
-	var nm := NavigationMesh.new()
-	nm.agent_radius = 2.5; nm.agent_height = 3.0; nm.agent_max_climb = 0.6; nm.agent_max_slope = 30.0
-	nm.cell_size = 0.5; nm.cell_height = 0.25
-	var src := NavigationMeshSourceGeometryData3D.new()
-	var ground := PlaneMesh.new(); ground.size = map_bounds.size + Vector2(20, 20)
-	src.add_mesh(ground, Transform3D.IDENTITY)
-	for c in get_children():
-		if c is MeshInstance3D and (c as MeshInstance3D).material_override is ShaderMaterial \
-				and ((c as MeshInstance3D).material_override as ShaderMaterial).shader == World.ROCK_SHADER:
-			if c.scale.x > 1.1:
-				src.add_mesh((c as MeshInstance3D).mesh, (c as MeshInstance3D).transform)
-	NavigationServer3D.bake_from_source_geometry_data(nm, src)
-	var region := NavigationRegion3D.new()
-	region.navigation_mesh = nm
-	add_child(region)
-	nav_map = get_world_3d().navigation_map
-	NavigationServer3D.map_set_cell_size(nav_map, 0.5)
-	NavigationServer3D.map_set_cell_height(nav_map, 0.25)
-	for i in 120:
-		await get_tree().physics_frame
-		if NavigationServer3D.map_get_iteration_id(nav_map) > 0:
-			break
-	nav_ready = NavigationServer3D.map_get_iteration_id(nav_map) > 0
-	print("NAV polygons=", nm.get_polygon_count(), " ready=", nav_ready)
+	gnav = GridNav.new(MAP_HALF + 30.0)
+	for o in obstacles_2d:
+		gnav.block_circle(Vector3(o.x, 0, o.y), o.z * 0.75 + 2.0)
+	var n_obs := obstacles_2d.size()
+	nav_ready = true
+	print("NAV grid=", gnav.n, "x", gnav.n, " obstacles=", n_obs)
 
 
 func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
-	if nav_ready:
-		var p := NavigationServer3D.map_get_path(nav_map, from, to, true)
-		if p.size() >= 2: return p
+	if gnav: return gnav.find_path(from, to)
 	return PackedVector3Array([from, to])
 
 
 func _spawn_forces() -> void:
+	if scenario == "base":
+		_spawn_bases()
+		return
 	var zb := 140.0 if "close" in args else 210.0
 	var zr := -140.0 if "close" in args else -215.0
 	for i in 6:
@@ -262,6 +271,9 @@ func _execute(cmd: Dictionary) -> void:
 	if cmd.type == "power":
 		launch_power(cmd.team, cmd.id, cmd.pos)
 		return
+	if cmd.type in ["place", "produce", "cancel_unit", "rally", "sell", "cancel_build"]:
+		_execute_econ(cmd)
+		return
 	var ids: Array = cmd.get("ids", [])
 	for i in ids.size():
 		var u: Unit = by_id.get(ids[i])
@@ -279,6 +291,10 @@ func _execute(cmd: Dictionary) -> void:
 			"force_ground": u.order_force_ground(cmd.pos)
 			"guard": u.order_guard(cmd.points[i], by_id.get(cmd.get("unit", -1)))
 			"stop": u.order_stop()
+			"build":
+				var b: Node = by_id.get(cmd.site)
+				if b is Building and not b.dead and not b.built and b.team == u.team and u.def.get("builder", false):
+					u.order_build(b)
 			"return": u.order_return()
 			"scatter":
 				var away := Vector3(u.position.x - cmd.center.x, 0, u.position.z - cmd.center.z)
@@ -296,6 +312,7 @@ func sim_tick(dt: float) -> void:
 	for c in pending: _execute(c)
 	pending.clear()
 	if ai and not game_over: ai.tick(dt)
+	if base_ai and not game_over: base_ai.tick(dt)
 	for u in units:
 		u.sim_tick(dt)
 	_separate()
@@ -310,7 +327,8 @@ func sim_tick(dt: float) -> void:
 
 
 func _separate() -> void:
-	var live := units.filter(func(u): return not u.dead and u.domain != "jet")
+	var live := units.filter(func(u): return not u.dead and u.domain != "jet" and not (u is Building))
+	var blds := units.filter(func(u): return not u.dead and u is Building)
 	for i in live.size():
 		var a: Unit = live[i]
 		for j in range(i + 1, live.size()):
@@ -324,6 +342,15 @@ func _separate() -> void:
 				a.position -= Vector3(push.x, 0, push.y)
 				b.position += Vector3(push.x, 0, push.y)
 		if a.domain == "ground":
+			for bb in blds:
+				var b: Building = bb
+				var dx := a.position.x - b.position.x
+				var dz := a.position.z - b.position.z
+				var ex: float = b.half.x + a.def.radius * 0.5 - absf(dx)
+				var ez: float = b.half.y + a.def.radius * 0.5 - absf(dz)
+				if ex > 0.0 and ez > 0.0:
+					if ex < ez: a.position.x += signf(dx if dx != 0.0 else 1.0) * ex
+					else: a.position.z += signf(dz if dz != 0.0 else 1.0) * ez
 			for o in obstacles_2d:
 				var d2 := Vector2(a.position.x - o.x, a.position.z - o.y)
 				var r: float = o.z + a.def.radius * 0.6
@@ -362,6 +389,7 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 	var sc: float = float(w.spread) * dist / float(w.range)
 	aim += Vector3(rng.randf_range(-sc, sc), rng.randf_range(-sc, sc) * 0.3, rng.randf_range(-sc, sc))
 	var dir: Vector3 = (aim - from).normalized()
+	_fire_sound(shooter, w, from)
 	var node: Node3D
 	match w.proj:
 		"missile", "rocket":
@@ -383,7 +411,29 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 	node.reset_physics_interpolation()
 	shots.append({"node": node, "pos": from, "dir": dir, "aim": aim, "left": dist, "speed": float(w.speed),
 		"shooter": shooter, "target": tunit, "dmg": float(w.damage), "splash": float(w.splash),
-		"homing": w.proj == "missile", "kind": w.proj, "targets": w.targets})
+		"homing": w.proj == "missile", "kind": w.proj, "targets": w.targets, "vs": w.get("vs", {})})
+
+
+var _snd_t := {}   # "uid:clip" -> sim time of the last report, so automatic weapons play one burst sound per burst
+
+
+func _fire_sound(shooter: Unit, w: Dictionary, from: Vector3) -> void:
+	var clip := ""
+	var gap := 0.0
+	var db := 0.0
+	var pitch := 1.0
+	match str(w.proj):
+		"missile", "rocket": clip = "rocket_launch"; gap = 0.25; db = -2.0 if w.proj == "rocket" else 0.0; pitch = 1.15 if w.proj == "rocket" else 0.95
+		"shell": clip = "explosion_big"; gap = 0.5; db = -9.0; pitch = 1.7
+		"bullet":
+			if w.id == "gau_cannon": clip = "a10_cannon"; gap = 1.9; db = 3.0
+			elif shooter.def.get("visual") == "infantry": clip = "rifle_burst"; gap = 1.1; db = -6.0
+			else: clip = "mg_burst"; gap = 1.25; db = -5.0
+	if clip == "": return
+	var key := "%d:%s" % [shooter.uid, clip]
+	if sim_time - float(_snd_t.get(key, -99.0)) < gap: return
+	_snd_t[key] = sim_time
+	SFX.play(shooter.body if clip == "a10_cannon" else self, clip, from, db, pitch, clip == "a10_cannon")
 
 
 func _update_shots(dt: float) -> void:
@@ -413,7 +463,7 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 	if t and is_instance_valid(t) and not t.dead:
 		var c := t.world_center()
 		direct = c.distance_to(p) < t.def.radius * 1.4 + 1.0
-		if direct: t.take_damage(s.dmg * rng.randf_range(0.85, 1.15) * _dmg_mult(s.shooter), s.shooter)
+		if direct: t.take_damage(s.dmg * rng.randf_range(0.85, 1.15) * _dmg_mult(s.shooter) * _armor_mult(s, t), s.shooter)
 	if diag and s.shooter and s.shooter.team == 0: diag.on_shot(s.shooter, t, p, direct)
 	if s.splash > 0.0:
 		for o in units:
@@ -421,7 +471,7 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 			if o.domain == "heli" and not ("heli" in s.targets): continue
 			var d := o.world_center().distance_to(p)
 			if d < s.splash:
-				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash), s.shooter)
+				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash) * _armor_mult(s, o), s.shooter)
 	var ground := p.y < 1.5
 	if s.kind == "bullet":
 		FX.bullet_hit(self, Vector3(p.x, maxf(p.y, 0.1), p.z), direct, s.shooter != null and s.shooter.is_air())
@@ -429,6 +479,13 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 		FX.impact(self, p, true)
 	else:
 		FX.impact(self, Vector3(p.x, 0.1, p.z), false)
+
+
+func _armor_mult(s: Dictionary, o: Unit) -> float:
+	var a := UnitDefs.armor_of(o.def)
+	var vs: Dictionary = s.get("vs", {})
+	if vs.has(a): return float(vs[a])
+	return float(UnitDefs.ARMOR_MULT.get(s.kind, {}).get(a, 1.0))
 
 
 # ------------------------------------------------------------------ support powers
@@ -477,6 +534,9 @@ func _update_flights(dt: float) -> void:
 		f.pos += f.dir * float(p.speed) * dt
 		f.node.position = f.pos
 		var along: float = (f.pos - f.target).dot(f.dir)   # <0 before the target, >0 after
+		if not f.has("snd") and along > -float(p.speed) * 3.5:
+			f["snd"] = true
+			SFX.play(f.node, "jet_flyby", f.pos, 4.0, 0.8 if f.id == "carpet" else 1.0, true)
 		if p.has("bombs"):
 			var n := int(p.bombs)
 			var fall := sqrt(2.0 * float(p.altitude) / 25.0)
@@ -489,6 +549,7 @@ func _update_flights(dt: float) -> void:
 				var bp: Vector3 = f.pos + Vector3.UP * float(p.altitude)
 				b.global_position = bp
 				b.reset_physics_interpolation()
+				if bombs.size() % 3 == 0: SFX.play(self, "bomb_fall", bp, -3.0, randf_range(0.92, 1.08))
 				bombs.append({"node": b, "pos": bp, "vel": f.dir * float(p.speed), "dmg": float(p.damage),
 					"splash": float(p.splash), "team": f.team})
 		if along > 450.0:
@@ -516,9 +577,21 @@ func _update_bombs(dt: float) -> void:
 
 # ------------------------------------------------------------------ deaths and visibility
 func on_unit_died(u: Unit) -> void:
+	if u.engine_snd: u.engine_snd.stop()
 	if u.team == 0: losses += 1
 	else: kills += 1
-	if u.domain == "ground":
+	var vis_kind: String = u.def.get("visual", "model")
+	if u is Building:
+		FX.explosion(self, u.global_position + Vector3(0, 2, 0), 2.2)
+		FX.wreck_fire(u.body)
+	elif vis_kind == "infantry":
+		FX.impact(self, u.global_position, false)
+		_fade_out(u, 3.0)
+	elif vis_kind == "vehicle_art":
+		FX.explosion(self, u.global_position, 1.0)
+		FX.wreck_fire(u.body)
+		if u.card_sprite: u.card_sprite.modulate = Color(0.16, 0.14, 0.12)
+	elif u.domain == "ground":
 		FX.explosion(self, u.global_position, 1.0)
 		FX.wreck_fire(u.body)
 		if u.turret:
@@ -534,11 +607,16 @@ func on_unit_died(u: Unit) -> void:
 		FX.explosion(self, u.world_center(), 0.6)
 		# the airframe falls and burns on impact
 		debris.append({"node": u.body, "vel": u.vel * 0.6 + Vector3(0, -2, 0), "spin": Vector3(rng.randf_range(-1, 1), rng.randf_range(-2, 2), rng.randf_range(-1.5, 1.5)), "crash": true})
-		if u.rotor: u.rotor.visible = false
+		for r in u.rotors: r.visible = false
 	if u in commander.selected:
 		commander.selected.erase(u)
 		commander.selection_changed.emit()
 	hud.flash_message(("Enemy %s destroyed" if u.team != 0 else "%s lost") % u.def.name)
+
+
+func _fade_out(u: Unit, after: float) -> void:
+	await get_tree().create_timer(after, false).timeout
+	if is_instance_valid(u): u.visible = false; u.set_process(false)
 
 
 func _update_debris(dt: float) -> void:
@@ -619,6 +697,7 @@ func _update_fog() -> void:
 			mini[k * 4 + 3] = 110
 		else:
 			mini[k * 4 + 3] = 225
+	fog_vis = vis
 	fog_img.set_data(FOG_N, FOG_N, false, Image.FORMAT_L8, data)
 	fog_tex.update(fog_img)
 	fog_mini_img.set_data(FOG_N, FOG_N, false, Image.FORMAT_RGBA8, mini)
@@ -636,16 +715,27 @@ func _update_visibility() -> void:
 		if u.team == 0 or u.dead:
 			if u.dead and not seen.get(u.uid, false): u.visible = false
 			continue
-		var vis := false
-		for f in units:
-			if f.team == 0 and not f.dead and f.flat_dist(u.position) <= f.def.sight:
-				vis = true; break
+		var vis := _cell_visible(u.position)
 		if not vis:
 			for z in reveal_zones:
 				if z.team == 0 and _dist_to_segment(u.position, z.a, z.b) < z.w * 0.5:
 					vis = true; break
+		if u is Building:
+			if vis: u.ever_seen = true
+			seen[u.uid] = vis or u.ever_seen   # structures stay on the map once scouted (last known state)
+			u.visible = seen[u.uid]
+			continue
 		seen[u.uid] = vis
 		u.visible = vis
+
+
+func _cell_visible(p: Vector3) -> bool:
+	if fog_vis.is_empty(): return false
+	var cell := FOG_RECT.size.x / FOG_N
+	var i := int((p.x - FOG_RECT.position.x) / cell)
+	var j := int((p.z - FOG_RECT.position.y) / cell)
+	if i < 0 or j < 0 or i >= FOG_N or j >= FOG_N: return false
+	return fog_vis[j * FOG_N + i] == 1
 
 
 func _dist_to_segment(p: Vector3, a: Vector3, b: Vector3) -> float:
@@ -687,3 +777,214 @@ func _end_screen(victory: bool) -> void:
 	await get_tree().create_timer(2.5).timeout   # let the final explosion play before the score screen
 	hud.banner = ""
 	pause_menu.open_end(victory, stats)
+
+
+# ------------------------------------------------------------------ economy and construction (B1.2)
+func _spawn_bases() -> void:
+	for t in 2:
+		cash[t] = BuildingDefs.START_CASH
+		var cc := add_structure("command_center", t, start_pos[t], true)
+		var fwd := -1.0 if t == 0 else 1.0     # toward the map centre
+		var d := _spawn("dozer", t, cc.position + Vector3(-8, 0, fwd * (cc.half.y + 8.0)), 0.0 if t == 0 else PI)
+		d.order_stop()
+	# neutral supply piles: two per side near each base, one larger contested pile in the centre (PROVISIONAL)
+	for p in [Vector3(-75, 0, 195), Vector3(80, 0, 250), Vector3(75, 0, -195), Vector3(-80, 0, -250)]:
+		add_pile(p, BuildingDefs.PILE_CASH)
+	add_pile(Vector3(0, 0, 0), BuildingDefs.PILE_CASH * 2)
+
+
+func add_structure(k: String, team: int, pos: Vector3, built := false) -> Building:
+	var b := Building.new()
+	add_child(b)
+	b.setup_structure(self, k, team, units.size() + 1, pos, built)
+	b.reset_physics_interpolation()
+	units.append(b)
+	by_id[b.uid] = b
+	if built: on_structure_built(b, false)
+	return b
+
+
+func add_pile(p: Vector3, amount: int) -> void:
+	var n := Node3D.new()
+	n.position = p
+	add_child(n)
+	var wood := StandardMaterial3D.new(); wood.albedo_color = Color(0.45, 0.36, 0.22); wood.roughness = 0.9
+	var crate := StandardMaterial3D.new(); crate.albedo_color = Color(0.33, 0.36, 0.22); crate.roughness = 0.8
+	var r := RandomNumberGenerator.new(); r.seed = int(p.x * 13 + p.z * 7)
+	for i in 26:
+		var m := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(r.randf_range(1.6, 2.4), r.randf_range(1.0, 1.6), r.randf_range(1.6, 2.4))
+		b.material = crate if i % 3 else wood
+		m.mesh = b
+		var a := r.randf() * TAU
+		var d := r.randf_range(0.0, 7.0)
+		m.position = Vector3(cos(a) * d, b.size.y * 0.5 + (b.size.y if i > 18 else 0.0), sin(a) * d)
+		m.rotation.y = r.randf() * TAU
+		n.add_child(m)
+	piles.append({"pos": p, "cash": amount, "node": n, "start": amount})
+	gnav.block_circle(p, 8.0)
+	obstacles_2d.append(Vector3(p.x, p.z, 8.0))
+
+
+func structures(team: int, k := "", only_built := true) -> Array:
+	var out: Array = []
+	for u in units:
+		if u is Building and not u.dead and u.team == team and (k == "" or u.bkind == k) and (u.built or not only_built):
+			out.append(u)
+	return out
+
+
+func power_gen(team: int) -> int:
+	var g := 0
+	for b in structures(team):
+		if b.bdef.power > 0: g += int(b.bdef.power)
+	return g
+
+
+func power_use(team: int) -> int:
+	var c := 0
+	for b in structures(team):
+		if b.bdef.power < 0: c -= int(b.bdef.power)
+	return c
+
+
+func power_ok(team: int) -> bool:
+	return power_gen(team) >= power_use(team)
+
+
+func requirements_met(team: int, k: String) -> bool:
+	for r in BuildingDefs.DEFS[k].requires:
+		if structures(team, r).is_empty(): return false
+	return true
+
+
+## "" when a structure of kind k may be placed at pos for team, otherwise the reason (shown to the player).
+func placement_problem(team: int, k: String, pos: Vector3) -> String:
+	var d: Dictionary = BuildingDefs.DEFS[k]
+	if cash[team] < int(d.cost): return "Not enough cash"
+	if not requirements_met(team, k): return "Requires " + ", ".join(d.requires.map(func(x): return BuildingDefs.DEFS[x].name))
+	var h: Vector2 = d.size * 0.5 + Vector2(1.0, 1.0)
+	if not map_bounds.grow(-10).has_point(Vector2(pos.x, pos.z)): return "Outside the map"
+	if not gnav.box_free(pos, h): return "Blocked"
+	for u in units:
+		if u.dead or u.is_air() or u is Building: continue
+		if absf(u.position.x - pos.x) < h.x + u.def.radius * 0.5 and absf(u.position.z - pos.z) < h.y + u.def.radius * 0.5 \
+				and not u.def.get("builder", false):
+			return "Units in the way"
+	# build radius: near any own structure (Generals-style base creep)
+	var near := false
+	for b in structures(team, "", false):
+		if b.position.distance_to(pos) < 140.0: near = true; break
+	if not near: return "Too far from your base"
+	return ""
+
+
+func _execute_econ(cmd: Dictionary) -> void:
+	var team: int = cmd.team
+	match cmd.type:
+		"place":
+			var k: String = cmd.id
+			var dz: Unit = by_id.get(cmd.get("builder", -1))
+			if dz == null or dz.dead or dz.team != team or not dz.def.get("builder", false): return
+			if placement_problem(team, k, cmd.pos) != "":
+				return
+			cash[team] -= int(BuildingDefs.DEFS[k].cost)
+			var b := add_structure(k, team, cmd.pos, false)
+			dz.order_build(b)
+		"cancel_build":
+			var b: Building = by_id.get(cmd.id)
+			if b and not b.dead and not b.built and b.team == team:
+				cash[team] += int(b.bdef.cost)
+				b.die()
+		"produce":
+			var b: Building = by_id.get(cmd.id)
+			var k: String = cmd.kind
+			if b == null or b.dead or not b.built or b.team != team or not (k in b.bdef.produces): return
+			if produce_problem(b, k) != "": return
+			cash[team] -= int(BuildingDefs.UNIT_COST[k][0])
+			b.queue_unit(k)
+		"cancel_unit":
+			var b: Building = by_id.get(cmd.id)
+			if b and not b.dead and b.team == team:
+				var k := b.cancel_last()
+				if k != "": cash[team] += int(BuildingDefs.UNIT_COST[k][0])
+		"rally":
+			var b: Building = by_id.get(cmd.id)
+			if b and not b.dead and b.team == team:
+				b.rally = cmd.pos; b.has_rally = true
+		"sell":
+			var b: Building = by_id.get(cmd.id)
+			if b and not b.dead and b.built and b.team == team and b.bkind != "command_center":
+				cash[team] += int(float(b.bdef.cost) * BuildingDefs.SELL_REFUND * b.hp / b.bdef.hp)
+				b.prod_queue.clear()
+				b.die()
+
+
+func produce_problem(b: Building, k: String) -> String:
+	if cash[b.team] < int(BuildingDefs.UNIT_COST[k][0]): return "Not enough cash"
+	if b.prod_queue.size() >= 9: return "Queue full"
+	if not b.pads.is_empty():
+		var free := 0
+		for p in b.pads:
+			var u: Unit = by_id.get(int(p.uid))
+			if u == null or u.dead: free += 1
+		if free <= b.prod_queue.size(): return "No free pad"
+	return ""
+
+
+func on_structure_built(b: Building, announce := true) -> void:
+	if b.bdef.has("free_unit"):
+		spawn_produced(b, b.bdef.free_unit)
+	if announce and b.team == 0 and hud: hud.flash_message("%s complete" % b.bdef.name)
+
+
+## A finished unit leaves its building toward the rally point; aircraft appear landed on a free pad.
+func spawn_produced(b: Building, k: String) -> void:
+	var team := b.team
+	var exit_dir := (b.rally - b.position)
+	exit_dir.y = 0.0
+	exit_dir = exit_dir.normalized() if exit_dir.length() > 0.1 else Vector3(0, 0, 1.0 if team == 0 else -1.0)
+	var reach := absf(exit_dir.x) * b.half.x + absf(exit_dir.z) * b.half.y + 5.0
+	var pos := b.position + exit_dir * reach
+	var yaw := atan2(-exit_dir.x, -exit_dir.z)
+	var u := _spawn(k, team, pos, yaw)
+	var d: Dictionary = UnitDefs.def_of(k)
+	if not b.pads.is_empty():
+		var i := b.free_pad()
+		if i < 0: i = 0
+		b.pads[i].uid = u.uid
+		u.position = b.pads[i].pos
+		u.home = b.pads[i].pos
+		u.heading = 0.0 if team == 0 else PI
+		u.state = Unit.S.LANDED; u.altitude = 0.4; u.speed_cur = 0.0; u.body.position.y = 0.4; u.airborne = false
+		u.reset_physics_interpolation()
+		return
+	u.reset_physics_interpolation()
+	if d.get("hauler", false) and b.bkind == "supply_depot":
+		u.home = b.position
+		u.start_haul(b)
+		return
+	if u.is_air():
+		u.home = pos
+	u.order_move(b.rally if b.has_rally else pos + exit_dir * 12.0)
+
+
+func nearest_pile(p: Vector3) -> Dictionary:
+	var best: Dictionary = {}
+	var bd := INF
+	for pl in piles:
+		if pl.cash <= 0: continue
+		var d := p.distance_to(pl.pos)
+		if d < bd: bd = d; best = pl
+	return best
+
+
+func deliver(team: int, amount: int) -> void:
+	cash[team] += amount
+	income[team] += amount
+
+
+## Radar: enemy units (not structures) appear on the minimap only with a powered radar.
+func radar_online(team: int) -> bool:
+	return not structures(team, "radar").is_empty() and power_ok(team)

@@ -1,0 +1,200 @@
+{
+ "generated_by": "tools/audio/prepare_audio.py",
+ "clips": {
+  "a10_cannon": {
+   "file": "res://assets/audio/a10_cannon.ogg",
+   "loop": false,
+   "use": "A-10 GAU-style cannon burst",
+   "source_file": "a-10-warthog-brrrt.mp3",
+   "source_sha256": "964a566ca49bc8ae0ed1be74d2f794a3e0fc58a24536ac0a1c321699fc56c745",
+   "window_s": [
+    0.0,
+    null
+   ],
+   "duration_s": 3.69,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "rifle_burst": {
+   "file": "res://assets/audio/rifle_burst.ogg",
+   "loop": false,
+   "use": "infantry rifle fire",
+   "source_file": "assault-rifle-ar15-1.mp3",
+   "source_sha256": "70b99f1299876d49bd99248891aae9acfc597bdd7f5d3691bc7d7302faf31cf2",
+   "window_s": [
+    0.4,
+    1.6
+   ],
+   "duration_s": 1.2,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "mg_burst": {
+   "file": "res://assets/audio/mg_burst.ogg",
+   "loop": false,
+   "use": "vehicle/heli machine gun",
+   "source_file": "machine-gun-bursts-gun-sounds-309721.mp3",
+   "source_sha256": "f767ba47b8fb09128c73bdcf173f43190099d49f7b0243c96d39fff5f658e451",
+   "window_s": [
+    0.0,
+    1.38
+   ],
+   "duration_s": 1.38,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "explosion_big": {
+   "file": "res://assets/audio/explosion_big.ogg",
+   "loop": false,
+   "use": "unit destroyed / bomb impact",
+   "source_file": "massive-explosion-2-397983.mp3",
+   "source_sha256": "1f566cb08b237682e144163d4687581d4d5930a2b59e8b245c968373f9422846",
+   "window_s": [
+    0.0,
+    3.2
+   ],
+   "duration_s": 3.2,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "rocket_launch": {
+   "file": "res://assets/audio/rocket_launch.ogg",
+   "loop": false,
+   "use": "missile / rocket launch",
+   "source_file": "rocket-launcher-307512.mp3",
+   "source_sha256": "cdb681a9484839707748fea10aa196fc33e996183424bd25563cb018d26db74e",
+   "window_s": [
+    0.0,
+    null
+   ],
+   "duration_s": 1.44,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "sam_launch": {
+   "file": "res://assets/audio/sam_launch.ogg",
+   "loop": false,
+   "use": "base defence missile launch",
+   "source_file": "base-defense-missle-launching.mp3",
+   "source_sha256": "d5eebe541398d13e46bc7fba037dd6ea19adc9ec90d812a422d12d339ba09448",
+   "window_s": [
+    0.0,
+    null
+   ],
+   "duration_s": 9.34,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "bomb_fall": {
+   "file": "res://assets/audio/bomb_fall.ogg",
+   "loop": false,
+   "use": "falling bomb whistle",
+   "source_file": "falling-bomb-41038.mp3",
+   "source_sha256": "1c6e5c5f334c4b2f1bc00a7a94c8fd22aa2d85fd39721288b1c1f706d6f508a4",
+   "window_s": [
+    0.0,
+    null
+   ],
+   "duration_s": 2.98,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "jet_flyby": {
+   "file": "res://assets/audio/jet_flyby.ogg",
+   "loop": false,
+   "use": "jet pass overhead",
+   "source_file": "fighter-jet-overhead-355468.mp3",
+   "source_sha256": "171085b68bf894b621f81da477c5e74b111681f67cadfa27879624b30786f637",
+   "window_s": [
+    2.1,
+    10.6
+   ],
+   "duration_s": 8.5,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "jet_takeoff": {
+   "file": "res://assets/audio/jet_takeoff.ogg",
+   "loop": false,
+   "use": "jet take-off roll (f-15 file is byte-identical)",
+   "source_file": "f-16-launch-75873.mp3",
+   "source_sha256": "b0caad36b70d439b5e067f0cbccbb5b0b96e234b4dc015120b8aafab1d1d6211",
+   "window_s": [
+    0.0,
+    15.3
+   ],
+   "duration_s": 15.3,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "heli_loop": {
+   "file": "res://assets/audio/heli_loop.ogg",
+   "loop": true,
+   "use": "helicopter rotor loop (8D stereo downmixed)",
+   "source_file": "helicopter-sound-8d-372463.mp3",
+   "source_sha256": "00889d14902cdc86d5af5af3b6bbac49e51491688014b0c7af904b63d60517c8",
+   "window_s": [
+    0.0,
+    9.7
+   ],
+   "duration_s": 9.1,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "tank_loop": {
+   "file": "res://assets/audio/tank_loop.ogg",
+   "loop": true,
+   "use": "tracked vehicle engine/track loop",
+   "source_file": "tank-moving-143104.mp3",
+   "source_sha256": "b1ce493bcc87d87720a804bbd58664dc39b20a6a8674f25af6a688f6ea18ccd7",
+   "window_s": [
+    0.25,
+    10.0
+   ],
+   "duration_s": 9.15,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "construction_loop": {
+   "file": "res://assets/audio/construction_loop.ogg",
+   "loop": true,
+   "use": "building under construction",
+   "source_file": "base-building-and-construction-work-26897.mp3",
+   "source_sha256": "b15dae6367b7d4a3d75b4b0496640b380804d1d48014aa8ae504283422b741bf",
+   "window_s": [
+    0.4,
+    29.6
+   ],
+   "duration_s": 28.6,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "radar_ping": {
+   "file": "res://assets/audio/radar_ping.ogg",
+   "loop": false,
+   "use": "radar / UI ping",
+   "source_file": "base-radar-ping-306440.mp3",
+   "source_sha256": "8f3df42fc9d304949e2fe11a50652c07831a74ca88ed0e8a9fdb616f0a90b923",
+   "window_s": [
+    0.0,
+    null
+   ],
+   "duration_s": 2.02,
+   "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
+   "status": "dev_ok; release needs per-item page URL",
+   "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  }
+ }
+}

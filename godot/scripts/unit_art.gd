@@ -28,6 +28,12 @@ static func material_for(src: Material, ao: Texture2D, team: Color, seed_idx: in
 	m.set_shader_parameter("metallic_v", e[2])
 	m.set_shader_parameter("kind", e[3])
 	m.set_shader_parameter("team_color", team)
+	# team paint schemes chosen to separate from the olive / tan terrain: blue = light grey and blue-grey,
+	# red = sand and rust. The rim light in the shader adds a team-coloured edge at every zoom level.
+	var blue := team.b > team.r
+	m.set_shader_parameter("camo_green", Color(0.40, 0.43, 0.44) if blue else Color(0.50, 0.42, 0.30))
+	m.set_shader_parameter("camo_brown", Color(0.22, 0.27, 0.33) if blue else Color(0.36, 0.19, 0.13))
+	m.set_shader_parameter("camo_black", Color(0.10, 0.11, 0.12) if blue else Color(0.12, 0.09, 0.08))
 	m.set_shader_parameter("camo_offset", Vector3(seed_idx * 13.7, seed_idx * 5.1, seed_idx * 9.3))
 	m.set_shader_parameter("ao_tex", ao)
 	return m
