@@ -141,6 +141,10 @@ func _build_model3d(path: String) -> void:
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			for si in mi.mesh.get_surface_count():
 				var mat := mi.get_active_material(si)
+				if mat and mat.resource_name.begins_with("SA_Ghillie") and mat is BaseMaterial3D:
+					var gm := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+					gm.cull_mode = BaseMaterial3D.CULL_DISABLED
+					mi.set_surface_override_material(si, gm)
 				if mat and mat.resource_name.begins_with("SA_Team") and mat is BaseMaterial3D:
 					var tm := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
 					tm.albedo_color = UnitDefs.TEAM_COLORS[team].lightened(0.15)
@@ -872,9 +876,12 @@ func _heal_aura(dt: float) -> void:
 	heal_t = 1.0
 	var h: Dictionary = def.heal
 	for u in battle.units:
-		if u == self or u.dead or u.team != team or u is Building or u.hp >= u.def.hp: continue
+		if u == self or u.dead or u.team != team or u.hp >= u.def.hp: continue
+		if u is Building and not (u as Building).built: continue
 		var kind_ok := false
 		for t in h.targets:
+			if t == "structure" and u is Building: kind_ok = true
+			if u is Building: continue
 			if t == "infantry" and u.def.get("visual", "") == "infantry": kind_ok = true
 			if t == "vehicle" and u.domain == "ground" and u.def.get("visual", "") != "infantry": kind_ok = true
 		if kind_ok and flat_dist(u.position) <= float(h.radius):
@@ -1141,7 +1148,7 @@ func _aim_turret(dt: float) -> void:
 		var to: Vector3 = aim_at - position
 		want_local = wrapf(atan2(-to.x, -to.z) - heading, -PI, PI)
 	var diff := wrapf(want_local - turret_yaw, -PI, PI)
-	var step := deg_to_rad(def.turret_turn_deg) * dt
+	var step := deg_to_rad(float(def.get("turret_turn_deg", 120.0))) * dt
 	turret_yaw = wrapf(turret_yaw + clampf(diff, -step, step), -PI, PI)
 	turret.rotation.y = turret_yaw
 

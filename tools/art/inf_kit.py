@@ -310,9 +310,10 @@ class Builder:
         self.dl = self.bm.verts.layers.deform.verify()
         self.groups = groups
         self.xf = None
+        self.remap = {}                # material substitution (role variants), empty for the rifleman
 
     def _fin(self, verts, m, w):
-        mi = MAT_ORDER.index(m)
+        mi = MAT_ORDER.index(self.remap.get(m, m))
         for f in {f for v in verts for f in v.link_faces}:
             f.material_index = mi
         for v in verts:
@@ -382,6 +383,12 @@ class Builder:
             bm.faces.new(rings[0][::-1]); bm.faces.new(rings[-1])
         self._fin(vs, m, w)
 
+    def quad(self, m, w, pts):
+        """Single quad card (double-sided material) - e.g. ghillie strands. w: weight dict/bone."""
+        vs = [self.bm.verts.new(self._p(p)) for p in pts]
+        self.bm.faces.new(vs)
+        self._fin(vs, m, w)
+
     def to_object(self, name):
         bm = self.bm
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
@@ -423,10 +430,17 @@ BODY_DEFAULTS = dict(
     mag_pouches=True,        # triple mag pouch on the plate carrier
     armband=True,            # SA_Team armband on both upper arms
     hydration=True,          # hose over the right shoulder
+    carrier="plate",         # "plate" (plate carrier + pouches) | "none" (role draws its own torso gear)
+    knee_pads=True,
+    eyepro=True,             # wrap-around glasses
+    beard=True,              # dark chin/beard shading
+    helmet_mat="SA_Camo",    # combat helmet shell material
+    remap={},                # material substitution for the whole body, e.g. {"SA_CamoGear": "SA_Green"}
 )
 
 
 def build_body(B, o):
+    B.remap = dict(o["remap"])
     CH_T = "chain:torso"
     # ---------------------------------------------------------------- pelvis: trouser seat, battle belt, pouches
     B.loftz("SA_Camo", CH_T, [(0.82, 0.13, 0.095, -0.005, 0.8), (0.90, 0.168, 0.115, -0.01, 0.7),
@@ -442,26 +456,27 @@ def build_body(B, o):
     B.loftz("SA_Camo", CH_T, [(1.05, 0.152, 0.102, 0.0, 0.75), (1.20, 0.168, 0.112, 0.01, 0.7),
                               (1.33, 0.188, 0.117, 0.02, 0.7), (1.43, 0.183, 0.102, 0.025, 0.65),
                               (1.50, 0.11, 0.08, 0.03, 0.8), (1.55, 0.065, 0.06, 0.035, 1.0)], seg=12)
-    B.loftz("SA_CamoGear", {"Chest": 0.85, "Spine": 0.15},
-            [(1.10, 0.188, 0.138, 0.015, 0.45), (1.30, 0.203, 0.143, 0.02, 0.45), (1.38, 0.172, 0.133, 0.025, 0.55)],
-            seg=14)
-    B.box("SA_CamoGear", "Chest", (0, 0.158, 1.29), (0.27, 0.05, 0.30), (0.05, 0, 0))
-    B.box("SA_CamoGear", "Chest", (0, -0.123, 1.29), (0.28, 0.05, 0.32), (-0.04, 0, 0))
-    for s in (-1, 1):
-        B.box("SA_CamoGear", "Chest", (s * 0.11, 0.03, 1.462), (0.07, 0.25, 0.03))
-        B.box("SA_CamoGear", "Chest", (s * 0.11, 0.137, 1.42), (0.07, 0.03, 0.09), (0.35, 0, 0))
-        B.box("SA_CamoGear", "Chest", (s * 0.11, -0.10, 1.42), (0.07, 0.03, 0.09), (-0.35, 0, 0))
-    if o["mag_pouches"]:
-        for k in (-1, 0, 1):                                               # triple mag pouch + flaps
-            B.box("SA_CamoGear", "Chest", (k * 0.077, 0.195, 1.19), (0.07, 0.058, 0.13))
-            B.box("SA_Canvas", "Chest", (k * 0.077, 0.204, 1.258), (0.072, 0.05, 0.028), (0.3, 0, 0))
-    B.box("SA_CamoGear", "Chest", (0.0, 0.19, 1.345), (0.17, 0.035, 0.09))                 # admin pouch
-    B.box("SA_Team", "Chest", (0.0, 0.2085, 1.35), (0.09, 0.003, 0.04))                    # ID patch
-    if o["radio"]:
-        B.box("SA_CamoGear", "Chest", (-0.205, -0.02, 1.18), (0.07, 0.11, 0.17))           # radio pouch
-        B.box("SA_Rubber", "Chest", (-0.205, -0.02, 1.28), (0.05, 0.06, 0.04))             # radio top
-        B.cyl("SA_Rubber", "Chest", (-0.215, -0.06, 1.47), 0.007, 0.36, seg=4)            # whip antenna
-    B.box("SA_CamoGear", "Chest", (0.205, -0.01, 1.17), (0.06, 0.1, 0.12))                 # IFAK
+    if o["carrier"] == "plate":
+        B.loftz("SA_CamoGear", {"Chest": 0.85, "Spine": 0.15},
+                [(1.10, 0.188, 0.138, 0.015, 0.45), (1.30, 0.203, 0.143, 0.02, 0.45), (1.38, 0.172, 0.133, 0.025, 0.55)],
+                seg=14)
+        B.box("SA_CamoGear", "Chest", (0, 0.158, 1.29), (0.27, 0.05, 0.30), (0.05, 0, 0))
+        B.box("SA_CamoGear", "Chest", (0, -0.123, 1.29), (0.28, 0.05, 0.32), (-0.04, 0, 0))
+        for s in (-1, 1):
+            B.box("SA_CamoGear", "Chest", (s * 0.11, 0.03, 1.462), (0.07, 0.25, 0.03))
+            B.box("SA_CamoGear", "Chest", (s * 0.11, 0.137, 1.42), (0.07, 0.03, 0.09), (0.35, 0, 0))
+            B.box("SA_CamoGear", "Chest", (s * 0.11, -0.10, 1.42), (0.07, 0.03, 0.09), (-0.35, 0, 0))
+        if o["mag_pouches"]:
+            for k in (-1, 0, 1):                                               # triple mag pouch + flaps
+                B.box("SA_CamoGear", "Chest", (k * 0.077, 0.195, 1.19), (0.07, 0.058, 0.13))
+                B.box("SA_Canvas", "Chest", (k * 0.077, 0.204, 1.258), (0.072, 0.05, 0.028), (0.3, 0, 0))
+        B.box("SA_CamoGear", "Chest", (0.0, 0.19, 1.345), (0.17, 0.035, 0.09))                 # admin pouch
+        B.box("SA_Team", "Chest", (0.0, 0.2085, 1.35), (0.09, 0.003, 0.04))                    # ID patch
+        if o["radio"]:
+            B.box("SA_CamoGear", "Chest", (-0.205, -0.02, 1.18), (0.07, 0.11, 0.17))           # radio pouch
+            B.box("SA_Rubber", "Chest", (-0.205, -0.02, 1.28), (0.05, 0.06, 0.04))             # radio top
+            B.cyl("SA_Rubber", "Chest", (-0.215, -0.06, 1.47), 0.007, 0.36, seg=4)            # whip antenna
+        B.box("SA_CamoGear", "Chest", (0.205, -0.01, 1.17), (0.06, 0.1, 0.12))                 # IFAK
     if o["pack"] == "assault":
         # assault pack: body, lid, front pocket, compression straps, team panel on the lid (top-down read)
         B.box("SA_Camo", "Chest", (0, -0.232, 1.27), (0.29, 0.16, 0.34), (-0.06, 0, 0))
@@ -487,11 +502,14 @@ def build_body(B, o):
     B.ell("SA_Skin", "Head", HC, (0.08, 0.094, 0.104), u=12, v=8)
     B.ell("SA_Skin", "Head", HC + V((0, 0.072, -0.058)), (0.06, 0.04, 0.048), u=8, v=5)       # jaw/chin
     B.box("SA_Skin", "Head", HC + V((0, 0.097, -0.008)), (0.02, 0.024, 0.036), (0.3, 0, 0))   # nose
-    B.ell("SA_Canvas", "Head", HC + V((0, 0.07, -0.072)), (0.062, 0.042, 0.03), u=8, v=4)     # beard shadow / chin
+    if o["beard"]:
+        B.ell("SA_Canvas", "Head", HC + V((0, 0.07, -0.072)), (0.062, 0.042, 0.03), u=8, v=4)  # beard shadow / chin
     for s in (-1, 1):
         B.ell("SA_Skin", "Head", HC + V((s * 0.079, 0.0, -0.005)), (0.014, 0.024, 0.03), u=6, v=4)
-    B.tube("SA_Glass", "Head", [HC + V((-0.079, 0.04, 0.01)), HC + V((-0.05, 0.088, 0.012)), HC + V((0, 0.1, 0.012)),
-                                HC + V((0.05, 0.088, 0.012)), HC + V((0.079, 0.04, 0.01))], [(0.02, 0.007)] * 5, seg=4)
+    if o["eyepro"]:
+        B.tube("SA_Glass", "Head", [HC + V((-0.079, 0.04, 0.01)), HC + V((-0.05, 0.088, 0.012)), HC + V((0, 0.1, 0.012)),
+                                    HC + V((0.05, 0.088, 0.012)), HC + V((0.079, 0.04, 0.01))], [(0.02, 0.007)] * 5,
+               seg=4)
     if o["helmet"] == "combat":
         combat_helmet(B, HC, o)
 
@@ -537,10 +555,8 @@ def build_body(B, o):
         B.box("SA_Camo", f"{nm}UpperLeg", pc + V((s * 0.004, 0, 0.07)), (0.034, 0.125, 0.025))
         B.box("SA_CamoGear", f"{nm}UpperLeg", hp + d1 * 0.12 + V((0, 0.093, 0)), (0.1, 0.012, 0.07))  # thigh pocket
         # knee pad: hard cap over soft pad + strap (rigid to the shin so it stays on the knee)
-        B.ell("SA_Canvas", f"{nm}LowerLeg", kn + V((0, 0.052, -0.01)), (0.054, 0.033, 0.072), u=8, v=6)
-        B.ell("SA_Canvas", f"{nm}LowerLeg", kn + V((0, 0.068, -0.015)), (0.04, 0.022, 0.05), u=8, v=5)
-        B.tube("SA_Rubber", f"{nm}LowerLeg", [kn + d2 * 0.05, kn + d2 * 0.072], [(0.063, 0.066)] * 2, seg=10,
-               caps=False)
+        if o["knee_pads"]:
+            knee_pad(B, kn, d2, nm)
         # boot: shaft, foot, toe cap, sole + heel, laces (rigid to the foot except the shaft top)
         fb = f"{nm}Foot"
         B.loftz("SA_Canvas", {f"{nm}LowerLeg": 0.6, fb: 0.4}, [(an.z + 0.11, 0.053, 0.058, an.y, 1.0),
@@ -558,6 +574,13 @@ def build_body(B, o):
         # drop-leg pistol holster on the right thigh
         B.box("SA_Rubber", "RightUpperLeg", HIP[1] + V((0.115, 0.02, -0.17)), (0.035, 0.07, 0.17))
         B.box("SA_Rubber", "RightUpperLeg", HIP[1] + V((0.11, 0.04, -0.07)), (0.03, 0.05, 0.06))
+
+
+def knee_pad(B, kn, d2, nm):
+    B.ell("SA_Canvas", f"{nm}LowerLeg", kn + V((0, 0.052, -0.01)), (0.054, 0.033, 0.072), u=8, v=6)
+    B.ell("SA_Canvas", f"{nm}LowerLeg", kn + V((0, 0.068, -0.015)), (0.04, 0.022, 0.05), u=8, v=5)
+    B.tube("SA_Rubber", f"{nm}LowerLeg", [kn + d2 * 0.05, kn + d2 * 0.072], [(0.063, 0.066)] * 2, seg=10,
+           caps=False)
 
 
 HC_HEAD = V((0, 0.045, 1.645))                 # head centre (rest)
@@ -594,7 +617,7 @@ def helmet_shell(B, HM, mname, w="Head", r=0.132, h=0.125, seg=16, rows=4, back_
 
 def combat_helmet(B, HC, o):
     HM = HC + V((0, -0.012, 0.016))
-    helmet_shell(B, HM, "SA_Camo")
+    helmet_shell(B, HM, o.get("helmet_mat", "SA_Camo"))
     if o.get("nvg", True):
         B.box("SA_Metal", "Head", HM + V((0, 0.137, 0.06)), (0.058, 0.022, 0.048), (-0.35, 0, 0))  # NVG shroud
         B.box("SA_Metal", "Head", HM + V((0, 0.152, 0.035)), (0.034, 0.03, 0.03))
@@ -843,6 +866,22 @@ def pose_points(p, objs):
     return out
 
 
+def hand_q(fingers, back, side=-1):
+    """Rotation (about the wrist) taking the rest hand frame to the given fingers / back-of-hand directions."""
+    Rd = axes_matrix(fingers, back, (0, 0, 0)).to_3x3()
+    return (Rd @ REST[f"{SIDE[side]}Hand"].to_3x3().inverted()).to_quaternion()
+
+
+def bone_empty(name, bone, world_pos, rot=(0, 0, 0)):
+    """Empty parented to an armature bone (Godot: BoneAttachment3D child), placed at a rest-pose world position."""
+    e = bpy.data.objects.new(name, None); scene.collection.objects.link(e)
+    e.empty_display_size = 0.05
+    e.parent = ARM; e.parent_type = "BONE"; e.parent_bone = bone
+    bpy.context.view_layer.update()
+    e.matrix_world = Matrix.Translation(V(world_pos)) @ Euler(rot).to_matrix().to_4x4()
+    return e
+
+
 # =============================================================================== actions (rifleman set, reusable)
 def smoothstep(x):
     x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
@@ -1058,6 +1097,8 @@ def die_keys():
 
 
 DIE_KEYS = None
+WEAPON_SOLVE_ITERS = 12   # weapon-out-of-ground iterations (long items like the mine detector need more)
+GROUND_SOLVE = {"die"}     # actions whose frames are lifted out of the ground (role may add e.g. para_land)
 DETAIL = False             # extra per-role report fields (off for the rifleman so its report stays identical)
 
 
@@ -1195,13 +1236,13 @@ def bake(actions):
             if loop and f == nf:
                 t = 0.0
             p = fn(t)
-            if name == "die":                  # ground solver: lift the hips if any part of the body would sink,
+            if name in GROUND_SOLVE:           # ground solver: lift the hips if any part of the body would sink,
                 for _ in range(6):             # and swing the muzzle up if the weapon would dig into the ground
                     m = pose_minz(p)
                     if m > -0.0005:
                         break
                     p["hips_pos"].z -= m * 1.1
-                for _ in range(12):
+                for _ in range(WEAPON_SOLVE_ITERS):
                     if pose_minz(p, objs=[WOBJ]) > -0.0005:
                         break
                     p["rifle_rot"] = p["rifle_rot"] + V((D(5) * (1 - p["rw"]), 0, 0))

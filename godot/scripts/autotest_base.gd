@@ -196,7 +196,9 @@ func _qa_checks(ccp: Vector3, bk: Building, wf: Building) -> void:
 	if af:
 		for p in af.pads:
 			if not battle.map_bounds.grow(-10).has_point(Vector2(p.pos.x, p.pos.z)): pads_ok = false
-			if p.pos.z > af.position.z: pads_ok = false     # apron is on the map-centre side
+			var inside: bool = absf(p.pos.x - af.position.x) <= af.half.x and absf(p.pos.z - af.position.z) <= af.half.y
+			var apron: bool = p.pos.z < af.position.z     # older 2D airfield: apron in front, toward the map centre
+			if not (inside if af.model3d else apron): pads_ok = false
 	_log("airfield_pads_on_map", pads_ok, "pads=%s" % (str(af.pads.map(func(p): return p.pos)) if af else "none"))
 	if af:
 		await _sel([af]); await _frames(3)
@@ -329,12 +331,12 @@ func _qa_m1(ccp: Vector3) -> void:
 	await _until(func(): return uh.passengers.is_empty(), 20.0)
 	_log("air_assault_unload", uh.passengers.is_empty() and sq.all(func(u): return u in battle.units), "alt at unload %.1f" % uh.altitude)
 	# --- paratroopers support power (needs an Airfield, which _qa_checks built)
-	var n0: int = _team(["rifleman"]).size()
+	var n0: int = _team(["paratrooper"]).size()
 	var tgt: Vector3 = ccp + Vector3(0, 0, -110)
 	battle.issue({"type": "power", "team": 0, "id": "paradrop", "pos": tgt})
 	await _wait_sim(18.0)
-	var paras: Array = _team(["rifleman"]).filter(func(u): return u.position.distance_to(tgt) < 60.0 and u.para_alt <= 0.0)
-	_log("paratroopers_land", _team(["rifleman"]).size() >= n0 + 6 and paras.size() >= 6, "riflemen %d -> %d, landed near target %d" % [n0, _team(["rifleman"]).size(), paras.size()])
+	var paras: Array = _team(["paratrooper"]).filter(func(u): return u.position.distance_to(tgt) < 60.0 and u.para_alt <= 0.0)
+	_log("paratroopers_land", _team(["paratrooper"]).size() >= n0 + 6 and paras.size() >= 6, "paratroopers %d -> %d, landed near target %d" % [n0, _team(["paratrooper"]).size(), paras.size()])
 	await _shot("paratroopers")
 	# --- supply drop zone: C-130 drops crates that add cash
 	var dz := await _place("drop_zone", ccp + Vector3(-60, 0, -95))
@@ -365,6 +367,18 @@ func _qa_m1(ccp: Vector3) -> void:
 	var s2: int = battle.shots_by.get(pal.uid, 0)
 	_log("artillery_range_rules", shots_far >= 1 and s2 == s1, "fired at 150 m: %d, at 20 m: %d" % [shots_far, s2 - s1])
 	dummy.take_damage(1e9, null)
+	# --- roster: every unit the Barracks and War Factory list spawns, and uses its 3D model when one is delivered
+	var kinds: Array = BuildingDefs.DEFS.barracks.produces + BuildingDefs.DEFS.war_factory.produces
+	var with3d: Array = []; var cards: Array = []; var bad: Array = []
+	for i in kinds.size():
+		var k: String = kinds[i]
+		var u: Unit = battle._spawn(k, 0, ccp + Vector3(-80 + (i % 7) * 12.0, 0, -150 - (i / 7) * 12.0), 0.0)
+		var m3: String = str(u.def.get("model3d", ""))
+		var has3d := m3 != "" and ResourceLoader.exists(m3)
+		if has3d and u.card_sprite == null and u.model != null: with3d.append(k)
+		elif not has3d and u.card_sprite != null: cards.append(k)
+		else: bad.append(k)
+	_log("roster_spawns_with_models", bad.is_empty(), "3D: %s | still image: %s | wrong: %s" % [", ".join(with3d), ", ".join(cards), ", ".join(bad)])
 
 
 func PAD_TOL(u: Unit) -> float:

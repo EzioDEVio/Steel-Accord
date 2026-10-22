@@ -25,7 +25,7 @@ const DEFS := {
 	},
 	"barracks": {
 		"name": "Barracks", "art": "barracks", "model3d": "res://assets/units3d/barracks/barracks.glb", "cost": 500, "build_time": 15.0, "power": -1,
-		"hp": 2000.0, "size": Vector2(20, 16), "sight": 60.0, "produces": ["rifleman", "at4"], "requires": ["power_plant"],
+		"hp": 2000.0, "size": Vector2(20, 16), "sight": 60.0, "produces": ["rifleman", "at4", "saw_gunner", "m240_gunner", "medic", "sniper", "eod_engineer", "ranger", "special_forces"], "requires": ["power_plant"],
 		"desc": "Trains infantry.",
 	},
 	"supply_depot": {
@@ -74,7 +74,8 @@ const BUILD_MENU := ["power_plant", "barracks", "supply_depot", "war_factory", "
 
 ## Production cost / time for units (unit stats live in UnitDefs). PROVISIONAL.
 const UNIT_COST := {
-	"dozer": [1000, 10.0], "ch47": [1200, 14.0], "rifleman": [200, 5.0], "at4": [300, 7.0],
+	"dozer": [1000, 10.0], "ch47": [1200, 14.0], "rifleman": [200, 5.0], "at4": [300, 7.0], "saw_gunner": [300, 6.0], "m240_gunner": [350, 7.0], "medic": [250, 6.0],
+	"sniper": [600, 10.0], "eod_engineer": [400, 8.0], "ranger": [350, 7.0], "special_forces": [800, 12.0], "paratrooper": [300, 6.0],
 	"hmmwv_50cal": [700, 9.0], "vanguard": [900, 12.0], "avenger": [800, 10.0],
 	"abrams": [1000, 13.0], "bradley": [850, 11.0], "paladin": [1200, 15.0], "m777": [900, 14.0], "m113": [600, 8.0],
 	"stryker": [800, 10.0], "mrap": [750, 9.0], "hmmwv_tow": [800, 9.0], "hmmwv_medical": [600, 8.0], "hmmwv": [400, 6.0],

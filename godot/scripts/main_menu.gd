@@ -9,7 +9,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	# automated runs (tests / diagnostics / evidence) skip the menu
 	for a in OS.get_cmdline_user_args():
-		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots", "pilotshots"] or a.begins_with("test"):
+		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots", "pilotshots", "m1shots"] or a.begins_with("test"):
 			Game.call_deferred("start_match")
 			return
 	var bg := TextureRect.new()

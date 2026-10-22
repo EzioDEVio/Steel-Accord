@@ -106,7 +106,7 @@ def build():
     ax = V((-0.35, -0.55, 0.76)).normalized()
     dc = V((dx, dy, RZ + 2.25))
     B.cyl("metal", (dx, dy, RZ + 1.95), 0.32, 0.35, seg=10, bottom=True)
-    B.dish("white", dc, 1.95, 0.55, ax, t=0.07, seg=20)
+    B.dish("hvac", dc, 1.95, 0.55, ax, t=0.07, seg=20)
     feed = dc + ax * 1.45
     for a in range(3):
         ang = 2 * PI * a / 3
@@ -241,12 +241,12 @@ def build():
 
     # ---------------------------------------------------------------- perimeter defences
     GX0, GX1 = DX - 1.7, DX + 1.7          # gap in front of the door
-    K.jersey_run(P, -12.6, GX0, -10.45, "x", SL, seglen=1.9, gap=0.08, sx=1.25, sz=1.75)
-    K.jersey_run(P, GX1, 12.6, -10.45, "x", SL, seglen=1.9, gap=0.08, sx=1.25, sz=1.75)
+    K.jersey_run(P, -12.6, GX0, -10.45, "x", SL, seglen=1.9, gap=0.08, sx=1.35, sz=2.0)
+    K.jersey_run(P, GX1, 12.6, -10.45, "x", SL, seglen=1.9, gap=0.08, sx=1.35, sz=2.0)
     K.sandbag_run(P, -11.95, GX0 - 0.2, -9.55, "x", SL)
     K.sandbag_run(P, GX1 + 0.2, 11.95, -9.55, "x", SL)
     for sx in (-1, 1):
-        K.jersey_run(P, -9.9, 0.2, sx * 12.65, "y", SL, seglen=1.9, gap=0.08, sx=1.25, sz=1.75)
+        K.jersey_run(P, -9.9, 0.2, sx * 12.65, "y", SL, seglen=1.9, gap=0.08, sx=1.35, sz=2.0)
         K.sandbag_run(P, -9.05, 0.3, sx * 11.85, "y", SL)
         K.hesco_run(P, 0.6, 10.4, sx * 12.4, "y", SL)
     K.hesco_run(P, -11.85, 11.85, 10.4, "x", SL)

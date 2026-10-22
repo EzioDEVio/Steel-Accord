@@ -58,7 +58,14 @@ def build():
     for sx, xo in ((-1, HX0), (1, HX1)):
         for y in (2.2, 5.6):
             K.louvre_panel(B, "x", xo, y, 4.6, sx, w=2.2, h=0.9)
-    K.louvre_panel(B, "y", HY1, -1.8, 4.6, 1, w=2.6, h=0.9)
+    K.louvre_panel(B, "y", HY1, -2.4, 4.6, 1, w=2.6, h=0.9)
+    K.louvre_panel(B, "y", HY1, 3.0, 4.6, 1, w=2.0, h=0.9)
+    for z in (1.5, 1.75):                                                                      # rear conduit run
+        B.strut("rubber", (-4.4, HY1 + 0.12, z), (0.9, HY1 + 0.12, z), 0.05)
+    B.strut("rubber", (-4.4, HY1 + 0.12, 1.5), (-4.4, HY1 + 0.12, 3.6), 0.05)
+    B.span("cabinet", -4.8, -4.0, HY1, HY1 + 0.3, 3.4, 4.2)
+    B.span("cabinet", -1.0, 0.6, HY1, HY1 + 0.45, SL, 2.0, bev=True)
+    B.span("metal", -1.1, 0.7, HY1, HY1 + 0.5, 2.0, 2.08)
     # central door with concrete hood + lamp (status light)
     B.span("gconc", -1.0, 1.0, HY0 - 0.12, HY0, SL, 2.75, bev=True)
     B.span("door", -0.65, 0.65, HY0 - 0.14, HY0 - 0.12, SL + 0.1, 2.45)
@@ -67,7 +74,7 @@ def build():
     K.wall_lamp(B, kit, "y", HY0 - 0.12, 0.0, 3.65, -1, "Light_Status0")
     # rear personnel door + side double cabinet door (west)
     B.span("door", 1.4, 2.5, HY1, HY1 + 0.04, SL, 2.4)
-    B.span("bconc", 1.2, 2.7, HY1, HY1 + 0.8, 2.5, 2.7, bottom=True)
+    B.span("bconc", 1.2, 2.7, HY1, HY1 + 0.55, 2.5, 2.7, bottom=True)
     # wall junction boxes + conduits on the front wall (cable bundles land here)
     for sx in (-1, 1):
         x = sx * 2.0

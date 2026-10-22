@@ -156,7 +156,7 @@ def t_gconc():         # weathered grey fortified concrete, form-panel joints, t
     k *= 1 - 0.16 * np.maximum(lines(VV, 2, 0.006), lines(UU, 2, 0.005))
     tie = ((np.abs(frac(UU * 8) - 0.5) < 0.012) & (np.abs(frac(VV * 6) - 0.5) < 0.016))
     k = np.where(tie, k * 0.55, k)
-    img = shade(col(134, 130, 120), k)
+    img = shade(col(122, 119, 110), k)
     rust = np.clip(noise(1.5, 40, 64) - 1.6, 0, None) * 0.25
     return img * (1 - rust[..., None]) + rust[..., None] * col(120, 82, 50)
 
@@ -167,7 +167,7 @@ def t_sandbag():       # running-bond sandbags, 6 rows per tile (S = 1.8 m)
     uu = UU * 3 + 0.5 * (ri % 2); fu = frac(uu)
     k = (0.62 + 0.38 * np.sin(np.clip(fr, 0, 1) * PI) ** 0.5) * (0.7 + 0.3 * np.sin(np.clip(fu, 0, 1) * PI) ** 0.35)
     k *= 1 + 0.07 * noise(6, 6, 65) + 0.04 * noise(2, 2, 66)
-    return shade(col(170, 148, 108), k)
+    return shade(col(150, 132, 100), k)
 
 
 def t_hesco():         # HESCO: tan geotextile behind a welded mesh, cell seams every half tile (S = 2 m)
@@ -446,13 +446,22 @@ class Kit:
             a = np.empty(img.size[0] * img.size[1] * 4, np.float32); img.pixels.foreach_get(a)
             return a.reshape(img.size[1], img.size[0], 4)[..., :3]
 
+        # composite colour x AO in row chunks (keeps peak memory low on a shared machine; same result)
         c = img_np(col_img)
-        ao = img_np(ao_img)[..., 0]
-        ao = np.asarray(Image.fromarray((ao * 255).astype(np.uint8)).resize((self.atlas, self.atlas), Image.BILINEAR), np.float32) / 255
-        lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
-        lin *= (0.28 + 0.72 * ao ** 1.1)[..., None]
-        srgb = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(np.clip(lin, 0, None), 1 / 2.4) - 0.055)
-        out8 = (np.clip(srgb, 0, 1) * 255 + 0.5).astype(np.uint8)[::-1]
+        bpy.data.images.remove(col_img)
+        ao8 = (img_np(ao_img)[..., 0] * 255).astype(np.uint8)
+        bpy.data.images.remove(ao_img)
+        ao_full = np.asarray(Image.fromarray(ao8).resize((self.atlas, self.atlas), Image.BILINEAR), np.uint8)
+        out8 = np.empty((self.atlas, self.atlas, 3), np.uint8)
+        for r0 in range(0, self.atlas, 512):
+            cc = c[r0:r0 + 512]
+            ao = ao_full[r0:r0 + 512].astype(np.float32) / 255
+            lin = np.where(cc <= 0.04045, cc / 12.92, ((cc + 0.055) / 1.055) ** 2.4)
+            lin *= (0.28 + 0.72 * ao ** 1.1)[..., None]
+            srgb = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(np.clip(lin, 0, None), 1 / 2.4) - 0.055)
+            out8[r0:r0 + 512] = (np.clip(srgb, 0, 1) * 255 + 0.5).astype(np.uint8)
+        del c, ao_full
+        out8 = out8[::-1]
         atlas_path = os.path.join(self.tmp, self.id + "_albedo.jpg")
         Image.fromarray(out8).save(atlas_path, quality=90, optimize=True)
 

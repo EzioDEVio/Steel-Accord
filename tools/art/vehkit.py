@@ -662,7 +662,7 @@ class ShadeCfg:
     def __init__(self, side, top, cams=None, k=3.0, k34=4.0, w34=1.0, mud_h=1.0, mud=(0.33, 0.29, 0.21),
                  mud_amt=0.55, rubber_objs=(), rubber_col=(0.075, 0.072, 0.068), tyre_axis_r=None,
                  overrides=None, under=(0.10, 0.10, 0.075), side_weight=1.0, top_weight=1.0, hubs=None,
-                 hub_period=40.0, hub_angle=-90.0, side_only=()):
+                 hub_period=40.0, hub_angle=-90.0, side_only=(), top_only=()):
         self.side, self.top = side, top
         self.cams = cams or {}
         self.k, self.k34, self.w34 = k, k34, w34
@@ -679,6 +679,7 @@ class ShadeCfg:
         # never shows skirt / fender colours baked into its hidden half.
         self.hubs = hubs or {}
         self.hub_period, self.hub_angle = hub_period, hub_angle
+        self.top_only = set(top_only)       # objects textured from the top view only (gun drawn elevated in side view)
         self.side_only = set(side_only)     # objects textured from the side view only (e.g. guns drawn rotated in the top view)
 
 
@@ -735,11 +736,15 @@ def shade_generic(P, N, names, refs, depth, cfg):
             dy = P[m, 1] - hy; dz = P[m, 2] - hz
             rho = np.sqrt(dy ** 2 + dz ** 2)
             th = np.degrees(np.arctan2(dz, dy))
-            per = cfg.hub_period
-            th2 = np.radians(cfg.hub_angle + ((th - cfg.hub_angle + per / 2) % per) - per / 2)
-            py_ = S.pc - (hy + rho * np.cos(th2)) / S.s
-            pz_ = S.pg - (hz + rho * np.sin(th2)) / S.s
-            c = sample(refs["side"], py_, pz_)
+            # radial profile: average of the side view over a sector around hub_angle (+-hub_period/2) at the
+            # texel's radius -> concentric, fully rotation-invariant wheel faces
+            c = 0
+            angs = cfg.hub_angle + np.linspace(-cfg.hub_period / 2, cfg.hub_period / 2, 7)
+            for a in np.radians(angs):
+                py_ = S.pc - (hy + rho * np.cos(a)) / S.s
+                pz_ = S.pg - (hz + rho * np.sin(a)) / S.s
+                c = c + sample(refs["side"], py_, pz_)
+            c = c / len(angs)
             face = np.abs(N[m, 0]) > 0.5
             inner = N[m, 0] * (1 if True else 1) > 0          # left wheels: +X faces the hull
             c = np.where(inner[:, None], c * 0.55, c)
@@ -749,6 +754,9 @@ def shade_generic(P, N, names, refs, depth, cfg):
                 tread = ~face
                 cm[tread] = cfg.rubber_col * (0.9 + 0.2 * value_noise(P[m][tread], 0.1, seed=9))[:, None] + c[tread] * 0.25
             col[m] = cm
+    if cfg.top_only:
+        to = np.isin(names, list(cfg.top_only))
+        col[to] = c_top[to] * (0.72 + 0.28 * np.clip(nz[to], 0, 1))[:, None]
     # rubber on tyre treads
     if cfg.rubber_objs:
         is_rub = np.array([n in cfg.rubber_objs for n in names])

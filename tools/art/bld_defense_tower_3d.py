@@ -173,4 +173,4 @@ def build():
 if not A.skip_build:
     build()
 if A.previews:
-    K.previews(GLB, A.previews, "m1_defense_tower", K.std_shots(8.0, 9.0, tz=3.2, dmul=1.15), only=A.only, concept=A.concept)
+    K.previews(GLB, A.previews, "m1_defense_tower", K.std_shots(8.0, 9.0, tz=3.8, dmul=1.35), only=A.only, concept=A.concept)

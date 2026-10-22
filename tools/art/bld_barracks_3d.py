@@ -45,8 +45,10 @@ def build():
         B.span("olivewall", x0 + 0.04, x1 - 0.04, WY0 + 0.04, WY1 - 0.04, F1, F2)
         B.span("conc", x0 - 0.08, x1 + 0.08, WY0 - 0.08, WY1 + 0.08, F1 - 0.12, F1 + 0.08, bev=True)
         B.span("conc", x0 - 0.1, x1 + 0.1, WY0 - 0.1, WY1 + 0.1, SL, SL + 0.45, bev=True)
-        B.span("olive", x0 - 0.14, x1 + 0.14, WY0 - 0.14, WY1 + 0.14, F2 - 0.05, F2 + 0.35, bev=True)  # coping
-        B.span("rooft", x0 + 0.05, x1 - 0.05, WY0 + 0.05, WY1 - 0.05, F2 + 0.3, F2 + 0.31)
+        for (cx0, cx1, cy0, cy1) in ((x0 - 0.14, x1 + 0.14, WY0 - 0.14, WY0 + 0.16), (x0 - 0.14, x1 + 0.14, WY1 - 0.16, WY1 + 0.14),
+                                     (x0 - 0.14, x0 + 0.16, WY0 + 0.16, WY1 - 0.16), (x1 - 0.16, x1 + 0.14, WY0 + 0.16, WY1 - 0.16)):
+            B.span("olive", cx0, cx1, cy0, cy1, F2 - 0.05, F2 + 0.42, bev=True)                     # coping ring
+        B.span("rooft", x0 + 0.16, x1 - 0.16, WY0 + 0.16, WY1 - 0.16, F2 - 0.05, F2 + 0.2)          # tan roof deck
         B.span("team", x0 + 0.6, x1 - 0.6, WY0 - 0.16, WY0 - 0.14, F2 + 0.05, F2 + 0.25, bottom=True)
         # downpipes at the corners
         for (px, py) in ((x0 + 0.15, WY0 - 0.12), (x1 - 0.15, WY0 - 0.12), (x0 + 0.15, WY1 + 0.12), (x1 - 0.15, WY1 + 0.12)):
@@ -73,11 +75,11 @@ def build():
                     B.span("conc", xc - 0.6, xc + 0.6, *sorted((face, face + out * 0.12)), z0 - 0.12, z0)
         # roof condensers + vents (as in the concept: three units per wing)
         cx = (x0 + x1) / 2
-        K.hvac(B, cx + 0.3 * so, WY0 + 2.0, F2 + 0.31, sx=1.3, sy=1.1, h=0.75)
-        K.hvac(B, cx - 0.4 * so, (WY0 + WY1) / 2 + 0.6, F2 + 0.31, sx=1.0, sy=0.9, h=0.6)
-        K.hvac(B, cx, WY1 - 1.8, F2 + 0.31, sx=1.3, sy=1.1, h=0.75)
+        K.hvac(B, cx + 0.3 * so, WY0 + 2.0, F2 + 0.2, sx=1.3, sy=1.1, h=0.75)
+        K.hvac(B, cx - 0.4 * so, (WY0 + WY1) / 2 + 0.6, F2 + 0.2, sx=1.0, sy=0.9, h=0.6)
+        K.hvac(B, cx, WY1 - 1.8, F2 + 0.2, sx=1.3, sy=1.1, h=0.75)
         B.cyl("metal", (cx - 1.2 * so, WY1 - 0.7, F2 + 0.6), 0.16, 0.6, seg=8)
-        B.span("hvac", cx + 1.3 * so - 0.4, cx + 1.3 * so + 0.4, WY1 - 0.9, WY1 - 0.3, F2 + 0.31, F2 + 0.75)
+        B.span("hvac", cx + 1.3 * so - 0.4, cx + 1.3 * so + 0.4, WY1 - 0.9, WY1 - 0.3, F2 + 0.2, F2 + 0.75)
         # upper walkway on the courtyard side (full length) + railing + posts
         bx0, bx1 = sorted((inner, inner + si * 1.05))
         B.span("grate", bx0, bx1, WY0 - 1.2, WY1, F1 - 0.12, F1)
@@ -111,7 +113,7 @@ def build():
     B.railing("metal", [(-2.6, UY0 - 0.1), (2.6, UY0 - 0.1)], F1, h=1.0, spacing=2.6)
     # single beacon on a short mast (east wing, rear)
     B.cyl("metal", (7.6, WY1 - 0.5, F2 + 0.3 + 1.1), 0.045, 2.2, seg=6)
-    B.span("metal", 7.45, 7.75, WY1 - 0.65, WY1 - 0.35, F2 + 0.31, F2 + 0.45)
+    B.span("metal", 7.45, 7.75, WY1 - 0.65, WY1 - 0.35, F2 + 0.2, F2 + 0.45)
     K.roof_beacon(B, kit, 7.6, WY1 - 0.5, F2 + 0.3 + 2.2, "Light_Beacon0", r=0.11)
 
     # ---------------------------------------------------------------- entrance block (front, single storey)
@@ -139,10 +141,10 @@ def build():
     for x in (-1.7, 1.7):
         B.span("win", x - 0.45, x + 0.45, UY0 - 0.03, UY0, 1.3, 2.1)
     # shade sail on four posts + picnic tables
-    for (x, y) in ((-2.9, -0.9), (2.9, -0.9), (-2.9, 3.1), (2.9, 3.1)):
-        P.cyl("metal", (x, y, SL + 1.5), 0.06, 3.0, seg=6)
-    P.frustum("shade", -3.0, 3.0, -1.0, 3.2, SL + 2.75, SL + 3.0, 0.0, insety=0.0)
-    P.span("shade", -3.0, 3.0, -1.0, 3.2, SL + 2.73, SL + 2.75, bottom=True)
+    for (x, y) in ((-2.3, -0.3), (2.3, -0.3), (-2.3, 2.9), (2.3, 2.9)):
+        P.cyl("metal", (x, y, SL + 1.45), 0.06, 2.9, seg=6)
+    P.frustum("shade", -2.4, 2.4, -0.4, 3.0, SL + 2.7, SL + 2.95, 0.5, insety=0.3)
+    P.span("shade", -2.4, 2.4, -0.4, 3.0, SL + 2.68, SL + 2.7, bottom=True)
     for (x, y) in ((-1.2, 0.4), (1.2, 0.4), (-1.2, 2.2), (1.2, 2.2)):
         P.span("wood", x - 0.9, x + 0.9, y - 0.4, y + 0.4, SL + 0.72, SL + 0.78)
         for s in (-1, 1):

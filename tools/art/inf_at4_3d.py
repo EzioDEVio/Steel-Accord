@@ -116,9 +116,9 @@ def aim_extra(p, kneel):
 def die_hook(keys):
     k0, k1, k2, k3, k4, k5 = keys
     k1["rifle_rot"] = V((D(-10), 0, 0))           # tube front dips as the hit lands
-    k2["rifle_rot"] = V((D(10), D(0), D(20)))
+    k2["rifle_rot"] = V((D(5), D(0), D(0)))
     k3["rifle_rot"] = V((D(40), D(0), D(35)))
-    k2["rifle_off"] = V((0.06, 0, 0)); k3["rifle_off"] = V((0.08, 0, 0))
+    k2["rifle_off"] = V((0.09, 0, 0)); k3["rifle_off"] = V((0.10, 0, 0))
 
 
 K.POSE_EXTRA = pose_extra

@@ -115,6 +115,10 @@ func _ready() -> void:
 		var vc: Node = load("res://scripts/vischeck.gd").new()
 		vc.battle = self
 		add_child(vc)
+	elif "m1shots" in args:
+		var m1: Node = load("res://scripts/m1shots.gd").new()
+		m1.battle = self
+		add_child(m1)
 	elif "pilotshots" in args:
 		var ps: Node = load("res://scripts/pilotshots.gd").new()
 		ps.battle = self
@@ -134,7 +138,7 @@ func _ready() -> void:
 
 
 func _automated() -> bool:
-	return "test" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args
+	return "test" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).
@@ -926,6 +930,7 @@ func placement_problem(team: int, k: String, pos: Vector3) -> String:
 			if absf(b.position.x - ac.x) < b.half.x + ah.x and absf(b.position.z - ac.z) < b.half.y + ah.y: return "Apron blocked"
 	for af in structures(0, "airfield", false) + structures(1, "airfield", false):
 		var r := Building.apron_rect(af.position, af.bdef)
+		if r.is_empty(): continue
 		var rc: Vector3 = r[0]; var rh: Vector2 = r[1]
 		if absf(pos.x - rc.x) < rh.x + h.x and absf(pos.z - rc.z) < rh.y + h.y: return "On an airfield apron"
 	for u in units:

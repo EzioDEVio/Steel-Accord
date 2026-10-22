@@ -24,9 +24,9 @@ def build():
     kit = K.Kit(ID, "WF", "WF_WarFactory", atlas=4096)
     B = kit.part("Building"); P = kit.part("Props")
     SL = 0.25
-    HX0, HX1, HY0, HY1 = -6.2, 12.2, -4.6, 10.2       # hall walls (front gable at HY0)
+    HX0, HX1, HY0, HY1 = -6.2, 12.2, -4.8, 9.4       # hall walls (front gable at HY0)
     HC = (HX0 + HX1) / 2
-    WH, CROWN = 7.4, 11.6                             # eaves height, arch crown (roof surface)
+    WH, CROWN = 8.0, 11.4                             # eaves height, arch crown (roof surface)
     BAYS = ((-4.8, 2.0), (4.0, 10.8))                 # vehicle bay openings (x ranges)
     BT = 6.4                                          # bay opening top
     half = (HX1 - HX0) / 2 + 0.35                     # roof overhang 0.35 beyond the walls
@@ -135,14 +135,17 @@ def build():
     butt_y(HX1 - 1.1, HX1 + 0.3, HY0, -1, 9.0, 2.6, 0.6)
     butt_x(HY0 - 0.3, HY0 + 1.0, HX0, -1, 8.6, 1.6)
     butt_x(HY0 - 0.3, HY0 + 1.0, HX1, 1, 8.6, 1.6)
-    for y in (HY0 + 4.8, HY0 + 9.6):
+    for y in (HY0 + 4.6, HY0 + 9.6, HY0 + 12.2):
         butt_x(y - 0.4, y + 0.4, HX1, 1, WH + 0.9, 1.4, 0.45)
     butt_x(HY1 - 1.0, HY1 + 0.3, HX1, 1, 8.6, 1.6)
     butt_x(HY1 - 1.0, HY1 + 0.3, HX0, -1, 8.6, 1.6)
-    butt_y(HX0 - 0.3, HX0 + 1.0, HY1, 1, 8.6, 1.6)
-    butt_y(HX1 - 1.0, HX1 + 0.3, HY1, 1, 8.6, 1.6)
+    butt_y(HX0 - 0.3, HX0 + 1.0, HY1, 1, 8.6, 1.3)
+    butt_y(HX1 - 1.0, HX1 + 0.3, HY1, 1, 8.6, 1.3)
     for x in (HC - 3.5, HC + 3.5):
-        butt_y(x - 0.4, x + 0.4, HY1, 1, WH + 0.6, 1.2, 0.45)
+        butt_y(x - 0.4, x + 0.4, HY1, 1, WH + 0.6, 1.1, 0.45)
+    for y in (HY0 + 4.8, HY0 + 9.6):                       # west side: buttresses rise above the annex roof
+        B.prism("conc", [(HX0, 5.3), (HX0 - 0.9, 5.3), (HX0 - 0.45, WH + 0.3), (HX0 - 0.45, WH + 0.9), (HX0, WH + 0.9)],
+                "y", y - 0.4, y + 0.4, bev=True)
     # wall details on the east side: louvres, small door, conduit
     for y in (HY0 + 2.6, HY0 + 7.4):
         K.louvre_panel(B, "x", HX1, y, 5.4, 1, w=2.2, h=0.9)
@@ -153,17 +156,19 @@ def build():
     # ---------------------------------------------------------------- bay interiors (seen through the openings)
     IY1 = HY0 + 9.5
     for bi, (bx0, bx1) in enumerate(BAYS):
-        B.room("clad", "floor", "dark", bx0 + 0.02, bx1 - 0.02, HY0 + 0.02, IY1, SL + 0.01, WH - 0.2)
+        B.room("bconc", "slab", "metal", bx0 + 0.02, bx1 - 0.02, HY0 + 0.02, IY1, SL + 0.01, WH - 0.2)
+        for x in ((bx0 + bx1) / 2 - 1.6, (bx0 + bx1) / 2 + 1.6):                                   # floor lane lines
+            B.span("yellow", x - 0.06, x + 0.06, HY0 + 0.3, IY1 - 0.5, SL + 0.01, SL + 0.02)
         # crane runway beams along both bay walls
         for x in (bx0 + 0.25, bx1 - 0.25):
             B.span("yellow" if bi == 0 else "metal", x - 0.15, x + 0.15, HY0 + 0.6, IY1 - 0.3, WH - 1.3, WH - 1.0, bottom=True)
         if bi == 0:                                       # yellow gantry crane bridge + hoist
-            yb = HY0 + 1.6
-            B.span("yellow", bx0 + 0.1, bx1 - 0.1, yb - 0.3, yb + 0.3, WH - 1.75, WH - 1.05, bottom=True)
-            B.span("hazard", bx0 + 0.3, bx1 - 0.3, yb - 0.32, yb - 0.3, WH - 1.65, WH - 1.4, bottom=True)
+            yb = HY0 + 1.1                                   # bridge just behind the header, visible from outside
+            B.span("yellow", bx0 + 0.1, bx1 - 0.1, yb - 0.3, yb + 0.3, BT - 0.75, BT - 0.1, bottom=True)
+            B.span("hazard", bx0 + 0.3, bx1 - 0.3, yb - 0.32, yb - 0.3, BT - 0.65, BT - 0.4, bottom=True)
             hx = (bx0 + bx1) / 2 - 0.8
-            B.span("yellow", hx - 0.45, hx + 0.45, yb - 0.45, yb + 0.45, WH - 2.25, WH - 1.75, bottom=True)
-            B.strut("dark", (hx, yb, WH - 2.25), (hx, yb, 3.2), 0.025, seg=4)
+            B.span("yellow", hx - 0.45, hx + 0.45, yb - 0.45, yb + 0.45, BT - 1.25, BT - 0.75, bottom=True)
+            B.strut("dark", (hx, yb, BT - 1.25), (hx, yb, 3.2), 0.025, seg=4)
             B.box("yellow", (hx, yb, 3.05), (0.3, 0.2, 0.3), bottom=True)
             # red machinery / tool carts inside (as in the concept)
             for (x, y, sx, sy, h) in ((bx0 + 1.0, HY0 + 4.5, 1.2, 0.8, 1.3), (bx1 - 1.1, HY0 + 5.2, 1.0, 1.4, 1.6),
@@ -212,7 +217,7 @@ def build():
     P.ladder((AX0 - 0.55, AY0 + 5.75, SL), (1, 0, 0), 1.8, (0, -1, 0), m="yellow")
     # lean-to canopy in front of the annex with stacked supplies underneath
     CY0 = -5.4
-    B.prism("corr", [(AY0, 3.8), (AY0, 3.6), (CY0, 3.0), (CY0, 3.15)], "x", AX0 - 0.2, AX1 - 0.3)
+    B.prism("roof", [(AY0, 3.8), (AY0, 3.6), (CY0, 3.0), (CY0, 3.15)], "x", AX0 - 0.2, AX1 - 0.3)
     B.span("metal", AX0 - 0.2, AX1 - 0.3, CY0 - 0.06, CY0 + 0.06, 2.85, 3.05, bottom=True)
     for x in (AX0, (AX0 + AX1) / 2, AX1 - 0.5):
         B.cyl("metal", (x, CY0 + 0.1, SL + 1.4), 0.06, 2.8, seg=6)
@@ -229,7 +234,7 @@ def build():
         K.ammo_pallet(P, x, y, SL, l)
     K.crate(P, 13.3, -1.8, SL, 1.0, 1.4, 1.0, m="wood")
     # rear: generator cabinets
-    for (x, y, sx, sy, h) in ((-2.0, 10.7, 1.6, 0.7, 1.6), (0.2, 10.7, 1.0, 0.7, 1.2), (8.0, 10.7, 1.8, 0.7, 1.5)):
+    for (x, y, sx, sy, h) in ((-2.0, 10.3, 1.6, 0.7, 1.6), (1.4, 10.3, 1.0, 0.7, 1.2), (8.6, 10.3, 1.8, 0.7, 1.5)):
         P.span("cabinet", x - sx / 2, x + sx / 2, y - sy / 2, y + sy / 2, SL, SL + h, bev=True)
 
     # ---------------------------------------------------------------- markers
