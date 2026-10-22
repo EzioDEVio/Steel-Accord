@@ -1,0 +1,564 @@
+{
+  "pack": "U.S. aircraft concept art",
+  "imported_by": "tools/import_aircraft.py",
+  "aircraft": [
+    {
+      "id": "f16",
+      "source_name": "F-16 Fighting Falcon",
+      "intended_use": "unit:jet_multirole",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 15.1,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/f16/F-16_Fighting_Falcon_4-view.png",
+          "from_pack": "b",
+          "sha256": "ff1ef1137c2b46cd3e2b6268c4c15345d75716a18d1030d646927f2a8a971dd9"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/f16/F-16_Fighting_Falcon_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "e4e00e39411e5530ee8e00157e816bfa0be11914d2c9412c0c8dd526834ab670"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/f16/F-16_Fighting_Falcon_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "1a8dfa1d4d4b99991b9c6f64df291f81ba1ecb3fc458575417071befb78e2a7f"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/f16/F-16_Fighting_Falcon_side_profile.png",
+          "from_pack": "b",
+          "sha256": "d5d9749150dadaf919932300bb6096920132a81c688485d54804af16f00eba5a"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/f16/F-16_Fighting_Falcon_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "d0b88fea5c1419dd1da099f8c50cf9526081d8c5324ce57b7fd3997283426315"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/f16/f16_top.png",
+        "icon": "res://assets/aircraft/f16/f16_icon.png"
+      },
+      "source_nose_direction": "up",
+      "sprite_px": 660,
+      "silhouette_px": [
+        575,
+        654
+      ],
+      "sprite_pixel_size_m": 0.02309,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "fa18",
+      "source_name": "F-A-18 Hornet",
+      "intended_use": "unit:jet_strike",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 17.1,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/fa18/F-A-18_Hornet_4-view.png",
+          "from_pack": "b",
+          "sha256": "e5ef2375af79a9ebb156b1c74da713f122449c1ccc182a2cca8292d97fe51e17"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/fa18/F-A-18_Hornet_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "d88b001745704e4c17cae95e725f3d19c57854c0362192d3c2de7fa0b8b7116f"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/fa18/F-A-18_Hornet_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "604a67636705dda2eaab047214474809bd22423dd774bb941cbeb51f2c05ec77"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/fa18/F-A-18_Hornet_side_profile.png",
+          "from_pack": "b",
+          "sha256": "a935f957746e74da81fb7a1a284a8217f1c3968106f8de3586f2b9866d57bff6"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/fa18/F-A-18_Hornet_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "b9e5cf9ffd3ada932846bc14091cfeeedc7bbddaff4705a0106bbaf957cb314c"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/fa18/fa18_top.png",
+        "icon": "res://assets/aircraft/fa18/fa18_icon.png"
+      },
+      "source_nose_direction": "down",
+      "sprite_px": 686,
+      "silhouette_px": [
+        674,
+        643
+      ],
+      "sprite_pixel_size_m": 0.02659,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "f22",
+      "source_name": "F-22 Raptor",
+      "intended_use": "unit:jet_air_superiority",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 18.9,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/f22/F-22_Raptor_4-view.png",
+          "from_pack": "b",
+          "sha256": "a69a8f603ff956a9afe7d6be3bf5a975cf80801a33805bab6d5ca0fc0e2f64fb"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/f22/F-22_Raptor_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "0bac503842da5e15f7fcdb573918e5625077722effeba853f59d1f54893cccae"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/f22/F-22_Raptor_front_three_quarter.png",
+          "from_pack": "a",
+          "sha256": "5dda2fbdec16e84ca942d36d6be3de5a6e95671e7383384c05f8c9550374c17e"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/f22/F-22_Raptor_side_profile.png",
+          "from_pack": "b",
+          "sha256": "1c2f089455a1a1fd69daaba00510a291ef4fe8af20c6dd89eb73b608a68e032a"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/f22/F-22_Raptor_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "fdb67d62fc028697d3f8487ce1bc4e03f8aa13ca632f7d737a7aa656cd9bda9f"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/f22/f22_top.png",
+        "icon": "res://assets/aircraft/f22/f22_icon.png"
+      },
+      "source_nose_direction": "up",
+      "sprite_px": 591,
+      "silhouette_px": [
+        522,
+        579
+      ],
+      "sprite_pixel_size_m": 0.03264,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "a10",
+      "source_name": "A-10 Thunderbolt II Warthog",
+      "intended_use": "unit:jet_ground_attack",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 16.3,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/a10/A-10_Thunderbolt_II_Warthog_4-view.png",
+          "from_pack": "b",
+          "sha256": "648e0c712df6847a3927dcf7c5390107a7322dea7b070d204b0084c39ba75749"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/a10/A-10_Thunderbolt_II_Warthog_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "a6d0900b00b1cca7f3ce7d997c3f1ea76fd8f48f47e174d4146842f67bc1f6e4"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/a10/A-10_Thunderbolt_II_Warthog_side_profile.png",
+          "from_pack": "b",
+          "sha256": "665686a609bb4f936589b85a5ce5aec24a08067cdf4dabdb1701eb5957c65c07"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/a10/A-10_Thunderbolt_II_Warthog_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "e8f1a304f258f314a81f0cd0531885675c49c1dbe55715e952f303ddb243020a"
+        }
+      },
+      "missing_or_corrupt": [
+        "individual_views/A-10_Thunderbolt_II_Warthog/A-10_Thunderbolt_II_Warthog_front_three_quarter.png"
+      ],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/a10/a10_top.png",
+        "icon": "res://assets/aircraft/a10/a10_icon.png"
+      },
+      "source_nose_direction": "down",
+      "sprite_px": 761,
+      "silhouette_px": [
+        749,
+        619
+      ],
+      "sprite_pixel_size_m": 0.02633,
+      "icon_from": "side_profile",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "ah64",
+      "source_name": "AH-64 Apache",
+      "intended_use": "unit:heli_attack",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 17.7,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/ah64/AH-64_Apache_4-view.png",
+          "from_pack": "b",
+          "sha256": "e89854e4d32f4825105be07faa6703360a2e3599b8f5fd2bc502eef5d7a6b9a8"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/ah64/AH-64_Apache_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "d17d6c734ba8a25f428deb190df0a79676cc26a7d2ca991bf3e5a9c7d798cd74"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/ah64/AH-64_Apache_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "7424997711de0a9dd45889ef491321a2ab32a4ba55620ca7ab7fcfa7d85c8047"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/ah64/AH-64_Apache_side_profile.png",
+          "from_pack": "b",
+          "sha256": "eed51eb43a64ebe698bce4c1fcfdda686ffdb16fd369ef39113ea6fd630204d3"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/ah64/AH-64_Apache_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "80c265e9d8bac85b74df9eb2469ea15f83e494bc6cfeab3f72b2e6e4354d21a5"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/ah64/ah64_top.png",
+        "icon": "res://assets/aircraft/ah64/ah64_icon.png"
+      },
+      "source_nose_direction": "left",
+      "sprite_px": 766,
+      "silhouette_px": [
+        560,
+        754
+      ],
+      "sprite_pixel_size_m": 0.02347,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "uh60",
+      "source_name": "UH-60 Black Hawk",
+      "intended_use": "unit:heli_transport",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 19.8,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/uh60/UH-60_Black_Hawk_4-view.png",
+          "from_pack": "b",
+          "sha256": "b87f050ac4e45a0e4144658a727ef6cf9e03cf79d57780e5d2baa428276a3228"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/uh60/UH-60_Black_Hawk_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "fe0366d51fab47b76950276f13f3d5bd42899cf6caaeaa4e07c8713f67cfd7f5"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/uh60/UH-60_Black_Hawk_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "7bc2aeb503b85617f9a8b4df0c00e00bbfe0bcca7bcc5d22005169558e8acb76"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/uh60/UH-60_Black_Hawk_side_profile.png",
+          "from_pack": "b",
+          "sha256": "e418d51029af03347533e2c789b517149c3afcbbca83013ccf023b635ab576da"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/uh60/UH-60_Black_Hawk_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "d7f70eebdc76b52bd4941a8041c1bbac70289880159ad604e68a5f1129dae891"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/uh60/uh60_top.png",
+        "icon": "res://assets/aircraft/uh60/uh60_icon.png"
+      },
+      "source_nose_direction": "down",
+      "sprite_px": 637,
+      "silhouette_px": [
+        557,
+        625
+      ],
+      "sprite_pixel_size_m": 0.03168,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "ch47",
+      "source_name": "CH-47 Chinook",
+      "intended_use": "unit:heli_heavy_transport",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 30.1,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/ch47/CH-47_Chinook_4-view.png",
+          "from_pack": "b",
+          "sha256": "c6030dcadcd287594f419ed78d48b5473990f4a32e8f3db82434649227162396"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/ch47/CH-47_Chinook_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "cbfd140f2c40966222b8a57b4a96e12ba2dc7330f6fd551a62c2f534ea9967eb"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/ch47/CH-47_Chinook_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "18781f8074f2653f8223c40cf1c5dc04f1376c12708ae48bbe9a8120dbc23610"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/ch47/CH-47_Chinook_side_profile.png",
+          "from_pack": "b",
+          "sha256": "4ecc8b27e0fdfc5bbb3a679d9a63b418828b3b73a6d740a4f3e97d8ee440b1ea"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/ch47/CH-47_Chinook_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "dd8a657a0ffac6a52f0aaa4cf17e7f75f66f89c798270a50040f947a9883e901"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/ch47/ch47_top.png",
+        "icon": "res://assets/aircraft/ch47/ch47_icon.png"
+      },
+      "source_nose_direction": "down",
+      "sprite_px": 610,
+      "silhouette_px": [
+        404,
+        598
+      ],
+      "sprite_pixel_size_m": 0.05033,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "b52",
+      "source_name": "B-52 Stratofortress",
+      "intended_use": "support_power:carpet_bombing",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 48.5,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/b52/B-52_Stratofortress_4-view.png",
+          "from_pack": "b",
+          "sha256": "57d758f817baf5873d62e6db831bdf7a915f2b80e068a0b9d8e636ccbb9b1819"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/b52/B-52_Stratofortress_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "9b08c090052c0e9e4bd06c4b3a2f4aefeefd5599b8c1c7241cbef082ca1af45f"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/b52/B-52_Stratofortress_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "4f4d222028bdd6ced7c10eb4e96842f7107cc94ba609674404e77b847ab8ad3d"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/b52/B-52_Stratofortress_side_profile.png",
+          "from_pack": "b",
+          "sha256": "6436ef88d4f9242ce9524710622693ba56021db5be8461ca4a728a4633fd0f94"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/b52/B-52_Stratofortress_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "7b170d91bad5ec8608af9d4d986df8d0790437eee4d6b296a4907172227d3ad9"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/b52/b52_top.png",
+        "icon": "res://assets/aircraft/b52/b52_icon.png"
+      },
+      "source_nose_direction": "up",
+      "sprite_px": 766,
+      "silhouette_px": [
+        754,
+        571
+      ],
+      "sprite_pixel_size_m": 0.08494,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "b1",
+      "source_name": "B-1 Lancer",
+      "intended_use": "support_power:supersonic_strike",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 44.5,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/b1/B-1_Lancer_4-view.png",
+          "from_pack": "b",
+          "sha256": "346253dacbd67804f9aa0c0367645a93d6d5c2d10da9974cd7a215477214da31"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/b1/B-1_Lancer_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "d3ac2a76979da11e284c1b728a54e86539d23e5c33e17f96731ea08d8b3ecb7c"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/b1/B-1_Lancer_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "b47efced199c643ec6c3b69c8f877eafde40553e89ea4d3025ba5d22a13c1531"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/b1/B-1_Lancer_side_profile.png",
+          "from_pack": "b",
+          "sha256": "4017207402c734e49cc2587853bc7b5db2dc20b8cedf5a0818d84693563d95c9"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/b1/B-1_Lancer_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "93b752d2b6fb6158fe35800c9678ef00544c214e592e0e84e4c138ce9e452d12"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/b1/b1_top.png",
+        "icon": "res://assets/aircraft/b1/b1_icon.png"
+      },
+      "source_nose_direction": "up",
+      "sprite_px": 653,
+      "silhouette_px": [
+        641,
+        597
+      ],
+      "sprite_pixel_size_m": 0.07454,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "b2",
+      "source_name": "B-2 Spirit",
+      "intended_use": "support_power:stealth_precision_strike",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 21.0,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/b2/B-2_Spirit_4-view.png",
+          "from_pack": "b",
+          "sha256": "e3a39bc8b2da4c4b66260a27b0114f7becd8bb7bf054c06b65741aaf113fa5e1"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/b2/B-2_Spirit_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "a80c7d570131477d5c110976e2a8761cbfd95cfe893a14fd63b0bdaef833a4bd"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/b2/B-2_Spirit_front_three_quarter.png",
+          "from_pack": "a",
+          "sha256": "3e0296d496b73d12f789e152bb388a6dc996402cd9dbdc1d1a734e270f311095"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/b2/B-2_Spirit_side_profile.png",
+          "from_pack": "b",
+          "sha256": "b1747c417b4d1b7a693a26b8e6e72f2377b052a5913c2a53529e55eda365170c"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/b2/B-2_Spirit_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "4a2197a94877e47396f5f7c8a9e673785f8bb971bb2bd374eaffc84ec79b47c2"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/b2/b2_top.png",
+        "icon": "res://assets/aircraft/b2/b2_icon.png"
+      },
+      "source_nose_direction": "down",
+      "sprite_px": 776,
+      "silhouette_px": [
+        764,
+        433
+      ],
+      "sprite_pixel_size_m": 0.0485,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    },
+    {
+      "id": "sr71",
+      "source_name": "SR-71 Blackbird",
+      "intended_use": "support_power:recon_overflight",
+      "representation": "sprite (top-down billboard on a horizontal quad) + portrait icon; NOT a 3D model",
+      "provenance": "AI-generated concept art supplied by client (ChatGPT image generation, Oct 2026); packs US_Aircraft_Game_Assets.zip / US_Aircraft_Game_Assets_Expanded.zip",
+      "license_status": "client-supplied; generator terms permit use by client - confirm before release",
+      "shipping_status": "DEV ONLY - release review required: depicts real aircraft designs, real names (manufacturer trademarks) and U.S. national insignia",
+      "reference_length_m": 32.7,
+      "source_files": {
+        "contact_sheet": {
+          "file": "art_source/us_aircraft/sr71/SR-71_Blackbird_4-view.png",
+          "from_pack": "b",
+          "sha256": "c186c136cec8a6e229a0798fb97ec47b7ddee3d1e0a147d3e38b86f23f16c7a6"
+        },
+        "overhead_game_view": {
+          "file": "art_source/us_aircraft/sr71/SR-71_Blackbird_overhead_game_view.png",
+          "from_pack": "b",
+          "sha256": "82c27c4a4fe445baf146f1702a867f253b728b985b7d2206b9e2e60122179d22"
+        },
+        "front_three_quarter": {
+          "file": "art_source/us_aircraft/sr71/SR-71_Blackbird_front_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "3227662591ba78ae41bce68f999ac1b82d45686b6703f611a840d92d3323c4b4"
+        },
+        "side_profile": {
+          "file": "art_source/us_aircraft/sr71/SR-71_Blackbird_side_profile.png",
+          "from_pack": "b",
+          "sha256": "36626061c55f878f25e00cfd61119dc36cc3b73def8f45fb520a9d59f58189af"
+        },
+        "rear_three_quarter": {
+          "file": "art_source/us_aircraft/sr71/SR-71_Blackbird_rear_three_quarter.png",
+          "from_pack": "b",
+          "sha256": "d63f28b2a5b1afc066464f003d350a8f403874c605458e98d6b023333951eb2a"
+        }
+      },
+      "missing_or_corrupt": [],
+      "game_files": {
+        "sprite_top": "res://assets/aircraft/sr71/sr71_top.png",
+        "icon": "res://assets/aircraft/sr71/sr71_icon.png"
+      },
+      "source_nose_direction": "down",
+      "sprite_px": 658,
+      "silhouette_px": [
+        516,
+        646
+      ],
+      "sprite_pixel_size_m": 0.05062,
+      "icon_from": "front_three_quarter",
+      "conversion_status": "sprite+icon generated"
+    }
+  ]
+}

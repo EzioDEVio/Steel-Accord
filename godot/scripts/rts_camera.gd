@@ -1,5 +1,6 @@
 # Steel Accord - RTS camera rig: pivot on the ground, camera on a pitched boom.
-# Arrow keys / screen-edge pan, mouse wheel zoom, middle-drag pan, comma/period rotate, Home resets.
+# Right-drag (via Commander) / arrow keys / screen edge pan, mouse wheel zoom, middle-drag rotate,
+# comma/period rotate, Home resets.
 class_name RTSCamera
 extends Node3D
 
@@ -71,12 +72,19 @@ func _unhandled_input(e: InputEvent) -> void:
 			_mid_drag = mb.pressed
 	elif e is InputEventMouseMotion and _mid_drag:
 		var mm := e as InputEventMouseMotion
-		var k := zoom * 0.0025
-		var right := Vector3(cos(yaw), 0, -sin(yaw))
-		var fwd := Vector3(-sin(yaw), 0, -cos(yaw))
-		focus(position - right * mm.relative.x * k + fwd * mm.relative.y * k)
+		yaw -= mm.relative.x * 0.006
+		pitch_deg = clampf(pitch_deg + mm.relative.y * 0.15, 35.0, 75.0)
+		_apply()
 	elif e is InputEventKey and e.pressed and (e as InputEventKey).keycode == KEY_HOME:
-		yaw = 0.0; zoom = 70.0; _apply()
+		yaw = 0.0; zoom = 70.0; pitch_deg = 52.0; _apply()
+
+
+## Grab-and-drag scrolling: the map follows the mouse (used for right-drag).
+func drag_pan(rel: Vector2) -> void:
+	var k := zoom * 0.0022
+	var right := Vector3(cos(yaw), 0, -sin(yaw))
+	var fwd := Vector3(-sin(yaw), 0, -cos(yaw))
+	focus(position - right * rel.x * k + fwd * rel.y * k)
 
 
 ## Ground point (y = 0 plane) under a screen position, or null.

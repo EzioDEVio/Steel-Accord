@@ -1,7 +1,15 @@
-# Steel Accord - local player command input.
-# Left click / drag: select (Shift adds, double-click selects same type on screen).
-# Right click: move, or attack when over an enemy. A then left click: attack-move. S: stop.
-# Ctrl+1..9: assign group; 1..9: recall (press twice to centre the camera). Esc: cancel / deselect.
+# Steel Accord - local player command input (mouse-first, C&C-style).
+#
+# CLASSIC scheme (default):
+#   Left click unit ............ select (Shift: add/remove, double-click: all of that type on screen)
+#   Left drag .................. box select
+#   Left click ground / enemy .. with units selected: move / attack (Ctrl: force-fire, Alt: add waypoint)
+#   Right click ................ deselect / cancel the active command mode
+#   Right drag ................. scroll the map
+# ALTERNATE scheme: left click / drag only selects; right click commands; right drag still scrolls.
+# Command modes (set by command-card buttons or hotkeys) consume the next left click:
+#   attack-move (A), guard (G), force-fire (F), waypoint (W), support power (button only).
+# Other: S stop, X scatter, R return-to-base (jets), Ctrl+A select all, Ctrl+1..9 / 1..9 groups, Esc cancel.
 class_name Commander
 extends Node
 
@@ -10,16 +18,24 @@ signal selection_changed
 var battle: Node
 var camera: RTSCamera
 var team := 0
+var scheme := "classic"
 var selected: Array[Unit] = []
 var groups := {}
-var attack_mode := false
+var mode := ""                  # "", attack_move, guard, force, waypoint, power:<id>
 var dragging := false
 var drag_from := Vector2.ZERO
 var drag_to := Vector2.ZERO
+var rdown := false
+var rdrag := false
+var rfrom := Vector2.ZERO
 var hover: Unit = null
 var _last_click_t := -1.0
 var _last_group := -1
 var _last_group_t := -1.0
+
+# kept for tests / HUD compatibility
+var attack_mode: bool:
+	get: return mode == "attack_move"
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -31,39 +47,68 @@ func _unhandled_input(e: InputEvent) -> void:
 			elif dragging:
 				dragging = false
 				drag_to = mb.position
-				if attack_mode:
-					_attack_move_at(mb.position)
-					attack_mode = false
-				elif drag_from.distance_to(drag_to) < 6.0:
-					_click_select(mb.position, mb.shift_pressed, mb.double_click or _is_double())
-				else:
-					_box_select(Rect2(drag_from, Vector2.ZERO).expand(drag_to), mb.shift_pressed)
-		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			if attack_mode:
-				attack_mode = false
-			else:
-				_command_at(mb.position)
+				_left_release(mb)
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				rdown = true; rdrag = false; rfrom = mb.position
+			elif rdown:
+				rdown = false
+				if not rdrag: _right_click(mb)
+				rdrag = false
 	elif e is InputEventMouseMotion:
 		var mm := e as InputEventMouseMotion
 		if dragging: drag_to = mm.position
+		if rdown:
+			if rdrag or mm.position.distance_to(rfrom) > 8.0:
+				rdrag = true
+				camera.drag_pan(mm.relative)
 		hover = unit_at(mm.position)
 		_update_cursor()
 	elif e is InputEventKey and e.pressed and not e.echo:
-		var k := e as InputEventKey
-		if k.keycode == KEY_A and not selected.is_empty():
-			attack_mode = true; _update_cursor()
-		elif k.keycode == KEY_S and not selected.is_empty():
-			battle.issue({"type": "stop", "ids": _ids()})
-		elif k.keycode == KEY_ESCAPE:
-			if attack_mode: attack_mode = false
+		_key(e as InputEventKey)
+
+
+func _key(k: InputEventKey) -> void:
+	var has_sel := not live_selection().is_empty()
+	match k.keycode:
+		KEY_A:
+			if k.ctrl_pressed: select_all()
+			elif has_sel: set_mode("attack_move")
+		KEY_G:
+			if has_sel: set_mode("guard")
+		KEY_F:
+			if has_sel: set_mode("force")
+		KEY_W:
+			if has_sel: set_mode("waypoint")
+		KEY_S:
+			if has_sel: cmd_stop()
+		KEY_X:
+			if has_sel: cmd_scatter()
+		KEY_R:
+			if has_sel: cmd_return()
+		KEY_ESCAPE:
+			if mode != "": set_mode("")
 			else: _set_selection([])
-			_update_cursor()
-		elif k.keycode >= KEY_1 and k.keycode <= KEY_9:
-			var g := int(k.keycode - KEY_0)
-			if k.ctrl_pressed:
-				groups[g] = selected.duplicate()
-			else:
-				_recall(g)
+		_:
+			if k.keycode >= KEY_1 and k.keycode <= KEY_9:
+				var g := int(k.keycode - KEY_0)
+				if k.ctrl_pressed: groups[g] = selected.duplicate()
+				else: _recall(g)
+
+
+func set_mode(m: String) -> void:
+	mode = m
+	_update_cursor()
+
+
+func live_selection() -> Array:
+	return selected.filter(func(u): return is_instance_valid(u) and not u.dead)
+
+
+func _ids() -> Array:
+	var a := []
+	for u in live_selection(): a.append(u.uid)
+	return a
 
 
 func _is_double() -> bool:
@@ -73,19 +118,14 @@ func _is_double() -> bool:
 	return d
 
 
-func _ids() -> Array:
-	var a := []
-	for u in selected:
-		if not u.dead: a.append(u.uid)
-	return a
-
-
 func _update_cursor() -> void:
 	var shape := Input.CURSOR_ARROW
-	if attack_mode or (hover and hover.team != team and not selected.is_empty()):
+	if mode != "" or (hover and hover.team != team and not selected.is_empty()):
 		shape = Input.CURSOR_CROSS
 	elif hover and hover.team == team:
 		shape = Input.CURSOR_POINTING_HAND
+	elif rdrag:
+		shape = Input.CURSOR_MOVE
 	Input.set_default_cursor_shape(shape)
 
 
@@ -95,7 +135,7 @@ func unit_at(screen: Vector2) -> Unit:
 	var best_d := INF
 	for u: Unit in battle.units:
 		if u.dead or not battle.is_visible_to(team, u): continue
-		var c := u.global_position + Vector3.UP * 1.4
+		var c := u.world_center()
 		if camera.cam.is_position_behind(c): continue
 		var sp := camera.cam.unproject_position(c)
 		var edge := camera.cam.unproject_position(c + camera.cam.global_basis.x * u.def.radius * 1.2)
@@ -106,6 +146,82 @@ func unit_at(screen: Vector2) -> Unit:
 	return best
 
 
+# ------------------------------------------------------------------ mouse
+func _left_release(mb: InputEventMouseButton) -> void:
+	var p := mb.position
+	var is_click := drag_from.distance_to(drag_to) < 6.0
+	if mode != "":
+		if is_click: _apply_mode(p, mb)
+		return
+	if not is_click:
+		_box_select(Rect2(drag_from, Vector2.ZERO).expand(drag_to), mb.shift_pressed)
+		return
+	var u := unit_at(p)
+	var own := u != null and u.team == team
+	if scheme == "classic" and not live_selection().is_empty() and not own and not mb.shift_pressed:
+		_command_at(p, mb.ctrl_pressed, mb.alt_pressed)
+		return
+	if scheme == "classic" and not live_selection().is_empty() and own and mb.ctrl_pressed:
+		_command_at(p, true, false)   # Ctrl+click on own unit = force-fire (attack friendly)
+		return
+	_click_select(p, mb.shift_pressed, mb.double_click or _is_double())
+
+
+func _right_click(mb: InputEventMouseButton) -> void:
+	if mode != "":
+		set_mode(""); return
+	if scheme == "classic":
+		_set_selection([])
+	else:
+		_command_at(mb.position, mb.ctrl_pressed, mb.alt_pressed)
+
+
+func _apply_mode(p: Vector2, mb: InputEventMouseButton) -> void:
+	var g: Variant = camera.ground_at(p)
+	var u := unit_at(p)
+	var m := mode
+	if not mb.shift_pressed: set_mode("")   # Shift keeps the mode active for repeated orders
+	if m.begins_with("power:"):
+		if g != null:
+			battle.issue({"type": "power", "team": team, "id": m.substr(6), "pos": g})
+			FX.order_marker(battle, g, Color(1, 0.8, 0.2, 0.9))
+		return
+	if live_selection().is_empty() or g == null: return
+	match m:
+		"attack_move":
+			battle.issue({"type": "attack_move", "ids": _ids(), "points": formation(g)})
+			FX.order_marker(battle, g, Color(1, 0.55, 0.2, 0.9))
+		"guard":
+			var gu := u.uid if (u and u.team == team) else -1
+			var gp: Vector3 = u.position if gu != -1 else g
+			battle.issue({"type": "guard", "ids": _ids(), "points": formation(gp, 5.0), "unit": gu})
+			FX.order_marker(battle, gp, Color(0.4, 0.7, 1.0, 0.9))
+		"force":
+			_command_at(p, true, false)
+		"waypoint":
+			battle.issue({"type": "move", "ids": _ids(), "points": formation(g), "append": true})
+			FX.order_marker(battle, g, Color(0.6, 1, 0.8, 0.9))
+			set_mode("waypoint")   # waypoint mode stays on until right click / Esc
+
+
+func _command_at(p: Vector2, force := false, waypoint := false) -> void:
+	if live_selection().is_empty(): return
+	var u := unit_at(p)
+	if u and (u.team != team or force):
+		battle.issue({"type": "attack", "ids": _ids(), "target": u.uid})
+		FX.order_marker(battle, u.global_position, Color(1, 0.25, 0.2, 0.9))
+		return
+	var g: Variant = camera.ground_at(p)
+	if g == null: return
+	if force:
+		battle.issue({"type": "force_ground", "ids": _ids(), "pos": g})
+		FX.order_marker(battle, g, Color(1, 0.2, 0.1, 0.9))
+		return
+	battle.issue({"type": "move", "ids": _ids(), "points": formation(g), "append": waypoint})
+	FX.order_marker(battle, g, Color(0.4, 1, 0.5, 0.9))
+
+
+# ------------------------------------------------------------------ selection
 func _set_selection(arr: Array) -> void:
 	for u in selected:
 		if is_instance_valid(u): u.set_selected(false)
@@ -113,7 +229,12 @@ func _set_selection(arr: Array) -> void:
 	for u in arr:
 		if not u.dead:
 			selected.append(u); u.set_selected(true)
+	if mode != "" and not mode.begins_with("power:"): set_mode("")
 	selection_changed.emit()
+
+
+func select_all() -> void:
+	_set_selection(battle.units.filter(func(u): return u.team == team and not u.dead))
 
 
 func _click_select(p: Vector2, add: bool, dbl: bool) -> void:
@@ -139,7 +260,7 @@ func _box_select(r: Rect2, add: bool) -> void:
 	var arr: Array = selected.duplicate() if add else []
 	for u: Unit in battle.units:
 		if u.team != team or u.dead or u in arr: continue
-		var c := u.global_position + Vector3.UP * 1.2
+		var c := u.world_center()
 		if camera.cam.is_position_behind(c): continue
 		if r.grow(6.0).has_point(camera.cam.unproject_position(c)):
 			arr.append(u)
@@ -159,30 +280,25 @@ func _recall(g: int) -> void:
 	_set_selection(arr)
 
 
-func _command_at(p: Vector2) -> void:
-	if selected.is_empty(): return
-	var u := unit_at(p)
-	if u and u.team != team:
-		battle.issue({"type": "attack", "ids": _ids(), "target": u.uid})
-		FX.order_marker(battle, u.global_position, Color(1, 0.25, 0.2, 0.9))
-		return
-	var g: Variant = camera.ground_at(p)
-	if g == null: return
-	battle.issue({"type": "move", "ids": _ids(), "points": formation(g)})
-	FX.order_marker(battle, g, Color(0.4, 1, 0.5, 0.9))
+# ------------------------------------------------------------------ immediate commands (keys and command card)
+func cmd_stop() -> void:
+	battle.issue({"type": "stop", "ids": _ids()})
 
 
-func _attack_move_at(p: Vector2) -> void:
-	if selected.is_empty(): return
-	var g: Variant = camera.ground_at(p)
-	if g == null: return
-	battle.issue({"type": "attack_move", "ids": _ids(), "points": formation(g)})
-	FX.order_marker(battle, g, Color(1, 0.55, 0.2, 0.9))
+func cmd_scatter() -> void:
+	var c := Vector3.ZERO
+	var live := live_selection()
+	for u in live: c += u.position
+	battle.issue({"type": "scatter", "ids": _ids(), "center": c / maxi(1, live.size())})
+
+
+func cmd_return() -> void:
+	battle.issue({"type": "return", "ids": _ids()})
 
 
 ## Grid formation centred on `dest`, facing the direction of travel; slots matched left-to-right.
-func formation(dest: Vector3) -> Array:
-	var live: Array = selected.filter(func(u): return not u.dead)
+func formation(dest: Vector3, spacing := 7.5) -> Array:
+	var live: Array = live_selection()
 	var n := live.size()
 	if n == 0: return []
 	var c := Vector3.ZERO
@@ -193,12 +309,11 @@ func formation(dest: Vector3) -> Array:
 	var right := Vector3(-fwd.z, 0, fwd.x)
 	var cols := int(ceil(sqrt(n)))
 	var rows := int(ceil(float(n) / cols))
-	var sp := 7.5
 	var slots: Array = []
 	for i in n:
 		var col := i % cols
 		var row := i / cols
-		slots.append(dest + right * (col - (cols - 1) / 2.0) * sp - fwd * (row - (rows - 1) / 2.0) * sp)
+		slots.append(dest + right * (col - (cols - 1) / 2.0) * spacing - fwd * (row - (rows - 1) / 2.0) * spacing)
 	var order := range(n)
 	order.sort_custom(func(a, b): return live[a].global_position.dot(right) < live[b].global_position.dot(right))
 	slots.sort_custom(func(a, b): return a.dot(right) < b.dot(right))

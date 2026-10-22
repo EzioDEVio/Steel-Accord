@@ -150,9 +150,9 @@ static func wreck_fire(host: Node3D) -> void:
 	l.position = Vector3(0, 2.5, -1.0)
 
 
-static func tracer_mesh() -> MeshInstance3D:
+static func tracer_mesh(width := 0.12, length := 4.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	var b := BoxMesh.new(); b.size = Vector3(0.12, 0.12, 4.0)
+	var b := BoxMesh.new(); b.size = Vector3(width, width, length)
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = Color(1.0, 0.75, 0.35)
@@ -160,6 +160,69 @@ static func tracer_mesh() -> MeshInstance3D:
 	b.material = m
 	mi.mesh = b
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+## Missile / rocket body with motor glow and a smoke trail (trail particles are emitted in world space).
+static func missile_node(guided: bool) -> Node3D:
+	var n := Node3D.new()
+	var body := MeshInstance3D.new()
+	var c := CylinderMesh.new()
+	c.top_radius = 0.09; c.bottom_radius = 0.09; c.height = 1.6 if guided else 1.1; c.radial_segments = 8
+	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.78, 0.78, 0.74); m.roughness = 0.5
+	c.material = m
+	body.mesh = c; body.rotation.x = PI / 2
+	n.add_child(body)
+	var glow := MeshInstance3D.new()
+	var q := QuadMesh.new(); q.size = Vector2(0.9, 0.9); q.material = _mat(true)
+	(q.material as StandardMaterial3D).billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	(q.material as StandardMaterial3D).albedo_color = Color(1, 0.75, 0.4)
+	glow.mesh = q; glow.position.z = 0.9
+	n.add_child(glow)
+	var p := CPUParticles3D.new()
+	var tq := QuadMesh.new(); tq.size = Vector2(0.9, 0.9); tq.material = _mat(false)
+	p.mesh = tq; p.amount = 40 if guided else 24; p.lifetime = 1.4
+	p.local_coords = false
+	p.direction = Vector3(0, 0, 1); p.spread = 8.0
+	p.initial_velocity_min = 0.5; p.initial_velocity_max = 1.5
+	p.gravity = Vector3(0, 0.6, 0)
+	var cv := Curve.new(); cv.add_point(Vector2(0, 0.4)); cv.add_point(Vector2(1, 2.4))
+	p.scale_amount_curve = cv
+	p.color_ramp = _ramp([Color(0.85, 0.84, 0.8, 0.7), Color(0.7, 0.7, 0.68, 0.35), Color(0.6, 0.6, 0.6, 0)])
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	p.position.z = 0.9
+	n.add_child(p)
+	p.emitting = true
+	return n
+
+
+static func launch_puff(parent: Node, pos: Vector3) -> void:
+	_flash(parent, pos, 3.0, 8.0, Color(1, 0.7, 0.4), 0.15)
+	_particles(parent, pos, 10, 1.2, false, 1.4, Vector2(1, 3), 50.0,
+		[Color(0.8, 0.8, 0.78, 0.6), Color(0.7, 0.7, 0.7, 0.3), Color(0.6, 0.6, 0.6, 0)], Vector3(0, 0.5, 0))
+
+
+static func small_flash(parent: Node, pos: Vector3) -> void:
+	_particles(parent, pos, 4, 0.08, true, 0.6, Vector2(2, 4), 20.0,
+		[Color(1, 0.9, 0.6, 1), Color(1, 0.5, 0.1, 0)], Vector3.ZERO, Vector3.UP, false)
+
+
+static func bullet_hit(parent: Node, pos: Vector3, armour: bool) -> void:
+	if armour:
+		_particles(parent, pos, 5, 0.25, true, 0.35, Vector2(4, 9), 70.0,
+			[Color(1, 0.9, 0.6, 1), Color(1, 0.5, 0.1, 0)], Vector3(0, -9, 0), Vector3.UP, false)
+	else:
+		_particles(parent, pos, 6, 0.9, false, 0.7, Vector2(1, 3), 35.0,
+			[Color(0.45, 0.39, 0.3, 0.8), Color(0.42, 0.37, 0.3, 0)], Vector3(0, -4, 0))
+
+
+static func bomb_node() -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var c := CapsuleMesh.new(); c.radius = 0.25; c.height = 1.9
+	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.25, 0.27, 0.2); m.roughness = 0.6
+	c.material = m
+	mi.mesh = c
+	mi.rotation.x = PI / 2
 	return mi
 
 
