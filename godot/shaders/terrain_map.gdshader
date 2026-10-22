@@ -31,7 +31,7 @@ void fragment() {
 	float d3 = texture(n_detail, p / 61.0).r;
 	float d4 = texture(n_detail, p / 230.0).r;
 
-	vec3 sand = mix(vec3(0.60, 0.50, 0.36), vec3(0.70, 0.60, 0.44), d3) * (0.88 + 0.22 * d1);
+	vec3 sand = mix(vec3(0.56, 0.46, 0.33), vec3(0.66, 0.55, 0.40), d3) * (0.86 + 0.24 * d1);
 	sand = mix(sand, vec3(0.66, 0.52, 0.38), smoothstep(0.55, 0.8, d4) * 0.5);       // reddish clay patches
 	vec3 rock = mix(vec3(0.40, 0.36, 0.31), vec3(0.55, 0.50, 0.44), d2) * (0.8 + 0.3 * d1);
 	rock = mix(rock, vec3(0.62, 0.56, 0.47), smoothstep(0.6, 0.75, fract(wpos.y * 0.18 + d2 * 0.6)) * 0.35); // strata

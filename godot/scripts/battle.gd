@@ -82,6 +82,11 @@ func _ready() -> void:
 	await World.environment(self)
 	props = World.props()
 	if terrain:
+		# bigger map and higher camera: thinner haze so distant ridges keep their contrast
+		for we in find_children("*", "WorldEnvironment", false, false):
+			var env: Environment = (we as WorldEnvironment).environment
+			env.fog_density = float(terrain.data.get("fog_density", 0.00045))
+			env.fog_aerial_perspective = 0.4
 		add_child(terrain)
 		await terrain.build_visual()
 		print("LOAD terrain visual %d ms" % (Time.get_ticks_msec() - _t0))
