@@ -39,6 +39,10 @@ func _place(k: String, at: Vector3) -> Building:
 	var now: Array = battle.structures(0, k, false)
 	if now.size() <= before:
 		printerr("TESTDBG place %s at %s refused: %s" % [k, str(at), battle.placement_problem(0, k, battle.commander.ghost_pos)])
+		for o in battle.obstacles_2d:
+			if Vector2(o.x - at.x, o.y - at.z).length() < 25.0: printerr("TESTDBG   obstacle ", o)
+		for u in battle.units:
+			if u.position.distance_to(at) < 25.0: printerr("TESTDBG   unit ", u.kind, " ", u.position)
 		return null
 	return now[now.size() - 1]
 
