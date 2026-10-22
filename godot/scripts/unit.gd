@@ -145,7 +145,7 @@ func _build_card_visual(visual: String) -> void:
 
 ## Team-coloured ellipse under card units: a contact shadow with a coloured rim (readable on any terrain).
 func _add_team_marker() -> void:
-	var r: float = def.radius * (1.3 if def.get("visual") == "vehicle_art" else 1.4)
+	var r: float = def.radius * (1.05 if def.get("visual") == "vehicle_art" else 1.2)
 	var mi := MeshInstance3D.new()
 	var q := QuadMesh.new(); q.size = Vector2(r * 2.0, r * 2.0); q.orientation = PlaneMesh.FACE_Y
 	var g := GradientTexture2D.new()
@@ -153,7 +153,7 @@ func _add_team_marker() -> void:
 	var gr := Gradient.new()
 	var tc: Color = UnitDefs.TEAM_COLORS[team].lightened(0.2)
 	gr.set_color(0, Color(0, 0, 0, 0.55)); gr.set_color(1, Color(0, 0, 0, 0))
-	gr.add_point(0.72, Color(0, 0, 0, 0.35)); gr.add_point(0.8, Color(tc.r, tc.g, tc.b, 0.9)); gr.add_point(0.9, Color(tc.r, tc.g, tc.b, 0.0))
+	gr.add_point(0.74, Color(0, 0, 0, 0.3)); gr.add_point(0.8, Color(tc.r, tc.g, tc.b, 0.75)); gr.add_point(0.86, Color(tc.r, tc.g, tc.b, 0.0))
 	g.gradient = gr; g.width = 64; g.height = 64
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = g; m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -162,7 +162,7 @@ func _add_team_marker() -> void:
 	mi.mesh = q
 	mi.position.y = 0.12
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.scale = Vector3(1.0, 1.0, 1.5 if def.get("visual") == "vehicle_art" else 1.0)
+	mi.scale = Vector3(1.0, 1.0, 1.35 if def.get("visual") == "vehicle_art" else 1.0)
 	body.add_child(mi)
 
 

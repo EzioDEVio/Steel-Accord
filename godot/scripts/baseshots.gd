@@ -35,8 +35,10 @@ func _run() -> void:
 	get_tree().root.size = Vector2i(1280, 720)
 	var c: Vector3 = battle.start_pos[0]
 	await _wait(0.3)
-	_look(c + Vector3(0, 0, -20), 90.0)
-	await _shot("b01_start")
+	var part2: bool = "part2" in battle.args
+	if not part2:
+		_look(c + Vector3(0, 0, -20), 90.0)
+		await _shot("b01_start")
 	# a base: power plants, barracks, depot, factory, airfield, radar, tower, hesco
 	var layout := [["power_plant", Vector3(-40, 0, -6)], ["power_plant", Vector3(-40, 0, 14)], ["barracks", Vector3(40, 0, -16)],
 		["supply_depot", Vector3(-50, 0, -40)], ["war_factory", Vector3(0, 0, -50)], ["radar", Vector3(45, 0, 16)],
@@ -60,6 +62,9 @@ func _run() -> void:
 	for i in reds.size():
 		var u: Unit = battle._spawn(reds[i], 1, Vector3(-20 + i * 12, 0, y - 30), PI)
 		u.reset_physics_interpolation()
+	if part2:
+		await _part2(c, dz)
+		return
 	await _wait(2.0)
 	_look(c + Vector3(0, 0, -35), 120.0)
 	await _shot("b02_base_overview")
@@ -115,4 +120,36 @@ func _run() -> void:
 	if not ch.is_empty():
 		_look(ch[0].position, 70.0)
 		await _shot("b12_hauler")
+	get_tree().quit()
+
+
+func _part2(c: Vector3, dz: Unit) -> void:
+	await _wait(0.3)
+	battle.commander._set_selection([dz])
+	battle.commander.set_mode("place:power_plant")
+	_look(c + Vector3(0, 0, -50), 80.0)
+	battle.commander.mouse_override = Vector2(640, 360)
+	await _wait(0.1)
+	await _shot("b08_placement_blocked")
+	battle.commander.set_mode("")
+	var bk: Building = battle.structures(0, "barracks")[0]
+	battle.commander._set_selection([bk])
+	battle.issue({"type": "produce", "team": 0, "id": bk.uid, "kind": "rifleman"})
+	battle.issue({"type": "produce", "team": 0, "id": bk.uid, "kind": "at4"})
+	_look(bk.position, 80.0)
+	await _wait(0.5)
+	await _shot("b09_production_card")
+	battle.commander._set_selection([])
+	var heli: Unit = battle._spawn("ah64", 0, c + Vector3(60, 0, -120), 0.3)
+	heli.reset_physics_interpolation()
+	var ch: Unit = battle._spawn("ch47", 0, c + Vector3(-20, 0, -120), -0.4)
+	ch.reset_physics_interpolation()
+	battle.issue({"type": "move", "ids": [heli.uid, ch.uid], "points": [heli.position + Vector3(0, 0, -40), ch.position + Vector3(0, 0, -40)]})
+	await _wait(1.0)
+	_look(heli.position + Vector3(0, 0, -heli.altitude * 0.78), 46.0)
+	await _shot("b10_heli_a")
+	await _wait(0.1)
+	await _shot("b11_heli_b")
+	_look(ch.position + Vector3(0, 0, -ch.altitude * 0.78), 55.0)
+	await _shot("b12_ch47")
 	get_tree().quit()

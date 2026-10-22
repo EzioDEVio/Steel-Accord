@@ -3,7 +3,7 @@
 class_name EconPanel
 extends Control
 
-const BTN := Vector2(128, 64)
+const BTN := Vector2(138, 64)
 const COLS := 4
 
 var battle: Node
@@ -138,8 +138,11 @@ func _build_structure_menu(b: Building) -> void:
 			Vector2((i % COLS) * (BTN.x + 4), (i / COLS) * (BTN.y + 4)), "")
 		i += 1
 	var sell := func(): battle.issue({"type": "sell", "team": team, "id": b.uid})
-	var sb := _make("sell", "Sell (50%)", 0, "", sell, Vector2(3 * (BTN.x + 4), BTN.y + 4), "Sell this structure for half its cost")
-	sb.custom_minimum_size = Vector2(BTN.x, 30); sb.size = Vector2(BTN.x, 30)
+	var sb: Button = hud._button("Sell (50%)", sell, Vector2(BTN.x, 30))
+	sb.position = Vector2(3 * (BTN.x + 4), BTN.y + 4 + 34)
+	sb.tooltip_text = "Sell this structure for half its cost (scaled by damage)"
+	add_child(sb)
+	buttons["sell"] = sb
 
 
 ## Production queue: one small tile per queued unit; the first shows progress. Click a tile: cancel the last (refund).

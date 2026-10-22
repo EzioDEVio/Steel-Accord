@@ -129,6 +129,8 @@ func _make_ghost(k: String) -> void:
 	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	fm.albedo_color = Color(0.3, 1.0, 0.4, 0.35)
+	fm.no_depth_test = true          # the footprint stays visible over structures it overlaps (shows why it is blocked)
+	fm.render_priority = 10
 	b.material = fm
 	var foot := MeshInstance3D.new()
 	foot.mesh = b; foot.name = "Foot"; foot.position.y = 0.15
