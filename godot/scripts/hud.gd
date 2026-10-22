@@ -146,7 +146,7 @@ func _process(dt: float) -> void:
 	mini_ctl.position = mini_rect.position; mini_ctl.size = mini_rect.size
 	card.position = Vector2(maxf(632.0, size.x - 4 * 154 - 200), size.y - 82)
 	power_box.position = Vector2(size.x - 198, 56)
-	econ.position = Vector2(card.position.x, size.y - 82 - 2 * 68 - 40)
+	econ.position = Vector2(card.position.x, size.y - 12 - econ.height - (84.0 if card.visible else 0.0))
 	scheme_btn.position = Vector2(14, 10)
 	help_btn.position = Vector2(210, 10)
 	menu_btn.position = Vector2(346, 10)

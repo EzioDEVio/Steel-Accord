@@ -324,6 +324,7 @@ func sim_tick(dt: float) -> void:
 	_update_shots(dt)
 	_update_flights(dt)
 	_update_bombs(dt)
+	_update_supply_drops(dt)
 	_update_debris(dt)
 	_update_visibility()
 	sim_time += dt
@@ -416,7 +417,8 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 	node.reset_physics_interpolation()
 	shots.append({"node": node, "pos": from, "dir": dir, "aim": aim, "left": dist, "speed": float(w.speed),
 		"shooter": shooter, "target": tunit, "dmg": float(w.damage), "splash": float(w.splash),
-		"homing": w.proj == "missile", "kind": w.proj, "targets": w.targets, "vs": w.get("vs", {})})
+		"homing": w.proj == "missile", "kind": w.proj, "targets": w.targets, "vs": w.get("vs", {}),
+		"arc": w.proj == "arty", "dist0": maxf(dist, 1.0)})
 
 
 var _snd_t := {}   # "uid:clip" -> sim time of the last report, so automatic weapons play one burst sound per burst
@@ -430,6 +432,7 @@ func _fire_sound(shooter: Unit, w: Dictionary, from: Vector3) -> void:
 	match str(w.proj):
 		"missile", "rocket": clip = "rocket_launch"; gap = 0.25; db = -2.0 if w.proj == "rocket" else 0.0; pitch = 1.15 if w.proj == "rocket" else 0.95
 		"shell": clip = "explosion_big"; gap = 0.5; db = -9.0; pitch = 1.7
+		"arty": clip = "explosion_big"; gap = 1.0; db = -3.0; pitch = 0.85
 		"bullet":
 			if w.id == "gau_cannon": clip = "a10_cannon"; gap = 1.9; db = 3.0
 			elif shooter.def.get("visual") == "infantry": clip = "rifle_burst"; gap = 1.1; db = -6.0
@@ -458,6 +461,10 @@ func _update_shots(dt: float) -> void:
 			s.pos += s.dir * step
 			s.left -= step
 			s.node.global_position = s.pos
+			if s.get("arc", false):
+				# ballistic shell: parabolic lift over the straight line (visual height only)
+				var tf: float = 1.0 - s.left / s.dist0
+				s.node.global_position = s.pos + Vector3.UP * (4.0 * s.dist0 * 0.22 * tf * (1.0 - tf))
 			if s.dir.length() > 0.01:
 				s.node.look_at(s.pos + s.dir, Vector3.UP if absf(s.dir.y) < 0.99 else Vector3.RIGHT)
 
@@ -478,7 +485,9 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 			if d < s.splash:
 				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash) * _armor_mult(s, o), s.shooter)
 	var ground := p.y < 1.5
-	if s.kind == "bullet":
+	if s.kind == "arty":
+		FX.explosion(self, Vector3(p.x, 0.2, p.z), 1.1)
+	elif s.kind == "bullet":
 		FX.bullet_hit(self, Vector3(p.x, maxf(p.y, 0.1), p.z), direct, s.shooter != null and s.shooter.is_air())
 	elif direct or not ground:
 		FX.impact(self, p, true)
@@ -971,6 +980,12 @@ func spawn_produced(b: Building, k: String) -> void:
 	exit_dir = exit_dir.normalized() if exit_dir.length() > 0.1 else Vector3(0, 0, 1.0 if team == 0 else -1.0)
 	var reach := absf(exit_dir.x) * b.half.x + absf(exit_dir.z) * b.half.y + 5.0
 	var pos := b.position + exit_dir * reach
+	var ep: Vector3 = b.exit_point()
+	if ep != Vector3.INF:
+		pos = ep            # the model's door / vehicle bay
+		var to_r := b.rally - pos
+		to_r.y = 0.0
+		if to_r.length() > 0.5: exit_dir = to_r.normalized()
 	var yaw := atan2(-exit_dir.x, -exit_dir.z)
 	var u := _spawn(k, team, pos, yaw)
 	var d: Dictionary = UnitDefs.def_of(k)
@@ -981,7 +996,10 @@ func spawn_produced(b: Building, k: String) -> void:
 		u.position = b.pads[i].pos
 		u.home = b.pads[i].pos
 		u.heading = 0.0 if team == 0 else PI
-		u.state = Unit.S.LANDED; u.altitude = 0.4; u.speed_cur = 0.0; u.body.position.y = 0.4; u.airborne = false
+		if b.runway.size() == 2 and u.domain == "jet":
+			u.has_runway = true; u.rw_start = b.runway[0]; u.rw_end = b.runway[1]
+			u.park_heading = u._runway_heading(); u.heading = u.park_heading
+		u.state = Unit.S.LANDED; u.altitude = u.ground_alt(); u.speed_cur = 0.0; u.body.position.y = u.altitude; u.airborne = false
 		u.reset_physics_interpolation()
 		return
 	u.reset_physics_interpolation()
@@ -1055,3 +1073,100 @@ func rubble_at(p: Vector3, team: int) -> Dictionary:
 	for r in rubble:
 		if r.team == team and absf(p.x - r.pos.x) < r.half.x and absf(p.z - r.pos.z) < r.half.y: return r
 	return {}
+
+
+# ------------------------------------------------------------------ supply drops (Supply Drop Zone)
+var drop_flights: Array = []    # {"node", "pos", "dir", "target", "team", "left", "value", "released"}
+var drop_crates: Array = []     # {"node", "pos", "vy", "team", "value", "canopy"}
+const C130_SPRITE := "res://assets/aircraft/c130/c130_top.png"
+const C130_MODEL := "res://assets/units3d/c130/c130.glb"
+const CRATE_MODEL := "res://assets/units3d/props/supply_crate_chute.glb"
+
+
+func launch_supply_drop(b: Building) -> void:
+	var d: Dictionary = b.bdef.drop
+	var target: Vector3 = b.drop_point_world()
+	var edge_z: float = map_bounds.end.y + 140.0 if b.team == 0 else map_bounds.position.y - 140.0
+	var start := Vector3(target.x + 60.0, 0, edge_z)
+	var dir := (target - start); dir.y = 0.0; dir = dir.normalized()
+	var node := Node3D.new()
+	add_child(node)
+	if ResourceLoader.exists(C130_MODEL):
+		var m: Node3D = (load(C130_MODEL) as PackedScene).instantiate()
+		m.scale = Vector3.ONE * UnitDefs.SCALE.aircraft
+		m.position.y = 34.0
+		node.add_child(m)
+	else:
+		var s := Sprite3D.new()
+		var tex: Texture2D = load(C130_SPRITE)
+		s.texture = tex; s.axis = Vector3.AXIS_Y; s.shaded = true; s.double_sided = true
+		s.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		s.pixel_size = 40.4 * UnitDefs.SCALE.aircraft / float(tex.get_width()) * 1.05   # C-130 span 40.4 m
+		s.position.y = 34.0
+		s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		node.add_child(s)
+	node.position = start
+	node.rotation.y = atan2(-dir.x, -dir.z)
+	node.reset_physics_interpolation()
+	SFX.play(node, "jet_flyby", start, 2.0, 0.7, true)
+	drop_flights.append({"node": node, "pos": start, "dir": dir, "target": target, "team": b.team,
+		"crates": int(d.crates), "value": int(d.value), "released": 0})
+	if b.team == 0 and hud: hud.flash_message("Supply drop inbound")
+
+
+func _update_supply_drops(dt: float) -> void:
+	for f in drop_flights.duplicate():
+		f.pos += f.dir * 55.0 * dt
+		f.node.position = f.pos
+		var along: float = (f.pos - f.target).dot(f.dir)
+		# release the crates in a short stick centred on the drop point
+		while f.released < f.crates and along >= -12.0 + f.released * 8.0 - 20.0:
+			var c := _make_crate()
+			var p: Vector3 = f.pos + Vector3(0, 32.0, 0)
+			c.node.position = p
+			c.node.reset_physics_interpolation()
+			drop_crates.append({"node": c.node, "canopy": c.canopy, "pos": p, "vy": -2.0, "team": f.team, "value": f.value,
+				"drift": f.dir * 12.0})
+			f.released += 1
+		if along > 500.0:
+			f.node.queue_free()
+			drop_flights.erase(f)
+	for c in drop_crates.duplicate():
+		c.vy = maxf(c.vy - 9.0 * dt, -5.0)     # canopy opens: terminal descent ~5 m/s
+		c.drift = c.drift.move_toward(Vector3.ZERO, 6.0 * dt)
+		c.pos += Vector3(c.drift.x, c.vy, c.drift.z) * dt
+		c.node.position = c.pos
+		if c.pos.y <= 0.0:
+			c.pos.y = 0.0
+			c.node.position = c.pos
+			if c.canopy: c.canopy.visible = false
+			deliver(c.team, c.value)
+			FX.impact(self, c.pos, false)
+			if c.team == 0 and hud: hud.flash_message("Supply crate +$%d" % c.value)
+			drop_crates.erase(c)
+			_fade_node(c.node, 6.0)
+
+
+func _make_crate() -> Dictionary:
+	if ResourceLoader.exists(CRATE_MODEL):
+		var m: Node3D = (load(CRATE_MODEL) as PackedScene).instantiate()
+		add_child(m)
+		return {"node": m, "canopy": m.find_child("Canopy", true, false)}
+	var n := Node3D.new()
+	var box := MeshInstance3D.new()
+	var bm := BoxMesh.new(); bm.size = Vector3(2, 1.5, 2)
+	var mat := StandardMaterial3D.new(); mat.albedo_color = Color(0.33, 0.36, 0.22)
+	bm.material = mat; box.mesh = bm; box.position.y = 0.75
+	n.add_child(box)
+	var can := MeshInstance3D.new()
+	var sm := SphereMesh.new(); sm.radius = 3.5; sm.height = 2.4; sm.is_hemisphere = true
+	var cm := StandardMaterial3D.new(); cm.albedo_color = Color(0.45, 0.47, 0.36)
+	sm.material = cm; can.mesh = sm; can.position.y = 7.0
+	n.add_child(can)
+	add_child(n)
+	return {"node": n, "canopy": can}
+
+
+func _fade_node(n: Node, after: float) -> void:
+	await get_tree().create_timer(after, false).timeout
+	if is_instance_valid(n): n.queue_free()

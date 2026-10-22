@@ -43,6 +43,11 @@ var airborne := true
 var run_out_t := 0.0
 var ret_phase := 0
 var site: Node = null          # dozer: structure under construction
+var has_runway := false        # jets: airfield with a runway (taxi out, roll along it, land on it, taxi back)
+var rw_start := Vector3.ZERO
+var rw_end := Vector3.ZERO
+var park_heading := 0.0
+var taxi_phase := 0            # ground: 0 taxi to runway start, 1 take-off roll | landing: 2 rollout, 3 taxi to pad
 var haul_depot: Node = null    # hauler: supply depot it delivers to
 var haul_phase := 0            # 0 fly to pile, 1 loading, 2 fly to depot, 3 unloading
 var haul_t := 0.0
@@ -580,6 +585,8 @@ func sim_tick(dt: float) -> void:
 		_surface_tick(dt)
 	rotation.y = heading
 	_fire_weapons()
+	if def.has("heal"): _heal_aura(dt)
+	if state == S.LANDED and hp < def.hp: hp = minf(def.hp, hp + def.hp * 0.03 * dt)   # serviced on its pad
 	if gun:
 		recoil = move_toward(recoil, 0.0, dt * 1.6)
 		gun.position = gun_rest + Vector3(0, 0, recoil)
@@ -778,6 +785,25 @@ func _haul_tick(dt: float) -> void:
 	body.rotation.x = -clampf(speed_cur / def.speed, 0.0, 1.0) * 0.12
 
 
+var heal_t := 0.0
+
+
+## Support units (ambulance, medic): restore health to nearby friendly units of the listed kinds.
+func _heal_aura(dt: float) -> void:
+	heal_t -= dt
+	if heal_t > 0.0: return
+	heal_t = 1.0
+	var h: Dictionary = def.heal
+	for u in battle.units:
+		if u == self or u.dead or u.team != team or u is Building or u.hp >= u.def.hp: continue
+		var kind_ok := false
+		for t in h.targets:
+			if t == "infantry" and u.def.get("visual", "") == "infantry": kind_ok = true
+			if t == "vehicle" and u.domain == "ground" and u.def.get("visual", "") != "infantry": kind_ok = true
+		if kind_ok and flat_dist(u.position) <= float(h.radius):
+			u.hp = minf(u.def.hp, u.hp + u.def.hp * float(h.per_s))
+
+
 func weapons_ready() -> bool:
 	if domain == "jet": return airborne and state != S.RETURN
 	if domain == "heli": return state != S.RETURN and state != S.LANDED and altitude >= def.altitude * 0.6
@@ -845,9 +871,10 @@ func _jet_tick(dt: float) -> void:
 	if state == S.LANDED:
 		airborne = false
 		speed_cur = 0.0
-		altitude = move_toward(altitude, 0.4, dt * 8.0)
+		taxi_phase = 0
+		altitude = move_toward(altitude, ground_alt(), dt * 8.0)
 		position = position.move_toward(home, dt * 6.0)
-		heading = lerp_angle(heading, 0.0, minf(1.0, dt * 3.0))
+		heading = lerp_angle(heading, park_heading, minf(1.0, dt * 3.0))
 		bank = 0.0
 		rearm_t -= dt
 		if rearm_t <= 0.0:
@@ -856,6 +883,22 @@ func _jet_tick(dt: float) -> void:
 				var full := int(def.weapons[i].get("ammo", -1))
 				if full > 0 and w_ammo[i] < full: w_ammo[i] += 1; break
 		vel = Vector3.ZERO
+		return
+	if not airborne and has_runway and taxi_phase >= 2:
+		_runway_landing_ground(dt)
+		return
+	if not airborne and has_runway and taxi_phase == 0:
+		# taxi from the parking spot to the runway threshold, then line up on the runway heading
+		bank = 0.0
+		altitude = ground_alt()
+		if flat_dist(rw_start) > 2.0:
+			_taxi_to(rw_start, dt)
+		else:
+			position = Vector3(rw_start.x, 0, rw_start.z)
+			heading = _runway_heading()
+			speed_cur = 0.0
+			taxi_phase = 1
+		vel = forward() * speed_cur
 		return
 	if not airborne:
 		# take-off roll straight down the pad heading, lift off at 80 % of minimum flying speed
@@ -893,6 +936,28 @@ func _jet_tick(dt: float) -> void:
 			if guard_unit and not guard_unit.dead: guard_pos = guard_unit.position
 			if target == null: target = battle.find_enemy_near_point(self, guard_pos, def.sight)
 			steer = _run_steer(target.position, dt) if target else _orbit_point(guard_pos, 60.0)
+		S.RETURN when has_runway:
+			# land on the runway: long final aligned with it, touch down at the threshold, roll out, taxi back
+			var rdir := (rw_end - rw_start).normalized()
+			var approach := rw_start - rdir * 120.0
+			if ret_phase == 0:
+				steer = approach
+				if flat_dist(approach) < 35.0: ret_phase = 1
+			else:
+				steer = rw_start + rdir * 6.0
+				var d := flat_dist(rw_start)
+				var to_thr := Vector3(rw_start.x - position.x, 0, rw_start.z - position.z)
+				var err := absf(wrapf(atan2(-to_thr.x, -to_thr.z) - heading, -PI, PI))
+				if d > 25.0 and err > deg_to_rad(60.0):
+					ret_phase = 0                                 # badly aligned: go around
+				altitude = move_toward(altitude, def.altitude * clampf((d - 2.0) / 120.0, 0.0, 1.0) + ground_alt(), dt * 12.0)
+				throttle = clampf(d * 0.3, def.min_speed * 0.5, def.speed * 0.75)
+				min_v = 4.0
+				if d < 6.0 or (to_thr.dot(rdir) < 0.0 and d < 20.0):
+					airborne = false; taxi_phase = 2; altitude = ground_alt()
+					position = Vector3(position.x, 0, position.z)
+					heading = _runway_heading()
+					return
 		S.RETURN:
 			var approach := home + Vector3(0, 0, 110.0)       # line up south of the pad, land heading north
 			if ret_phase == 0:
@@ -921,6 +986,49 @@ func _jet_tick(dt: float) -> void:
 	speed_cur = move_toward(speed_cur, throttle, def.accel * dt)
 	position += forward() * speed_cur * dt
 	bank = move_toward(bank, (turn / maxf(step, 1e-4)) * 0.55, dt * 1.8)
+	vel = forward() * speed_cur
+
+
+func ground_alt() -> float:
+	return 0.0 if vis and def.has("model3d") and ResourceLoader.exists(str(def.model3d)) else 0.4
+
+
+func _runway_heading() -> float:
+	var d := rw_end - rw_start
+	return atan2(-d.x, -d.z)
+
+
+## Ground movement for jets: slow taxi with tight turns.
+func _taxi_to(p: Vector3, dt: float) -> void:
+	var to := Vector3(p.x - position.x, 0, p.z - position.z)
+	var diff := wrapf(atan2(-to.x, -to.z) - heading, -PI, PI)
+	var step := deg_to_rad(110.0) * dt
+	heading = wrapf(heading + clampf(diff, -step, step), -PI, PI)
+	var ts := 7.0 * clampf(cos(diff), 0.15, 1.0)
+	ts = minf(ts, maxf(1.5, to.length() * 1.5))
+	speed_cur = move_toward(speed_cur, ts, 6.0 * dt)
+	position += forward() * speed_cur * dt
+
+
+## After touchdown: brake along the runway, then taxi to the parking spot and park.
+func _runway_landing_ground(dt: float) -> void:
+	bank = 0.0
+	if state != S.RETURN and taxi_phase == 3:
+		taxi_phase = 0          # new orders while taxiing in: turn round and take off again
+		return
+	altitude = ground_alt()
+	if taxi_phase == 2:
+		speed_cur = move_toward(speed_cur, 7.0, def.accel * 1.2 * dt)
+		position += forward() * speed_cur * dt
+		var along := (position - rw_start).dot((rw_end - rw_start).normalized())
+		if speed_cur <= 7.5 or along > (rw_end - rw_start).length() * 0.8:
+			taxi_phase = 3
+	else:
+		if flat_dist(home) > 1.5:
+			_taxi_to(home, dt)
+		else:
+			position = Vector3(home.x, 0, home.z)
+			state = S.LANDED; rearm_t = 1.5; speed_cur = 0.0; taxi_phase = 0
 	vel = forward() * speed_cur
 
 
@@ -976,7 +1084,7 @@ func _fire_weapons() -> void:
 		if tunit and not (tunit.domain in w.targets): continue
 		if tunit == null and not ("ground" in w.targets): continue
 		var d := flat_dist(tpos)
-		if d > w.range: continue
+		if d > w.range or d < float(w.get("min_range", 0.0)): continue
 		var to: Vector3 = tpos - position
 		var bearing := atan2(-to.x, -to.z)
 		var facing_err: float

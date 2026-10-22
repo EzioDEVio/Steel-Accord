@@ -18,10 +18,10 @@ var attacking: Array = []      # uids sent on the current attack
 const ORDER := [
 	["power_plant", -36, -6], ["barracks", 36, 14], ["supply_depot", 40, -16], ["power_plant", -36, 16],
 	["war_factory", 0, 42], ["defense_tower", -26, 64], ["power_plant", -60, 2], ["defense_tower", 26, 64],
-	["airfield", -95, 60], ["power_plant", -60, 22], ["hesco", -12, 70], ["hesco", 12, 70],
+	["airfield", -100, 70], ["power_plant", -60, 22], ["drop_zone", 70, 20], ["hesco", -12, 70], ["hesco", 12, 70],
 ]
 const BARRACKS_MIX := ["rifleman", "rifleman", "at4"]
-const FACTORY_MIX := ["vanguard", "hmmwv_50cal", "vanguard", "avenger"]
+const FACTORY_MIX := ["abrams", "hmmwv_50cal", "bradley", "avenger", "abrams", "paladin"]
 const AIR_MIX := ["ah64", "a10"]
 
 

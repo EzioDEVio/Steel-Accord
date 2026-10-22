@@ -14,17 +14,17 @@ const PILE_CASH := 20000             # per supply pile
 
 const DEFS := {
 	"command_center": {
-		"name": "Command Center", "art": "command_center", "cost": 2000, "build_time": 40.0, "power": 0,
+		"name": "Command Center", "art": "command_center", "model3d": "res://assets/units3d/command_center/command_center.glb", "cost": 2000, "build_time": 40.0, "power": 0,
 		"hp": 5000.0, "size": Vector2(26, 22), "sight": 90.0, "produces": ["dozer"], "requires": [],
 		"desc": "Headquarters. Produces Dozers. Losing every structure and unit loses the match.", "buildable": false,
 	},
 	"power_plant": {
-		"name": "Power Plant", "art": "power_plant", "cost": 800, "build_time": 12.0, "power": 10,
+		"name": "Power Plant", "art": "power_plant", "model3d": "res://assets/units3d/power_plant/power_plant.glb", "cost": 800, "build_time": 12.0, "power": 10,
 		"hp": 1500.0, "size": Vector2(18, 16), "sight": 50.0, "produces": [], "requires": [],
 		"desc": "+10 power. Under-powered bases build and produce at half speed.",
 	},
 	"barracks": {
-		"name": "Barracks", "art": "barracks", "cost": 500, "build_time": 15.0, "power": -1,
+		"name": "Barracks", "art": "barracks", "model3d": "res://assets/units3d/barracks/barracks.glb", "cost": 500, "build_time": 15.0, "power": -1,
 		"hp": 2000.0, "size": Vector2(20, 16), "sight": 60.0, "produces": ["rifleman", "at4"], "requires": ["power_plant"],
 		"desc": "Trains infantry.",
 	},
@@ -34,40 +34,49 @@ const DEFS := {
 		"free_unit": "ch47", "desc": "Cash drop-off. Comes with one CH-47 that hauls supplies from the nearest pile.",
 	},
 	"war_factory": {
-		"name": "War Factory", "art": "war_factory", "cost": 2000, "build_time": 25.0, "power": -2,
-		"hp": 3000.0, "size": Vector2(28, 22), "sight": 60.0, "produces": ["hmmwv_50cal", "vanguard", "avenger"],
-		"requires": ["supply_depot"], "desc": "Builds vehicles.",
+		"name": "War Factory", "art": "war_factory", "model3d": "res://assets/units3d/war_factory/war_factory.glb", "cost": 2000, "build_time": 25.0, "power": -2,
+		"hp": 3000.0, "size": Vector2(28, 22), "sight": 60.0, "produces": ["hmmwv", "hmmwv_50cal", "hmmwv_tow", "mrap", "hmmwv_medical", "m113", "stryker", "bradley", "abrams", "avenger", "paladin", "m777"],
+		"requires": ["supply_depot"], "repair": true,
+		"desc": "Builds vehicles. Damaged vehicles parked at its repair bay are repaired (select vehicles, click the War Factory).",
 	},
 	"airfield": {
-		"name": "Airfield", "art": "airfield", "cost": 1200, "build_time": 25.0, "power": -2,
-		"hp": 2500.0, "size": Vector2(34, 26), "sight": 70.0, "produces": ["f16", "a10", "ah64"],
+		"name": "Airfield", "art": "airfield", "model3d": "res://assets/units3d/airfield/airfield.glb", "cost": 1200, "build_time": 25.0, "power": -2,
+		"hp": 2500.0, "size": Vector2(60, 44), "sight": 70.0, "produces": ["f16", "a10", "ah64"],
 		"requires": ["war_factory"], "pads": 4, "desc": "Builds aircraft. Four parking pads; aircraft rearm on their pad.",
 	},
 	"defense_tower": {
-		"name": "Defense Tower", "art": "defense_tower", "cost": 1000, "build_time": 15.0, "power": -2,
+		"name": "Defense Tower", "art": "defense_tower", "model3d": "res://assets/units3d/defense_tower/defense_tower.glb", "cost": 1000, "build_time": 15.0, "power": -2,
 		"hp": 1800.0, "size": Vector2(8, 8), "sight": 95.0, "produces": [], "requires": ["barracks"],
 		"weapons": [{"id": "tower_missile", "range": 85.0, "reload": 1.8, "damage": 140.0, "splash": 2.5, "proj": "missile",
 			"speed": 140.0, "spread": 0.5, "targets": ["ground", "heli", "jet"], "facing_deg": 360.0}],
 		"desc": "Missile tower: engages vehicles, infantry and aircraft. Fires slowly when under-powered.",
 	},
+	"drop_zone": {
+		"name": "Supply Drop Zone", "art": "airdrop_zone", "model3d": "res://assets/units3d/drop_zone/drop_zone.glb",
+		"cost": 2500, "build_time": 30.0, "power": -1, "hp": 1800.0, "size": Vector2(24, 24), "sight": 60.0,
+		"produces": [], "requires": ["supply_depot"], "drop": {"every": 80.0, "crates": 4, "value": 250},
+		"desc": "A C-130 drops 4 supply crates by parachute every 80 s ($1,000). Needs power.",
+	},
 	"hesco": {
-		"name": "HESCO Barrier", "art": "hesco", "cost": 100, "build_time": 4.0, "power": 0,
+		"name": "HESCO Barrier", "art": "hesco", "model3d": "res://assets/units3d/hesco/hesco.glb", "cost": 100, "build_time": 4.0, "power": 0,
 		"hp": 1200.0, "size": Vector2(8, 4), "sight": 20.0, "produces": [], "requires": [],
 		"desc": "Earth-filled barrier that blocks vehicles and infantry.",
 	},
 	"radar": {
-		"name": "Radar", "art": "radar", "cost": 500, "build_time": 15.0, "power": -2,
+		"name": "Radar", "art": "radar", "model3d": "res://assets/units3d/radar/radar.glb", "cost": 500, "build_time": 15.0, "power": -2,
 		"hp": 1200.0, "size": Vector2(12, 12), "sight": 60.0, "produces": [], "requires": ["power_plant"],
 		"desc": "Shows enemy units that your forces can see on the minimap. Needs power.",
 	},
 }
 
 ## Order of the dozer's build menu.
-const BUILD_MENU := ["power_plant", "barracks", "supply_depot", "war_factory", "airfield", "defense_tower", "hesco", "radar"]
+const BUILD_MENU := ["power_plant", "barracks", "supply_depot", "war_factory", "airfield", "defense_tower", "hesco", "radar", "drop_zone"]
 
 ## Production cost / time for units (unit stats live in UnitDefs). PROVISIONAL.
 const UNIT_COST := {
 	"dozer": [1000, 10.0], "ch47": [1200, 14.0], "rifleman": [200, 5.0], "at4": [300, 7.0],
 	"hmmwv_50cal": [700, 9.0], "vanguard": [900, 12.0], "avenger": [800, 10.0],
+	"abrams": [1000, 13.0], "bradley": [850, 11.0], "paladin": [1200, 15.0], "m777": [900, 14.0], "m113": [600, 8.0],
+	"stryker": [800, 10.0], "mrap": [750, 9.0], "hmmwv_tow": [800, 9.0], "hmmwv_medical": [600, 8.0], "hmmwv": [400, 6.0],
 	"f16": [1400, 18.0], "a10": [1700, 20.0], "ah64": [1500, 16.0],
 }

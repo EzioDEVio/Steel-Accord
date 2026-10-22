@@ -261,6 +261,23 @@ func _left_release(mb: InputEventMouseButton) -> void:
 		return
 	var u := unit_at(p)
 	var own := u != null and u.team == team
+	# vehicles + own War Factory: drive to its repair bay; aircraft + own Airfield: return to their pads
+	if own and u is Building and u.built and not live_selection().is_empty() and scheme == "classic" and not mb.shift_pressed:
+		var bld: Building = u
+		if bld.bdef.get("repair", false):
+			var veh := live_selection().filter(func(x): return x.domain == "ground" and x.def.get("visual", "") != "infantry" and not x.def.get("builder", false))
+			if not veh.is_empty():
+				var rp := bld.repair_point()
+				var pts: Array = []
+				for i in veh.size(): pts.append(rp + Vector3((i % 3 - 1) * 6.0, 0, (i / 3) * 6.0))
+				battle.issue({"type": "move", "ids": veh.map(func(x): return x.uid), "points": pts})
+				FX.order_marker(battle, rp, Color(0.4, 0.8, 1.0, 0.9))
+				return
+		if bld.bkind == "airfield":
+			var air := live_selection().filter(func(x): return x.is_air())
+			if not air.is_empty():
+				battle.issue({"type": "return", "ids": air.map(func(x): return x.uid)})
+				return
 	# dozer + own unfinished structure: (re)start construction
 	if own and u is Building and not u.built and not dozers().is_empty():
 		battle.issue({"type": "build", "team": team, "ids": dozers().map(func(d): return d.uid), "site": u.uid})

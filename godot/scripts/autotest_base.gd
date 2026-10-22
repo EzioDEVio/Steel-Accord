@@ -140,10 +140,10 @@ func _run_main() -> void:
 	if wf:
 		await _sel([wf]); await _frames(3)
 		await _until(func(): return battle.cash[0] >= 1700, 60.0)
-		_press_button(battle.hud.econ.buttons["vanguard"]); await _frames(2)
+		_press_button(battle.hud.econ.buttons["abrams"]); await _frames(2)
 		_press_button(battle.hud.econ.buttons["hmmwv_50cal"]); await _wait_sim(0.2)
-	var veh := await _until(func(): return _team(["vanguard"]).size() >= 1 and _team(["hmmwv_50cal"]).size() >= 1, 40.0)
-	_log("vehicles_produced", veh, "vanguard=%d hmmwv=%d" % [_team(["vanguard"]).size(), _team(["hmmwv_50cal"]).size()])
+	var veh := await _until(func(): return _team(["abrams"]).size() >= 1 and _team(["hmmwv_50cal"]).size() >= 1, 40.0)
+	_log("vehicles_produced", veh, "abrams=%d hmmwv=%d" % [_team(["abrams"]).size(), _team(["hmmwv_50cal"]).size()])
 	# selling the only power plant leaves the base under-powered: refund + production at half speed
 	var c3: int = battle.cash[0]
 	var i3: int = battle.income[0]

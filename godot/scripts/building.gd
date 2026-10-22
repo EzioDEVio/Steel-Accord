@@ -26,6 +26,7 @@ var repairing := false
 var repair_debt := 0.0        # cash owed for repairs, charged in whole dollars
 var repair_blocked := ""      # why repair is paused ("" = running)
 var sold := false
+var drop_t := 25.0          # first supply drop 25 s after completion
 var _depth_px := 0.0
 
 const STRUCTURE_SHADER := preload("res://shaders/structure.gdshader")
@@ -63,9 +64,12 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 	ring = _make_ring()
 	add_child(ring)
 	if bdef.has("pads"):
-		for p in pad_positions(pos, bdef):
-			pads.append({"pos": p, "uid": -1})
-		_build_pads()
+		if not model_pads.is_empty():
+			for p in model_pads: pads.append({"pos": p, "uid": -1})
+		else:
+			for p in pad_positions(pos, bdef):
+				pads.append({"pos": p, "uid": -1})
+			_build_pads()
 	battle.gnav.set_structure(position, half + Vector2(1.0, 1.0), true)
 
 
@@ -93,6 +97,7 @@ static func pad_positions(pos: Vector3, d: Dictionary) -> Array:
 
 ## Rectangle (centre, half size) covered by the apron, for placement checks.
 static func apron_rect(pos: Vector3, d: Dictionary) -> Array:
+	if ResourceLoader.exists(str(d.get("model3d", "_"))): return []   # 3D airfield: pads are inside its footprint
 	var ps := pad_positions(pos, d)
 	if ps.is_empty(): return []
 	var c := Vector3.ZERO
@@ -128,12 +133,13 @@ var revealing := false
 
 func _build_model(path: String) -> void:
 	model3d = (load(path) as PackedScene).instantiate()
-	if front_dir().z > 0.0: model3d.rotation.y = PI   # authored facing south (+Z); north-side bases face the centre too
-	body.add_child(model3d)
+	body.add_child(model3d)      # authored with its front (doors, bays, apron) toward +Z: the default camera side
 	model = model3d
+	_collect_model_nodes()
 	var top := 0.0
 	for mi in model3d.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
+		if String(m.name).begins_with("Light_"): continue
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		top = maxf(top, (m.get_aabb().end.y) * m.global_transform.basis.get_scale().y if m.is_inside_tree() else m.get_aabb().end.y)
 		for si in m.mesh.get_surface_count():
@@ -142,10 +148,122 @@ func _build_model(path: String) -> void:
 	if not built: _set_reveal(true)
 
 
+# ---- named nodes inside structure models (see docs/M1_STRUCTURES_*.md)
+var model_pads: Array = []          # airfield parking spots (world)
+var runway := []                    # [start, end] world points, airfield only
+var exit_node: Node3D
+var repair_bay: Node3D
+var drop_point: Node3D
+var radar_dish: Node3D
+var b_turret: Node3D
+var b_muzzle: Node3D
+var lights := {"status": [], "beacon": [], "flood": [], "runway": []}   # [MeshInstance3D, StandardMaterial3D]
+var light_t := 0.0
+var turret_off := INF
+
+
+func _collect_model_nodes() -> void:
+	var pad_nodes := {}
+	for n in model3d.find_children("*", "Node3D", true, false):
+		var nm := String(n.name)
+		if nm.begins_with("Pad") and nm.substr(3).is_valid_int(): pad_nodes[int(nm.substr(3))] = n
+		elif nm == "RunwayStart": runway.resize(2); runway[0] = (n as Node3D).global_position
+		elif nm == "RunwayEnd": runway.resize(2); runway[1] = (n as Node3D).global_position
+		elif nm == "Exit": exit_node = n
+		elif nm == "RepairBay": repair_bay = n
+		elif nm == "DropPoint": drop_point = n
+		elif nm == "RadarDish": radar_dish = n
+		elif nm == "Turret": b_turret = n
+		elif nm == "Muzzle": b_muzzle = n
+		elif nm.begins_with("Light_") and n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			var src := mi.get_active_material(0)
+			var m := StandardMaterial3D.new()
+			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			m.emission_enabled = true
+			mi.set_surface_override_material(0, m)
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var group := "status"
+			if nm.begins_with("Light_Beacon"): group = "beacon"
+			elif nm.begins_with("Light_Flood"): group = "flood"
+			elif nm.begins_with("Light_Runway"): group = "runway"
+			lights[group].append([mi, m])
+	var keys := pad_nodes.keys()
+	keys.sort()
+	for k in keys: model_pads.append((pad_nodes[k] as Node3D).global_position * Vector3(1, 0, 1))
+	if runway.size() == 2 and (runway[0] == null or runway[1] == null): runway = []
+
+
+## War Factory repair bay: stationary damaged vehicles near it regain 4 % health per second (2 % when under-powered).
+func repair_point() -> Vector3:
+	if repair_bay: return repair_bay.global_position * Vector3(1, 0, 1)
+	var ep := exit_point()
+	return ep if ep != Vector3.INF else position + front_dir() * (half.y + 6.0)
+
+
+var servicing := false
+
+
+func _service_vehicles(dt: float, powered: bool) -> void:
+	var rp := repair_point()
+	servicing = false
+	for u in battle.units:
+		if u.dead or u.team != team or u is Building or u.domain != "ground" or u.def.get("visual", "") == "infantry": continue
+		if u.hp >= u.def.hp or u.speed_cur > 0.5 or u.flat_dist(rp) > 14.0: continue
+		u.hp = minf(u.def.hp, u.hp + u.def.hp * (0.04 if powered else 0.02) * dt)
+		servicing = true
+
+
+func drop_point_world() -> Vector3:
+	return drop_point.global_position * Vector3(1, 0, 1) if drop_point else position
+
+
+func exit_point() -> Vector3:
+	return exit_node.global_position * Vector3(1, 0, 1) if exit_node else Vector3.INF
+
+
+## Status lights (presentation only): green = idle and powered, blinking amber = busy (producing, building,
+## repairing), blinking red = damaged below half health or the base is under-powered. Beacons blink red,
+## flood lights stay on, runway edge lights chase toward the take-off end.
+func _update_lights(dt: float) -> void:
+	light_t += dt
+	var busy := not prod_queue.is_empty() or repairing or not built or revealing or servicing
+	var bad: bool = hp < bdef.hp * 0.5 or (bdef.power < 0 and not battle.power_ok(team))
+	var col := Color(0.25, 1.0, 0.35)
+	var on := true
+	if bad:
+		col = Color(1.0, 0.15, 0.1); on = fmod(light_t, 0.6) < 0.3
+	elif busy:
+		col = Color(1.0, 0.7, 0.1); on = fmod(light_t, 0.9) < 0.55
+	for e in lights.status:
+		(e[1] as StandardMaterial3D).albedo_color = col if on else col * 0.15
+		(e[1] as StandardMaterial3D).emission = col if on else Color.BLACK
+		(e[1] as StandardMaterial3D).emission_energy_multiplier = 3.0
+	var bon := fmod(light_t + float(uid) * 0.37, 1.4) < 0.25
+	for e in lights.beacon:
+		(e[1] as StandardMaterial3D).albedo_color = Color(1, 0.1, 0.05) if bon else Color(0.25, 0.02, 0.02)
+		(e[1] as StandardMaterial3D).emission = Color(1, 0.1, 0.05) if bon else Color.BLACK
+		(e[1] as StandardMaterial3D).emission_energy_multiplier = 4.0
+	for e in lights.flood:
+		(e[1] as StandardMaterial3D).albedo_color = Color(1.0, 0.95, 0.8)
+		(e[1] as StandardMaterial3D).emission = Color(1.0, 0.93, 0.75)
+		(e[1] as StandardMaterial3D).emission_energy_multiplier = 2.0
+	var n: int = lights.runway.size()
+	for i in n:
+		var lit := int(light_t * 8.0) % maxi(n, 1) == i or i % 2 == 0
+		var c := Color(1.0, 0.95, 0.6) if lit else Color(0.5, 0.45, 0.25)
+		(lights.runway[i][1] as StandardMaterial3D).albedo_color = c
+		(lights.runway[i][1] as StandardMaterial3D).emission = c
+		(lights.runway[i][1] as StandardMaterial3D).emission_energy_multiplier = 2.5 if lit else 0.5
+	for g in lights:
+		for e in lights[g]: (e[0] as MeshInstance3D).visible = built
+
+
 func _set_reveal(on: bool) -> void:
 	revealing = on
 	for e in mesh_list:
 		var m: MeshInstance3D = e[0]
+		if String(m.name).begins_with("Light_"): continue
 		if on:
 			var src: Material = e[2]
 			var sm := ShaderMaterial.new()
@@ -220,6 +338,16 @@ func _build_outline() -> void:
 
 func _process(_dt: float) -> void:
 	if model3d:
+		_update_lights(_dt)
+		if radar_dish and built and not dead and battle.power_ok(team): radar_dish.rotate_y(_dt * 0.9)
+		if b_turret and target and is_instance_valid(target) and not target.dead:
+			var to: Vector3 = target.global_position - b_turret.global_position
+			if turret_off == INF and b_muzzle:
+				var ml: Vector3 = b_turret.to_local(b_muzzle.global_position)
+				turret_off = atan2(ml.x, ml.z)
+			var want := atan2(to.x, to.z) - (turret_off if turret_off != INF else 0.0)
+			var cur := b_turret.global_rotation.y
+			b_turret.global_rotation.y = lerp_angle(cur, want, minf(1.0, _dt * 5.0))
 		if revealing:
 			if built: _set_reveal(false)
 			else:
@@ -260,6 +388,7 @@ func world_center() -> Vector3:
 
 
 func muzzle_pos() -> Vector3:
+	if b_muzzle: return b_muzzle.global_position
 	return global_position + Vector3.UP * 9.0
 
 
@@ -285,6 +414,13 @@ func sim_tick(dt: float) -> void:
 			target = battle.find_enemy_near(self, def.weapons[0].range)
 		_fire_weapons()
 	_repair_tick(dt)
+	if bdef.get("repair", false): _service_vehicles(dt, powered)
+	# supply drop zone: periodic C-130 airdrop (paused while under-powered)
+	if bdef.has("drop") and powered:
+		drop_t -= dt
+		if drop_t <= 0.0:
+			drop_t = float(bdef.drop.every)
+			battle.launch_supply_drop(self)
 	# production
 	if not prod_queue.is_empty():
 		prod_left -= dt * (1.0 if powered else BuildingDefs.LOW_POWER_RATE)
