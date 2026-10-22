@@ -39,7 +39,7 @@ func _ready() -> void:
 	var model: Node3D = load(args.model).instantiate()
 	add_child(model)
 	dust_off = args.dust == "off"
-	_apply_materials(model, 0, args.model)
+	UnitArt.apply(model, args.model.get_basename() + "_", TEAM, 0)
 	if args.pose == "walk":
 		_pose_walk(model)
 	elif args.pose == "spin":
@@ -54,7 +54,7 @@ func _ready() -> void:
 		var ref: Node3D = load("res://assets/units/vanguard.glb").instantiate()
 		add_child(ref)
 		ref.position = Vector3(aabb.end.x + 6.0, 0, aabb.get_center().z)
-		_apply_materials(ref, 1, "res://assets/units/vanguard.glb")
+		UnitArt.apply(ref, "res://assets/units/vanguard_", TEAM, 1)
 	_camera(args, aabb)
 	for i in 10:
 		await get_tree().process_frame

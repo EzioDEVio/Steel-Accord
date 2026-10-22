@@ -13,6 +13,8 @@ uniform vec3 camo_brown : source_color = vec3(0.27, 0.21, 0.14);
 uniform vec3 camo_black : source_color = vec3(0.08, 0.08, 0.07);
 uniform vec3 dust_color : source_color = vec3(0.50, 0.43, 0.32);
 uniform float burnt = 0.0;
+uniform float y_offset = 0.0;     // this mesh's height above the unit root (segmented models)
+uniform float dust_amount = 1.0;
 uniform sampler2D ao_tex : hint_default_white, filter_linear_mipmap;
 varying vec3 lp;
 varying vec3 ln;
@@ -43,10 +45,10 @@ void fragment() {
 	}
 	if (kind != 5) {
 		// dust: heavy toward the running gear, light film on upward faces
-		float low = 1.0 - smoothstep(0.05, 0.95, lp.y + (sa_fbm(lp * 2.5) - 0.5) * 0.6);
+		float low = 1.0 - smoothstep(0.05, 0.95, lp.y + y_offset + (sa_fbm(lp * 2.5) - 0.5) * 0.6);
 		float top = smoothstep(0.65, 0.95, ln.y) * smoothstep(0.45, 0.75, sa_fbm(lp * 1.8 + 4.0));
 		float amt = kind == 3 ? 0.3 + low * 0.35 : low * 0.45 + top * 0.25;
-		amt *= 0.75 + 0.5 * sa_noise(lp * 9.0);
+		amt *= (0.75 + 0.5 * sa_noise(lp * 9.0)) * dust_amount;
 		c = mix(c, dust_color, clamp(amt, 0.0, 0.85));
 		rough = mix(rough, 0.95, clamp(amt, 0.0, 1.0));
 	}

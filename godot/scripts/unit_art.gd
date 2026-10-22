@@ -14,7 +14,7 @@ const PALETTE := {
 	"SA_Decal": [Color(0.78, 0.76, 0.68), 0.7, 0.0, 4],
 	"SA_Canvas": [Color(0.36, 0.33, 0.23), 0.95, 0.0, 4],
 	"SA_Skin": [Color(0.55, 0.40, 0.31), 0.7, 0.0, 4],
-	"SA_Concrete": [Color(0.47, 0.46, 0.43), 0.9, 0.0, 4],
+	"SA_Concrete": [Color(0.40, 0.39, 0.36), 0.9, 0.0, 4],
 }
 
 
@@ -34,15 +34,25 @@ static func material_for(src: Material, ao: Texture2D, team: Color, seed_idx: in
 
 
 ## Replaces every surface material under `n`; returns the list of created materials (for later effects, e.g. burnt).
-static func apply(n: Node, ao_prefix: String, team: Color, seed_idx: int, out: Array = []) -> Array:
+static func apply(n: Node, ao_prefix: String, team: Color, seed_idx: int, out: Array = [], root: Node = null) -> Array:
+	if root == null: root = n
 	if n is MeshInstance3D:
 		var mi := n as MeshInstance3D
+		# height of this mesh's origin above the model root, so dust is measured from the ground for every segment
+		var y_off := 0.0
+		var p: Node = mi
+		while p != root and p is Node3D:
+			y_off += (p as Node3D).position.y
+			p = p.get_parent()
+		var spinning := mi.name.ends_with("Rotor")
 		var ao_path := "%s%s_ao.png" % [ao_prefix, mi.name.to_lower()]
 		var ao: Texture2D = load(ao_path) if ResourceLoader.exists(ao_path) else null
 		for i in mi.mesh.get_surface_count():
 			var m := material_for(mi.mesh.surface_get_material(i), ao, team, seed_idx)
+			m.set_shader_parameter("y_offset", y_off)
+			m.set_shader_parameter("dust_amount", 0.15 if spinning else 1.0)
 			mi.set_surface_override_material(i, m)
 			out.append(m)
 	for c in n.get_children():
-		apply(c, ao_prefix, team, seed_idx, out)
+		apply(c, ao_prefix, team, seed_idx, out, root)
 	return out
