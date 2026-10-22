@@ -234,7 +234,7 @@ func order_stop() -> void:
 
 
 func order_return() -> void:
-	if domain != "jet" or state == S.LANDED: return
+	if domain == "ground" or state == S.LANDED: return
 	_clear(); state = S.RETURN; goal = home; ret_phase = 0
 
 
@@ -265,7 +265,7 @@ func sim_tick(dt: float) -> void:
 	if gun:
 		recoil = move_toward(recoil, 0.0, dt * 1.6)
 		gun.position = gun_rest + Vector3(0, 0, recoil)
-	if rotor: rotor.rotation.y += dt * 28.0
+	if rotor: rotor.rotation.y += dt * (6.0 if state == S.LANDED else 28.0)
 	body.position.y = altitude
 	body.rotation.z = bank
 
@@ -278,6 +278,9 @@ func _acquire(r: float) -> void:
 ## Ground vehicles and helicopters.
 func _surface_tick(dt: float) -> void:
 	var moving := false
+	if domain == "heli" and state in [S.LANDED, S.RETURN]:
+		_heli_pad(dt)
+		return
 	match state:
 		S.IDLE:
 			_acquire(def.sight * 0.8 if domain == "heli" else max_range_any() * 1.05)
@@ -324,9 +327,39 @@ func _surface_tick(dt: float) -> void:
 		bank = move_toward(bank, 0.0, dt)
 	vel = forward() * speed_cur
 	if domain == "heli":
-		altitude = move_toward(altitude, def.altitude, dt * 6.0)
+		altitude = move_toward(altitude, def.altitude, dt * 5.0)   # lift-off / cruise height
 		body.rotation.x = -clampf(speed_cur / def.speed, 0.0, 1.0) * 0.12   # nose-down when cruising
 	_aim_turret(dt)
+
+
+## Helicopter return: fly to the pad, hover, descend vertically onto the pad centre, then sit with rotors idling.
+func _heli_pad(dt: float) -> void:
+	target = null
+	if state == S.LANDED:
+		speed_cur = 0.0; vel = Vector3.ZERO; bank = 0.0
+		altitude = move_toward(altitude, 0.4, dt * 4.0)
+		position = position.move_toward(home, dt * 2.0)
+		heading = lerp_angle(heading, 0.0, minf(1.0, dt * 2.0))
+		body.rotation.x = 0.0
+		return
+	var d := flat_dist(home)
+	if d > 1.5:
+		altitude = move_toward(altitude, def.altitude, dt * 5.0)
+		_steer_to(home, dt)
+		vel = forward() * speed_cur
+	else:
+		speed_cur = 0.0; vel = Vector3.ZERO
+		position = position.move_toward(Vector3(home.x, 0, home.z), dt * 3.0)
+		heading = lerp_angle(heading, 0.0, minf(1.0, dt * 2.0))
+		altitude = move_toward(altitude, 0.4, dt * 3.5)
+		if altitude <= 0.45: state = S.LANDED
+	body.rotation.x = -clampf(speed_cur / def.speed, 0.0, 1.0) * 0.12
+
+
+func weapons_ready() -> bool:
+	if domain == "jet": return airborne and state != S.RETURN
+	if domain == "heli": return state != S.RETURN and state != S.LANDED and altitude >= def.altitude * 0.6
+	return true
 
 
 func max_range_any() -> float:
@@ -507,7 +540,7 @@ func _aim_turret(dt: float) -> void:
 
 
 func _fire_weapons() -> void:
-	if domain == "jet" and (not airborne or state == S.RETURN): return
+	if not weapons_ready(): return
 	var tpos: Variant = null
 	var tunit: Unit = null
 	if state == S.FORCE_GROUND:

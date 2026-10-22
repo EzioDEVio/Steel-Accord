@@ -199,11 +199,19 @@ static func launch_puff(parent: Node, pos: Vector3) -> void:
 
 
 static func small_flash(parent: Node, pos: Vector3) -> void:
-	_particles(parent, pos, 4, 0.08, true, 0.6, Vector2(2, 4), 20.0,
+	_particles(parent, pos, 4, 0.08, true, 1.1, Vector2(2, 4), 20.0,
 		[Color(1, 0.9, 0.6, 1), Color(1, 0.5, 0.1, 0)], Vector3.ZERO, Vector3.UP, false)
 
 
-static func bullet_hit(parent: Node, pos: Vector3, armour: bool) -> void:
+static func bullet_hit(parent: Node, pos: Vector3, armour: bool, heavy := false) -> void:
+	if heavy:
+		# aircraft cannon: sparks + a burst of dust per round so a strafing run reads as a line of impacts
+		_flash(parent, pos + Vector3.UP, 2.5, 7.0, Color(1, 0.7, 0.35), 0.1)
+		_particles(parent, pos, 8, 0.3, true, 0.5, Vector2(5, 12), 70.0,
+			[Color(1, 0.9, 0.6, 1), Color(1, 0.5, 0.1, 0)], Vector3(0, -9, 0), Vector3.UP, false)
+		_particles(parent, Vector3(pos.x, 0.2, pos.z), 10, 1.4, false, 1.8, Vector2(2, 6), 45.0,
+			[Color(0.45, 0.39, 0.3, 0.85), Color(0.42, 0.37, 0.3, 0.4), Color(0.4, 0.36, 0.3, 0)], Vector3(0, -3, 0))
+		return
 	if armour:
 		_particles(parent, pos, 5, 0.25, true, 0.35, Vector2(4, 9), 70.0,
 			[Color(1, 0.9, 0.6, 1), Color(1, 0.5, 0.1, 0)], Vector3(0, -9, 0), Vector3.UP, false)

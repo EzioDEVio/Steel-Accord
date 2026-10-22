@@ -1,5 +1,6 @@
 // Steel Accord terrain v2: gentle hills, grass with dry/lush variation, rutted dirt road, rock on slopes.
 shader_type spatial;
+#include "res://shaders/fog.gdshaderinc"
 render_mode diffuse_burley;
 #include "res://shaders/noise.gdshaderinc"
 uniform sampler2D n_macro : filter_linear_mipmap, repeat_enable;
@@ -51,7 +52,7 @@ void fragment() {
 	c = mix(c, rutc, rut * 0.8);
 	vec3 rock = mix(vec3(0.33, 0.31, 0.28), vec3(0.47, 0.45, 0.41), d1);
 	c = mix(c, rock, smoothstep(0.2, 0.35, slope + (d1 - 0.5) * 0.1));
-	ALBEDO = pow(max(c, vec3(0.0)), vec3(2.2));  // authored in sRGB
+	ALBEDO = (pow(max(c, vec3(0.0)), vec3(2.2))) * sa_fog_shade(wpos.xz);  // authored in sRGB
 	ROUGHNESS = mix(0.96, 0.85, road) - rut * 0.25;
 	NORMAL_MAP = mix(texture(n_normal, p / 2.2).rgb, vec3(0.5, 0.5, 1.0), 0.45 + road * 0.3);
 	NORMAL_MAP_DEPTH = 0.6;

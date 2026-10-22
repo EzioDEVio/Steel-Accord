@@ -3,7 +3,7 @@ config_version=5
 
 [application]
 config/name="Steel Accord"
-run/main_scene="res://scenes/battle.tscn"
+run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.5", "Forward Plus")
 
 [display]
@@ -25,3 +25,22 @@ common/physics_interpolation=true
 3d/default_cell_size=0.5
 3d/default_cell_height=0.25
 world/map_use_async_iterations=false
+
+[autoload]
+
+Game="*res://scripts/game.gd"
+
+[shader_globals]
+
+fog_tex={
+"type": "sampler2D",
+"value": ""
+}
+fog_rect={
+"type": "vec4",
+"value": Vector4(-320, -320, 640, 640)
+}
+fog_on={
+"type": "float",
+"value": 0.0
+}

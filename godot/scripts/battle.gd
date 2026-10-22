@@ -32,6 +32,19 @@ var ai: EnemyAI
 var props := {}
 var args := {}
 var diag: Node = null
+var pause_menu: PauseMenu
+var kills := 0
+var shots_by := {}   # shooter uid -> rounds fired (diagnostics / tests)
+var losses := 0
+const FOG_N := 80   # 8 m cells over 640 m; edges are smoothed by linear filtering in the shaders
+const FOG_RECT := Rect2(-320, -320, 640, 640)
+var fog_img: Image
+var fog_tex: ImageTexture
+var fog_mini_img: Image
+var fog_mini_tex: ImageTexture
+var explored := PackedByteArray()
+var fog_t := 0.0
+var fog_stamps := {}
 var bomb_log: Array = []
 
 var camera: RTSCamera
@@ -41,6 +54,7 @@ var hud: HUD
 
 func _ready() -> void:
 	args = _args()
+	_init_fog()
 	rng.seed = 20261021
 	Engine.physics_ticks_per_second = TICK_HZ
 	await World.environment(self)
@@ -64,9 +78,18 @@ func _ready() -> void:
 	hud = HUD.new()
 	hud.battle = self; hud.commander = commander; hud.camera = camera
 	layer.add_child(hud)
-	ai = EnemyAI.new(self, 1, 30.0)
+	var diff: Dictionary = Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"])
+	ai = EnemyAI.new(self, 1, 30.0 if _automated() else float(diff.attack_after))
+	pause_menu = PauseMenu.new()
+	pause_menu.battle = self
+	add_child(pause_menu)
+	apply_settings()
 	hud.flash_message("Enemy armour reported to the north. Destroy all hostile units.")
-	if "airdiag" in args:
+	if "uishots" in args:
+		var us: Node = load("res://scripts/evidence_ui.gd").new()
+		us.battle = self
+		add_child(us)
+	elif "airdiag" in args:
 		var dg: Node = load("res://scripts/airdiag.gd").new()
 		dg.battle = self
 		add_child(dg)
@@ -78,6 +101,22 @@ func _ready() -> void:
 		var t: Node = load("res://scripts/autotest.gd").new()
 		t.battle = self
 		add_child(t)
+
+
+func _automated() -> bool:
+	return "test" in args or "airdiag" in args or "evidence" in args
+
+
+## Player options from the menus (mouse scheme, edge scrolling, camera speed).
+func apply_settings() -> void:
+	commander.scheme = Game.settings.mouse_scheme if not _automated() else "classic"
+	camera.edge_pan = Game.settings.edge_pan and not _automated()
+	camera.speed_mult = float(Game.settings.cam_speed)
+	if hud: hud.scheme_btn.text = "Mouse: " + commander.scheme.capitalize()
+
+
+func open_menu() -> void:
+	if not game_over: pause_menu.open_pause()
 
 
 func _args() -> Dictionary:
@@ -194,11 +233,12 @@ func _spawn_forces() -> void:
 		_spawn("vanguard", 1, Vector3(-48 + i * 16, 0, zr - (i % 2) * 12), PI)
 	# air wing on the pads (south-east). "airshow" adds every controllable aircraft type.
 	var wing := ["f16", "f16", "ah64", "a10"]
+	if not _automated() and not Game.settings.air_wing: wing = []
 	if "airshow" in args: wing = ["f16", "fa18", "f22", "a10", "ah64", "uh60", "ch47"]
 	if "noair" in args: wing = []
 	for i in wing.size():
 		var u := _spawn(wing[i], 0, PAD_POSITIONS[i], 0.0)
-		if u.domain == "jet":
+		if u.is_air():
 			u.state = Unit.S.LANDED; u.altitude = 0.4; u.speed_cur = 0.0; u.body.position.y = 0.4; u.airborne = false
 
 
@@ -226,7 +266,9 @@ func _execute(cmd: Dictionary) -> void:
 	for i in ids.size():
 		var u: Unit = by_id.get(ids[i])
 		if u == null or u.dead: continue
-		if u.state == Unit.S.LANDED and cmd.type in ["move", "attack_move", "attack", "force_ground", "guard"]:
+		if u.state in [Unit.S.LANDED, Unit.S.RETURN] and u.domain == "heli" and cmd.type in ["move", "attack_move", "attack", "force_ground", "guard", "scatter"]:
+			u.state = Unit.S.IDLE
+		elif u.state == Unit.S.LANDED and cmd.type in ["move", "attack_move", "attack", "force_ground", "guard"]:
 			u.state = Unit.S.IDLE
 		match cmd.type:
 			"move": u.order_move(cmd.points[i], cmd.get("append", false))
@@ -311,6 +353,7 @@ func find_enemy_near_point(u: Unit, p: Vector3, r: float) -> Unit:
 
 ## Spawn a projectile for weapon `w`. tunit may be null (force-fire at ground position tpos).
 func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
+	shots_by[shooter.uid] = int(shots_by.get(shooter.uid, 0)) + 1
 	var from := shooter.muzzle_pos()
 	var aim: Vector3 = tunit.world_center() if tunit else Vector3(tpos.x, 0.3, tpos.z)
 	var dist := from.distance_to(aim)
@@ -325,8 +368,12 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 			node = FX.missile_node(w.proj == "missile")
 			FX.launch_puff(self, from)
 		"bullet":
-			node = FX.tracer_mesh(0.05, 1.6)
-			if shooter.domain == "ground" or rng.randf() < 0.3: FX.small_flash(self, from)
+			if shooter.is_air():
+				node = FX.tracer_mesh(0.22, 6.0)
+				FX.small_flash(self, from)
+			else:
+				node = FX.tracer_mesh(0.08, 2.4)
+				if rng.randf() < 0.5: FX.small_flash(self, from)
 		_:
 			node = FX.tracer_mesh(0.12, 4.0)
 			FX.muzzle_flash(self, from, dir)
@@ -366,7 +413,7 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 	if t and is_instance_valid(t) and not t.dead:
 		var c := t.world_center()
 		direct = c.distance_to(p) < t.def.radius * 1.4 + 1.0
-		if direct: t.take_damage(s.dmg * rng.randf_range(0.85, 1.15), s.shooter)
+		if direct: t.take_damage(s.dmg * rng.randf_range(0.85, 1.15) * _dmg_mult(s.shooter), s.shooter)
 	if diag and s.shooter and s.shooter.team == 0: diag.on_shot(s.shooter, t, p, direct)
 	if s.splash > 0.0:
 		for o in units:
@@ -377,7 +424,7 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash), s.shooter)
 	var ground := p.y < 1.5
 	if s.kind == "bullet":
-		FX.bullet_hit(self, Vector3(p.x, maxf(p.y, 0.1), p.z), direct)
+		FX.bullet_hit(self, Vector3(p.x, maxf(p.y, 0.1), p.z), direct, s.shooter != null and s.shooter.is_air())
 	elif direct or not ground:
 		FX.impact(self, p, true)
 	else:
@@ -385,6 +432,11 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 
 
 # ------------------------------------------------------------------ support powers
+func _dmg_mult(shooter: Unit) -> float:
+	if shooter == null or shooter.team != 1 or _automated(): return 1.0
+	return float(Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"]).damage_mult)
+
+
 func power_cooldown_left(team: int, id: String) -> float:
 	return maxf(0.0, float(power_ready[team].get(id, 0.0)) - sim_time)
 
@@ -464,6 +516,8 @@ func _update_bombs(dt: float) -> void:
 
 # ------------------------------------------------------------------ deaths and visibility
 func on_unit_died(u: Unit) -> void:
+	if u.team == 0: losses += 1
+	else: kills += 1
 	if u.domain == "ground":
 		FX.explosion(self, u.global_position, 1.0)
 		FX.wreck_fire(u.body)
@@ -503,7 +557,79 @@ func _update_debris(dt: float) -> void:
 			debris.erase(d)
 
 
+## Fog of war. Cells (4 m) currently seen by the player's units are clear, explored cells are dimmed, never-seen
+## cells are dark. Drives the terrain/vegetation shaders (global uniforms) and the minimap overlay.
+func _init_fog() -> void:
+	explored.resize(FOG_N * FOG_N)
+	explored.fill(0)
+	fog_img = Image.create(FOG_N, FOG_N, false, Image.FORMAT_L8)
+	fog_tex = ImageTexture.create_from_image(fog_img)
+	fog_mini_img = Image.create(FOG_N, FOG_N, false, Image.FORMAT_RGBA8)
+	fog_mini_tex = ImageTexture.create_from_image(fog_mini_img)
+	RenderingServer.global_shader_parameter_set("fog_tex", fog_tex)
+	RenderingServer.global_shader_parameter_set("fog_rect", Vector4(FOG_RECT.position.x, FOG_RECT.position.y, FOG_RECT.size.x, FOG_RECT.size.y))
+	RenderingServer.global_shader_parameter_set("fog_on", 1.0)
+
+
+func _stamp(r_cells: int) -> PackedInt32Array:
+	# cell offsets (dx, dz pairs) inside a circle of the given radius, cached per radius
+	if not fog_stamps.has(r_cells):
+		var s := PackedInt32Array()
+		for j in range(-r_cells, r_cells + 1):
+			for i in range(-r_cells, r_cells + 1):
+				if i * i + j * j <= r_cells * r_cells: s.append(i); s.append(j)
+		fog_stamps[r_cells] = s
+	return fog_stamps[r_cells]
+
+
+func _update_fog() -> void:
+	var vis := PackedByteArray()
+	vis.resize(FOG_N * FOG_N)
+	vis.fill(0)
+	var cell := FOG_RECT.size.x / FOG_N
+	var eyes: Array = []
+	for u in units:
+		if u.team == 0 and not u.dead: eyes.append([u.position, float(u.def.sight)])
+	for z in reveal_zones:
+		if z.team != 0: continue
+		var steps := int(z.a.distance_to(z.b) / (z.w * 0.4)) + 1
+		for i in steps + 1:
+			eyes.append([z.a.lerp(z.b, float(i) / steps), z.w * 0.5])
+	for e in eyes:
+		var p: Vector3 = e[0]
+		var cx := int((p.x - FOG_RECT.position.x) / cell)
+		var cz := int((p.z - FOG_RECT.position.y) / cell)
+		var st := _stamp(int(float(e[1]) / cell))
+		for k in range(0, st.size(), 2):
+			var i: int = cx + st[k]
+			var j: int = cz + st[k + 1]
+			if i >= 0 and j >= 0 and i < FOG_N and j < FOG_N:
+				vis[j * FOG_N + i] = 1
+	var data := PackedByteArray()
+	data.resize(FOG_N * FOG_N)
+	var mini := PackedByteArray()
+	mini.resize(FOG_N * FOG_N * 4)
+	mini.fill(0)
+	for k in FOG_N * FOG_N:
+		if vis[k]:
+			explored[k] = 1
+			data[k] = 255
+		elif explored[k]:
+			data[k] = 110
+			mini[k * 4 + 3] = 110
+		else:
+			mini[k * 4 + 3] = 225
+	fog_img.set_data(FOG_N, FOG_N, false, Image.FORMAT_L8, data)
+	fog_tex.update(fog_img)
+	fog_mini_img.set_data(FOG_N, FOG_N, false, Image.FORMAT_RGBA8, mini)
+	fog_mini_tex.update(fog_mini_img)
+
+
 func _update_visibility() -> void:
+	fog_t -= 1.0 / TICK_HZ
+	if fog_t <= 0.0:
+		fog_t = 0.3
+		_update_fog()
 	for z in reveal_zones.duplicate():
 		if sim_time > z.until: reveal_zones.erase(z)
 	for u in units:
@@ -546,7 +672,18 @@ func _check_end() -> void:
 		game_over = true
 		hud.banner = "VICTORY"; hud.banner_color = Color(0.5, 1.0, 0.6)
 		print("RESULT victory t=%.1f blue_left=%d" % [sim_time, alive_count(0)])
+		_end_screen(true)
 	elif alive_count(0) == 0:
 		game_over = true
 		hud.banner = "DEFEAT"; hud.banner_color = Color(1.0, 0.4, 0.35)
 		print("RESULT defeat t=%.1f red_left=%d" % [sim_time, alive_count(1)])
+		_end_screen(false)
+
+
+func _end_screen(victory: bool) -> void:
+	var stats := {"time": "%02d:%02d" % [int(sim_time) / 60, int(sim_time) % 60], "kills": kills, "losses": losses}
+	Game.last_result = stats.merged({"result": "Victory" if victory else "Defeat"})
+	if _automated(): return
+	await get_tree().create_timer(2.5).timeout   # let the final explosion play before the score screen
+	hud.banner = ""
+	pause_menu.open_end(victory, stats)

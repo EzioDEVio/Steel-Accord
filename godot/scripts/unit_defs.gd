@@ -52,8 +52,8 @@ const DEFS := {
 		"sprite": "res://assets/aircraft/a10/a10_top.png", "icon": "res://assets/aircraft/a10/a10_icon.png", "length": 16.3,
 		"hp": 650.0, "speed": 38.0, "min_speed": 22.0, "accel": 14.0, "turn_deg": 60.0, "altitude": 12.0,
 		"radius": 4.6, "height": 1.0, "sight": 85.0, "cost": 1700, "provisional": true,
-		"weapons": [{"id": "gau_cannon", "range": 70.0, "reload": 0.12, "damage": 22.0, "splash": 1.5, "proj": "bullet",
-			"speed": 500.0, "spread": 2.5, "targets": ["ground", "heli"], "ammo": 60, "facing_deg": 12.0}],
+		"weapons": [{"id": "gau_cannon", "range": 90.0, "reload": 0.1, "damage": 20.0, "splash": 1.5, "proj": "bullet",
+			"speed": 520.0, "spread": 2.5, "targets": ["ground", "heli"], "ammo": 80, "facing_deg": 14.0}],
 	},
 	"ah64": {
 		"name": "AH-64 (attack helicopter)", "role": "Attack helicopter - rockets and guided missiles vs armour", "domain": "heli",

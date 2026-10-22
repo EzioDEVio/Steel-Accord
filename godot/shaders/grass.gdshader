@@ -1,11 +1,14 @@
 // Steel Accord grass tufts: alpha-cut blades on crossed cards, ground-matched normals, instance-tinted.
 shader_type spatial;
+#include "res://shaders/fog.gdshaderinc"
 render_mode cull_disabled, diffuse_burley;
 uniform vec3 c_base : source_color = vec3(0.10, 0.14, 0.05);
 uniform vec3 c_tip : source_color = vec3(0.34, 0.37, 0.15);
 varying vec3 tint;
+varying vec3 fwp;
 void vertex() {
 	tint = COLOR.rgb;
+	fwp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	NORMAL = vec3(0.0, 1.0, 0.0);
 }
 float rnd(float x) { return fract(sin(x * 12.9898) * 43758.5453); }
@@ -19,7 +22,7 @@ void fragment() {
 	float w = 0.48 * (1.0 - t / h);
 	if (t > h || abs(fx - lean) > w) discard;
 	vec3 c = mix(c_base, c_tip, smoothstep(0.0, 1.0, t / h)) * tint;
-	ALBEDO = c * mix(0.5, 1.0, t);
+	ALBEDO = (c * mix(0.5, 1.0, t)) * sa_fog_shade(fwp.xz);
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.3;
 	BACKLIGHT = c * 0.4;

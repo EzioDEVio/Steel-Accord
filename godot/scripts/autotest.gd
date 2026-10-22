@@ -25,8 +25,11 @@ func _log(name: String, ok: bool, detail := "") -> void:
 
 func _wait_sim(t: float) -> void:
 	var end: float = battle.sim_time + t
+	var stuck := 0
 	while battle.sim_time < end:
-		await get_tree().physics_frame
+		await get_tree().process_frame
+		stuck += 1
+		if stuck == 300 and get_tree().paused: print("TESTDBG stalled: paused=", get_tree().paused, " menu=", battle.pause_menu.visible, " sim_time=", battle.sim_time)
 
 
 func _frames(n := 2) -> void:
@@ -114,6 +117,25 @@ func _run() -> void:
 	var tanks := _team(["vanguard"])
 	cam.focus(_centroid(tanks))
 	await _frames()
+	# 0a. pause menu: F10 opens and pauses; the Resume button closes; Esc with nothing selected also opens it
+	_key(KEY_F10); await _frames(3)
+	var opened: bool = get_tree().paused and battle.pause_menu.visible
+	var resume: Button = null
+	for ch in battle.pause_menu.box.get_children():
+		if ch is Button and ch.text == "Resume": resume = ch
+	if resume: _press_button(resume)
+	await _frames(3)
+	var resumed: bool = not get_tree().paused and not battle.pause_menu.visible
+	_key(KEY_ESCAPE); await _frames(3)
+	var esc_opens: bool = get_tree().paused
+	_key(KEY_ESCAPE); await _frames(3)
+	_log("pause_menu", opened and resumed and esc_opens and not get_tree().paused, "F10 open=%s, Resume closes=%s, Esc opens=%s" % [opened, resumed, esc_opens])
+	# 0b. fog of war: own start area explored, enemy start not
+	var cell: float = battle.FOG_RECT.size.x / battle.FOG_N
+	var own_c: int = int((tanks[0].position.z - battle.FOG_RECT.position.y) / cell) * battle.FOG_N + int((tanks[0].position.x - battle.FOG_RECT.position.x) / cell)
+	var red0: Unit = battle.units.filter(func(u): return u.team == 1)[0]
+	var red_c: int = int((red0.position.z - battle.FOG_RECT.position.y) / cell) * battle.FOG_N + int((red0.position.x - battle.FOG_RECT.position.x) / cell)
+	_log("fog_of_war", battle.explored[own_c] == 1 and battle.explored[red_c] == 0 and not red0.visible, "own base explored, enemy base unexplored and enemy hidden")
 	# 1. box selection
 	await _box(tanks)
 	_log("box_select", cmd.live_selection().size() == tanks.size(), "selected=%d of %d" % [cmd.live_selection().size(), tanks.size()])
@@ -149,6 +171,7 @@ func _run() -> void:
 	_key(KEY_1); await _frames()
 	# 6. Alt+click waypoints build a queue
 	var c := _centroid(tanks)
+	cam.focus(c + Vector3(-12, 0, -25)); await _frames()
 	_click(MOUSE_BUTTON_LEFT, _screen(c + Vector3(-25, 0, -10)), {"alt": true})
 	await _wait_sim(0.1)
 	_click(MOUSE_BUTTON_LEFT, _screen(c + Vector3(-25, 0, -40)), {"alt": true})
@@ -210,6 +233,32 @@ func _run() -> void:
 		var a0: int = lj.w_ammo[0]
 		await _wait_sim(4.0)
 		_log("f16_rearm", lj.w_ammo[0] > a0 or lj.w_ammo[0] == 4, "ammo %d -> %d" % [a0, lj.w_ammo[0]])
+	# 9b. A-10: attack order on an enemy tank -> cannon rounds fired
+	var a10: Unit = _team(["a10"])[0] if not _team(["a10"]).is_empty() else null
+	var redt: Array = battle.units.filter(func(u): return u.team == 1 and not u.dead)
+	if a10 and not redt.is_empty():
+		var before: int = battle.shots_by.get(a10.uid, 0)
+		battle.issue({"type": "attack", "ids": [a10.uid], "target": redt[0].uid})
+		await _wait_sim(30.0)
+		var fired_a10: int = int(battle.shots_by.get(a10.uid, 0)) - before
+		_log("a10_cannon_fires", fired_a10 > 10, "%d cannon rounds fired" % fired_a10)
+		battle.issue({"type": "return", "ids": [a10.uid]})
+	# 9c. AH-64: fly out, then R: lands on its own pad; no rounds fired once returning
+	var heli: Unit = _team(["ah64"])[0] if not _team(["ah64"]).is_empty() else null
+	if heli:
+		battle.issue({"type": "move", "ids": [heli.uid], "points": [heli.home + Vector3(-40, 0, -120)]})
+		await _wait_sim(10.0)
+		var up: bool = heli.altitude > 8.0
+		cmd._set_selection([heli]); await _frames()
+		_key(KEY_R); await _frames()
+		var s0: int = battle.shots_by.get(heli.uid, 0)
+		var t_h: float = battle.sim_time + 40.0
+		while battle.sim_time < t_h and heli.state != Unit.S.LANDED:
+			await _wait_sim(0.5)
+		var s1: int = battle.shots_by.get(heli.uid, 0)
+		_log("heli_return_lands_on_pad", up and heli.state == Unit.S.LANDED and heli.flat_dist(heli.home) < 1.0 and s1 == s0,
+			"airborne=%s landed=%s %.2f m from pad, rounds fired while returning/landing: %d" % [up, heli.state == Unit.S.LANDED, heli.flat_dist(heli.home), s1 - s0])
+		cmd._set_selection([])
 	# 10. Support power by mouse: click the Carpet Bombing button, then click a target
 	var reds: Array = battle.units.filter(func(u): return u.team == 1 and not u.dead)
 	var tgt: Vector3 = _centroid(reds) if not reds.is_empty() else Vector3(0, 0, -100)

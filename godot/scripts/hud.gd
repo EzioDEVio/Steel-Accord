@@ -24,6 +24,7 @@ var power_box: Control
 var power_buttons := {}
 var scheme_btn: Button
 var help_btn: Button
+var menu_btn: Button
 var portraits := {}
 
 
@@ -42,6 +43,8 @@ func _ready() -> void:
 	scheme_btn.tooltip_text = "Classic: left click selects AND commands, right click deselects, right drag scrolls.\nAlternate: left click selects, right click commands."
 	help_btn = _button("Controls (F1)", func(): show_help = not show_help, Vector2(130, 30))
 	add_child(help_btn)
+	menu_btn = _button("Menu (F10)", func(): battle.open_menu(), Vector2(120, 30))
+	add_child(menu_btn)
 
 
 func _style(c: Color, border: Color) -> StyleBoxFlat:
@@ -80,7 +83,7 @@ func _build_card() -> void:
 		["waypoint", "Waypoints  W", "Click a chain of points; right click ends (also Alt+click)", func(): commander.set_mode("waypoint")],
 		["stop", "Stop  S", "Stop and hold position", func(): commander.cmd_stop()],
 		["scatter", "Scatter  X", "Spread out from each other", func(): commander.cmd_scatter()],
-		["return", "Return to Pad  R", "Jets: fly back to the pad to rearm", func(): commander.cmd_return()],
+		["return", "Return to Pad  R", "Aircraft: fly back and land on their own pad (jets rearm there)", func(): commander.cmd_return()],
 		["select_all", "Select All  Ctrl+A", "Select every unit you own", func(): commander.select_all()],
 	]
 	for i in defs.size():
@@ -141,10 +144,11 @@ func _process(dt: float) -> void:
 	power_box.position = Vector2(size.x - 198, size.y - 4 * 66 - 96)
 	scheme_btn.position = Vector2(14, 10)
 	help_btn.position = Vector2(210, 10)
+	menu_btn.position = Vector2(346, 10)
 	var live := commander.live_selection()
 	card.visible = not live.is_empty()
-	var any_jet := live.any(func(u): return u.domain == "jet")
-	card_buttons["return"].disabled = not any_jet
+	var any_air := live.any(func(u): return u.is_air())
+	card_buttons["return"].disabled = not any_air
 	for id in power_buttons:
 		var b: Button = power_buttons[id]
 		var left: float = battle.power_cooldown_left(commander.team, id)
@@ -280,6 +284,13 @@ func _draw_minimap() -> void:
 		draw_circle(_world_to_mini(Vector3(o.x, 0, o.y)), maxf(1.5, o.z / battle.map_bounds.size.x * mini_rect.size.x), Color(0.35, 0.33, 0.3))
 	for q: Vector3 in battle.PAD_POSITIONS:
 		draw_rect(Rect2(_world_to_mini(q) - Vector2(4, 4), Vector2(8, 8)), Color(0.5, 0.5, 0.48))
+	if battle.fog_mini_tex:
+		# fog texture covers FOG_RECT; draw only the part that lies inside the playable map
+		var fr: Rect2 = battle.FOG_RECT
+		var mb: Rect2 = battle.map_bounds
+		var px := float(battle.FOG_N) / fr.size.x
+		var src := Rect2((mb.position.x - fr.position.x) * px, (mb.position.y - fr.position.y) * px, mb.size.x * px, mb.size.y * px)
+		draw_texture_rect_region(battle.fog_mini_tex, mini_rect, src)
 	for z in battle.reveal_zones:
 		draw_line(_world_to_mini(z.a), _world_to_mini(z.b), Color(1, 1, 0.6, 0.25), z.w / battle.map_bounds.size.x * mini_rect.size.x)
 	for u: Unit in battle.units:
@@ -348,11 +359,12 @@ func _draw_help() -> void:
 		"Left click ground/enemy (Classic): move / attack    Right click: deselect",
 		"Right drag: scroll map   Wheel: zoom   Middle drag: rotate/tilt",
 		"Command card buttons or keys: A attack-move  G guard  F force fire",
-		"  W waypoints  S stop  X scatter  R jets return to pad",
+		"  W waypoints  S stop  X scatter  R aircraft return to pad",
 		"Ctrl+click: force fire   Alt+click: add waypoint   Shift: keep mode",
 		"Ctrl+A select all   Ctrl+1..9 set group   1..9 recall (twice: jump)",
 		"Support powers (right column): click, then click a target",
 		"Minimap: left click/drag moves camera, right click moves units",
+		"Esc (nothing selected) or F10: pause menu - Resume, Restart, Options, Main Menu, Exit",
 	]
 	var r := Rect2(size.x / 2 - 260, 54, 520, 22 + lines.size() * 18)
 	_panel(r)

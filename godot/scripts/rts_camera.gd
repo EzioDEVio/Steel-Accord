@@ -12,6 +12,7 @@ var pitch_deg := 52.0
 var yaw := 0.0
 var bounds := Rect2(-150, -150, 300, 300)
 var edge_pan := true
+var speed_mult := 1.0
 var _mid_drag := false
 
 
@@ -53,7 +54,7 @@ func _process(dt: float) -> void:
 			if m.y < 6: mv.y -= 1
 			elif m.y > s.y - 6: mv.y += 1
 	if mv != Vector2.ZERO:
-		var spd := zoom * 1.1 * dt
+		var spd := zoom * 1.1 * dt * speed_mult
 		var right := Vector3(cos(yaw), 0, -sin(yaw))
 		var fwd := Vector3(-sin(yaw), 0, -cos(yaw))
 		focus(position + (right * mv.x - fwd * mv.y).normalized() * spd)

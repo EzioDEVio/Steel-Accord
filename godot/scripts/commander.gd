@@ -88,7 +88,10 @@ func _key(k: InputEventKey) -> void:
 			if has_sel: cmd_return()
 		KEY_ESCAPE:
 			if mode != "": set_mode("")
-			else: _set_selection([])
+			elif not live_selection().is_empty(): _set_selection([])
+			else: battle.open_menu()
+		KEY_F10:
+			battle.open_menu()
 		_:
 			if k.keycode >= KEY_1 and k.keycode <= KEY_9:
 				var g := int(k.keycode - KEY_0)
