@@ -181,6 +181,7 @@ func _run() -> void:
 			if u.has_meta("grooming"): groom[u.get_meta("grooming")] = int(groom.get(u.get_meta("grooming"), 0)) + 1
 		_log("ai_nation_roster", ok_nat, "nation %s infantry kinds %s grooming %s" % [nat, str(kinds.keys()), str(groom)])
 		if nat == "iran":
+			battle.cry_t[1] = -99.0      # the AI may have just shouted; start this check from a ready cooldown
 			var cry0: int = battle.cries
 			var p0: Vector3 = battle.grounded(Vector3(250, 0, 120))
 			var us_r: Unit = battle._spawn("rifleman", 0, p0, 0.0)

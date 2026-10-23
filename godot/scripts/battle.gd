@@ -1905,9 +1905,10 @@ func _update_drones(dt: float) -> void:
 			v = Vector3(to.x, 0, to.z).normalized() * d.speed
 			v.y = (gy + d.alt - d.pos.y) * 2.0       # hold altitude over the terrain
 		d.pos += v * dt
+		if not d.diving: d.pos.y = maxf(d.pos.y, ground_h(d.pos.x, d.pos.z) + 8.0)   # terrain-following: clear ridges
 		n.position = d.pos
 		if v.length() > 0.1: n.look_at(d.pos + v, Vector3.UP)
-		if d.pos.y <= ground_h(d.pos.x, d.pos.z) + 0.5 or (d.diving and d.pos.distance_to(d.aim) < 1.5):
+		if d.diving and (d.pos.y <= ground_h(d.pos.x, d.pos.z) + 0.5 or d.pos.distance_to(d.aim) < 1.5):
 			var p: Vector3 = grounded(d.pos)
 			FX.explosion(self, p + Vector3(0, 0.3, 0), clampf(d.splash / 6.0, 0.8, 1.8))
 			SFX.play(self, "explosion_big", p, 0.0, 1.1)

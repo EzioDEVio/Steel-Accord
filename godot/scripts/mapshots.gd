@@ -58,7 +58,7 @@ func _run() -> void:
 		for i in inf.size():
 			var u: Unit = battle._spawn(inf[i], t, c + Vector3(-12 + (i % 4) * 3.5, 0, (70 + (i / 4) * 4.0) * f), 0.0 if t == 0 else PI)
 			u.reset_physics_interpolation()
-		var veh: Array = ["abrams", "bradley", "hmmwv_50cal"] if t == 0 else ["abrams", "m113", "mrap"]
+		var veh: Array = ["abrams", "bradley", "hmmwv_50cal"] if t == 0 else ["ir_karrar", "ir_bmp2", "ir_boragh"]
 		for i in veh.size():
 			var u: Unit = battle._spawn(veh[i], t, c + Vector3(20 + i * 12.0, 0, 80 * f), 0.0 if t == 0 else PI)
 			u.reset_physics_interpolation()
@@ -73,6 +73,34 @@ func _run() -> void:
 		u.reset_physics_interpolation(); col.append(u)
 	battle.issue({"type": "move", "team": 0, "ids": col.map(func(u): return u.uid), "points": col.map(func(u): return u.position + Vector3(0, 0, -120))})
 	await _wait(2.0)
+	if "ironly" in battle.args:
+		# Iranian vehicles and aircraft lined up on open ground for close review
+		var o: Vector3 = battle.grounded(Vector3(60, 0, -150))
+		var vk := ["ir_karrar", "ir_t72s", "ir_bmp2", "ir_boragh", "ir_engineer_dozer"]
+		for i in vk.size():
+			var u: Unit = battle._spawn(vk[i], 1, o + Vector3(-24 + i * 12.0, 0, 0), deg_to_rad(-20.0))
+			u.reset_physics_interpolation()
+		var ak := ["ir_f14", "ir_f4", "ir_su24"]
+		for i in ak.size():
+			var u: Unit = battle._spawn(ak[i], 1, o + Vector3(-20 + i * 20.0, 0, -30), deg_to_rad(-20.0))
+			u.state = Unit.S.LANDED; u.altitude = u.ground_alt(); u.airborne = false; u.speed_cur = 0.0
+			u.reset_physics_interpolation()
+		var hk := ["ir_ah1j", "ir_ch47"]
+		for i in hk.size():
+			var u: Unit = battle._spawn(hk[i], 1, o + Vector3(-12 + i * 24.0, 0, -58), deg_to_rad(-20.0))
+			u.state = Unit.S.LANDED; u.altitude = u.ground_alt()
+			u.reset_physics_interpolation()
+		await _wait(1.0)
+		_cam(o + Vector3(0, 0, -2), 46.0, 160.0, 34.0); await _shot("zb_iran_vehicles_close")
+		_cam(o + Vector3(0, 0, -40), 70.0, 160.0, 40.0); await _shot("zb_iran_aircraft")
+		_cam(o + Vector3(0, 0, -25), 120.0, 160.0, 52.0); await _shot("zb_iran_arsenal_rts")
+		battle.power_ready[1]["shahed"] = 0.0
+		battle.launch_power(1, "shahed", o + Vector3(0, 0, 60))
+		await _wait(9.0)
+		if not battle.drones.is_empty():
+			_cam(battle.drones[0].pos, 40.0, 30.0, 35.0); await _shot("zb_shahed_inbound")
+		get_tree().quit()
+		return
 	if "infonly" in battle.args:
 		# a squad on open ground in the basin, facing the camera
 		var cc: Vector3 = battle.grounded(Vector3(60, 0, -150))
