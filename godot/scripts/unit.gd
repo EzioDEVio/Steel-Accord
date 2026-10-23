@@ -92,7 +92,7 @@ func setup(b: Node, unit_kind: String, t: int, id: int, pos: Vector3, yaw: float
 	elif domain == "ground":
 		model = load(def.model).instantiate()
 		body.add_child(model)
-		mats = UnitArt.apply(model, def.ao_prefix, UnitDefs.TEAM_COLORS[team], id)
+		mats = UnitArt.apply(model, def.ao_prefix, UnitDefs.team_color(team), id)
 		turret = model.find_child("Turret", true, false) as Node3D
 		gun = model.find_child("Gun", true, false) as Node3D
 		muzzle = model.find_child("Muzzle", true, false) as Node3D
@@ -160,7 +160,7 @@ func _build_model3d(path: String) -> void:
 					mi.set_surface_override_material(si, gm)
 				if mat and mat.resource_name.begins_with("SA_Team") and mat is BaseMaterial3D:
 					var tm := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
-					tm.albedo_color = UnitDefs.TEAM_COLORS[team].lightened(0.15)
+					tm.albedo_color = UnitDefs.team_color(team).lightened(0.15)
 					mi.set_surface_override_material(si, tm)
 				if mat and mat.resource_name.begins_with("SA_TrackScroll") and mat is BaseMaterial3D:
 					var dm := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
@@ -287,7 +287,7 @@ func _add_team_marker() -> void:
 	var g := GradientTexture2D.new()
 	g.fill = GradientTexture2D.FILL_RADIAL; g.fill_from = Vector2(0.5, 0.5); g.fill_to = Vector2(1.0, 0.5)
 	var gr := Gradient.new()
-	var tc: Color = UnitDefs.TEAM_COLORS[team].lightened(0.2)
+	var tc: Color = UnitDefs.team_color(team).lightened(0.2)
 	gr.set_color(0, Color(0, 0, 0, 0.55)); gr.set_color(1, Color(0, 0, 0, 0))
 	gr.add_point(0.74, Color(0, 0, 0, 0.3)); gr.add_point(0.8, Color(tc.r, tc.g, tc.b, 0.75)); gr.add_point(0.86, Color(tc.r, tc.g, tc.b, 0.0))
 	g.gradient = gr; g.width = 64; g.height = 64

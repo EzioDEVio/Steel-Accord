@@ -120,7 +120,7 @@ func _build_powers() -> void:
 	for id in Nations.powers(nat):
 		var p: Dictionary = UnitDefs.POWERS[id]
 		var b := _button("", func(): commander.set_mode("power:" + id), Vector2(186, 62))
-		b.tooltip_text = "%s - click the button, then click the target on the map.\nCooldown %d s (PROVISIONAL)" % [p.name, int(p.cooldown)]
+		b.tooltip_text = "%s - click the button, then click the target on the map.\nCooldown %d s (PROVISIONAL)" % [battle.lbl(commander.team, id, p.name), int(p.cooldown)]
 		var icon := TextureRect.new()
 		icon.texture = load(Nations.power_icon(nat, id))
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -184,11 +184,12 @@ func _process(dt: float) -> void:
 		var b: Button = power_buttons[id]
 		var left: float = battle.power_cooldown_left(commander.team, id)
 		var l := b.get_node("L") as Label
-		l.text = "%s\n%s" % [UnitDefs.POWERS[id].name, "READY" if left <= 0.0 else "%d s" % int(ceil(left))]
+		var pname: String = battle.lbl(commander.team, id, UnitDefs.POWERS[id].name)
+		l.text = "%s\n%s" % [pname, "READY" if left <= 0.0 else "%d s" % int(ceil(left))]
 		l.add_theme_color_override("font_color", ACCENT if left <= 0.0 else Color(0.7, 0.72, 0.7))
 		var why: String = battle.power_problem(commander.team, id)
 		b.disabled = left > 0.0 or why != ""
-		if why != "": l.text = "%s\n%s" % [UnitDefs.POWERS[id].name, why]
+		if why != "": l.text = "%s\n%s" % [pname, why]
 	queue_redraw()
 
 
@@ -215,13 +216,13 @@ func _update_prod_strip() -> void:
 		if c.is_queued_for_deletion() or not is_instance_valid(b) or b.dead: continue
 		if b.built and b.prod_queue.is_empty(): continue
 		if not b.built:
-			c.text = "%s  building %d%%" % [b.bdef.name, int(b.progress * 100.0)]
+			c.text = "%s  building %d%%" % [b.def.name, int(b.progress * 100.0)]
 		else:
 			var k: String = b.prod_queue[0]
 			var total := float(BuildingDefs.UNIT_COST[k][1])
 			var pct := int(100.0 * (1.0 - b.prod_left / total))
 			var state := "" if battle.power_ok(commander.team) else "  (low power)"
-			c.text = "%s: %s %d%%%s%s" % [b.bdef.name, UnitDefs.def_of(k).name.split(" (")[0], pct,
+			c.text = "%s: %s %d%%%s%s" % [b.def.name, UnitDefs.def_of(k).name.split(" (")[0], pct,
 				("  +%d" % (b.prod_queue.size() - 1)) if b.prod_queue.size() > 1 else "", state]
 
 
@@ -305,7 +306,7 @@ func _draw() -> void:
 		draw_rect(r.grow(1), Color(0, 0, 0, 0.75))
 		var col := Color(0.3, 0.9, 0.4) if f > 0.6 else (Color(0.95, 0.8, 0.2) if f > 0.3 else Color(0.95, 0.25, 0.2))
 		draw_rect(Rect2(r.position, Vector2(w * f, 5)), col)
-		draw_rect(Rect2(r.position - Vector2(0, 4), Vector2(w, 2)), UnitDefs.TEAM_COLORS[u.team].lightened(0.25))
+		draw_rect(Rect2(r.position - Vector2(0, 4), Vector2(w, 2)), UnitDefs.team_color(u.team).lightened(0.25))
 		if u.selected and u.domain == "jet":
 			_text(sp + Vector2(-w / 2, 18), _ammo_text(u), 11, Color(1, 0.85, 0.5))
 	if commander.dragging and commander.drag_from.distance_to(commander.drag_to) > 6.0 and commander.mode == "":
@@ -320,7 +321,7 @@ func _draw() -> void:
 		var label: String = {"attack_move": "ATTACK-MOVE", "guard": "GUARD - click ground or a friendly unit", "force": "FORCE FIRE",
 			"waypoint": "WAYPOINTS - right click to finish"}.get(commander.mode, "")
 		if commander.mode.begins_with("place:"):
-			label = "PLACE %s - %s" % [String(BuildingDefs.DEFS[commander.mode.substr(6)].name).to_upper(), "click to build" if commander.ghost_ok else commander.ghost_reason]
+			label = "PLACE %s - %s" % [battle.bname(commander.team, commander.mode.substr(6)).to_upper(), "click to build" if commander.ghost_ok else commander.ghost_reason]
 		if commander.mode.begins_with("power:"): label = String(UnitDefs.POWERS[commander.mode.substr(6)].name).to_upper() + " - click target"
 		_text(get_local_mouse_position() + Vector2(18, 26), label, 13, Color(1, 0.65, 0.3))
 	if banner != "":
@@ -370,7 +371,7 @@ func _draw_minimap() -> void:
 	for pl in battle.piles:
 		if pl.cash > 0: draw_circle(_world_to_mini(pl.pos), 3.5, Color(0.95, 0.8, 0.3))
 	for e in battle.derricks:
-		var dc: Color = UnitDefs.TEAM_COLORS[e.owner].lightened(0.3) if e.owner >= 0 else Color(0.9, 0.9, 0.85)
+		var dc: Color = UnitDefs.team_color(e.owner).lightened(0.3) if e.owner >= 0 else Color(0.9, 0.9, 0.85)
 		var dp := _world_to_mini(e.pos)
 		draw_rect(Rect2(dp - Vector2(3.5, 3.5), Vector2(7, 7)), Color(0.05, 0.05, 0.05))
 		draw_rect(Rect2(dp - Vector2(2.5, 2.5), Vector2(5, 5)), dc)
@@ -390,7 +391,7 @@ func _draw_minimap() -> void:
 		if u.dead or not battle.is_visible_to(commander.team, u): continue
 		if u.team != commander.team and not radar_ok and not (u is Building): continue
 		var p := _world_to_mini(u.global_position)
-		var c: Color = UnitDefs.TEAM_COLORS[u.team].lightened(0.35 if u.selected else 0.1)
+		var c: Color = UnitDefs.team_color(u.team).lightened(0.35 if u.selected else 0.1)
 		if u is Building:
 			var hs: Vector2 = (u as Building).half / battle.map_bounds.size.x * mini_rect.size.x
 			draw_rect(Rect2(p - hs, hs * 2.0).grow(0.5), c)
@@ -446,9 +447,9 @@ func _draw_selection_panel() -> void:
 func _draw_status() -> void:
 	var r := Rect2(size.x / 2 - 170, 10, 340, 34)
 	_panel(r)
-	_text(r.position + Vector2(16, 23), "BLUE %d" % battle.alive_count(0), 16, UnitDefs.TEAM_COLORS[0].lightened(0.45))
+	_text(r.position + Vector2(16, 23), "%s %d" % [UnitDefs.team_name(0).to_upper(), battle.alive_count(0)], 16, UnitDefs.team_color(0).lightened(0.45))
 	_text(r.position + Vector2(140, 23), "%02d:%02d" % [int(battle.sim_time) / 60, int(battle.sim_time) % 60], 16)
-	_text(r.position + Vector2(250, 23), "RED %d" % battle.alive_count(1), 16, UnitDefs.TEAM_COLORS[1].lightened(0.45))
+	_text(r.position + Vector2(250, 23), "%s %d" % [UnitDefs.team_name(1).to_upper(), battle.alive_count(1)], 16, UnitDefs.team_color(1).lightened(0.45))
 	if battle.scenario == "base":
 		var t: int = commander.team
 		var r2 := Rect2(r.end.x + 8, 10, 360, 34)
@@ -463,7 +464,7 @@ func _draw_status() -> void:
 		if pl != "" or battle.plan_pending[t] != "":
 			var r3 := Rect2(r2.position.x, 48, 170, 26)
 			_panel(r3)
-			_text(r3.position + Vector2(10, 18), "Plan: " + (Upgrades.PLANS[pl].name if pl != "" else "switching..."), 13, Color(0.95, 0.85, 0.55))
+			_text(r3.position + Vector2(10, 18), "Plan: " + (battle.lbl(t, pl, Upgrades.PLANS[pl].name) if pl != "" else "switching..."), 13, Color(0.95, 0.85, 0.55))
 		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: half-speed build", 12, Color(1.0, 0.45, 0.35))
 	if msg_t > 0.0:
 		var s := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)

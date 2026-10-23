@@ -79,6 +79,7 @@ func _ready() -> void:
 	_init_fog()
 	rng.seed = 20261021
 	Engine.physics_ticks_per_second = TICK_HZ
+	Engine.time_scale = 1.0 if _automated() else float(Game.settings.get("game_speed", 1.0))   # Skirmish: game speed
 	await World.environment(self)
 	props = World.props()
 	if terrain:
@@ -744,7 +745,7 @@ func power_problem(team: int, id: String) -> String:
 	var p: Dictionary = UnitDefs.POWERS[id]
 	if not (id in Nations.powers(nation_of(team))): return "Not available to %s" % Nations.name_of(nation_of(team))
 	if scenario == "base" and p.has("requires") and structures(team, p.requires).is_empty():
-		return "Requires " + BuildingDefs.DEFS[p.requires].name
+		return "Requires " + bname(team, p.requires)
 	return ""
 
 
@@ -787,7 +788,7 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 	flights.append({"node": node, "pos": start, "dir": dir, "def": p, "id": id, "team": team, "target": target, "dropped": 0})
 	if id == "recon":
 		reveal_zones.append({"a": start, "b": target + dir * 400.0, "w": float(p.reveal_width), "team": team, "until": sim_time + float(p.reveal_time)})
-	if hud: hud.flash_message("%s inbound" % p.name)
+	if hud and team == 0: hud.flash_message("%s inbound" % lbl(team, id, p.name))
 
 
 func _update_flights(dt: float) -> void:
@@ -1056,7 +1057,7 @@ func _end_screen(victory: bool) -> void:
 # ------------------------------------------------------------------ economy and construction (B1.2)
 func _spawn_bases() -> void:
 	for t in 2:
-		cash[t] = BuildingDefs.START_CASH
+		cash[t] = BuildingDefs.START_CASH if _automated() else int(Game.settings.get("start_cash", BuildingDefs.START_CASH))
 		var cc := add_structure("command_center", t, start_pos[t], true)
 		add_flag(t, cc.position + Vector3(cc.half.x + 4.0, 0, (cc.half.y - 2.0) * (1.0 if t == 0 else -1.0)))
 		var fwd := -1.0 if t == 0 else 1.0     # toward the map centre
@@ -1146,7 +1147,7 @@ func requirements_met(team: int, k: String) -> bool:
 func placement_problem(team: int, k: String, pos: Vector3) -> String:
 	var d: Dictionary = BuildingDefs.DEFS[k]
 	if cash[team] < int(d.cost): return "Not enough cash"
-	if not requirements_met(team, k): return "Requires " + ", ".join(d.requires.map(func(x): return BuildingDefs.DEFS[x].name))
+	if not requirements_met(team, k): return "Requires " + ", ".join(d.requires.map(func(x): return bname(team, x)))
 	var h: Vector2 = d.size * 0.5 + Vector2(1.0, 1.0)
 	if not map_bounds.grow(-10).has_point(Vector2(pos.x, pos.z)): return "Outside the map"
 	if terrain:
@@ -1245,7 +1246,7 @@ func produce_problem(b: Building, k: String) -> String:
 func on_structure_built(b: Building, announce := true) -> void:
 	if b.bdef.has("free_unit"):
 		spawn_produced(b, Nations.swap_unit(nation_of(b.team), str(b.bdef.free_unit)))
-	if announce and b.team == 0 and hud: hud.flash_message("%s complete" % b.bdef.name)
+	if announce and b.team == 0 and hud: hud.flash_message("%s complete" % b.def.name)
 
 
 ## A finished unit leaves its building toward the rally point; aircraft appear landed on a free pad.
@@ -1667,7 +1668,7 @@ func _set_derrick_flag(e: Dictionary) -> void:
 		f = MeshInstance3D.new()
 		var q := QuadMesh.new(); q.size = Vector2(2.4, 1.5)
 		var m := StandardMaterial3D.new(); m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		m.albedo_color = UnitDefs.TEAM_COLORS[e.owner].lightened(0.2) if e.owner >= 0 else Color(0.85, 0.85, 0.82)
+		m.albedo_color = UnitDefs.team_color(e.owner).lightened(0.2) if e.owner >= 0 else Color(0.85, 0.85, 0.82)
 		q.material = m
 		(f as MeshInstance3D).mesh = q
 		f.position = Vector3(1.2, 0, 0)
@@ -1787,13 +1788,13 @@ func researching_at(team: int, id: String) -> Building:
 ## "" if `id` can be researched at structure b now, else the reason.
 func research_problem(b: Building, id: String) -> String:
 	var d: Dictionary = Upgrades.DEFS[id]
-	if b.bkind != d.at: return "Researched at the %s" % BuildingDefs.DEFS[d.at].name
+	if b.bkind != d.at: return "Researched at the %s" % bname(b.team, d.at)
 	if has_upgrade(b.team, id): return "Installed"
 	if researching_at(b.team, id): return "Already researching"
 	if b.research_id != "": return "This building is researching"
 	if not b.built: return "Under construction"
 	for r in d.requires:
-		if structures(b.team, r).is_empty(): return "Requires " + BuildingDefs.DEFS[r].name
+		if structures(b.team, r).is_empty(): return "Requires " + bname(b.team, r)
 	if cash[b.team] < int(d.cost): return "Not enough cash"
 	return ""
 
@@ -1801,13 +1802,13 @@ func research_problem(b: Building, id: String) -> String:
 func complete_upgrade(team: int, id: String) -> void:
 	upgrades[team][id] = true
 	print("UPGRADE team %d %s t=%.1f" % [team, id, sim_time])
-	if team == 0 and hud: hud.flash_message("Research complete: %s" % Upgrades.DEFS[id].name)
+	if team == 0 and hud: hud.flash_message("Research complete: %s" % lbl(team, id, Upgrades.DEFS[id].name))
 
 
 func plan_problem(team: int, id: String) -> String:
 	if not Upgrades.PLANS.has(id): return "Unknown plan"
 	if structures(team, "command_center").is_empty(): return "Requires a Command Center"
-	if not has_upgrade(team, Upgrades.PLAN_REQUIRES): return "Requires " + Upgrades.DEFS[Upgrades.PLAN_REQUIRES].name
+	if not has_upgrade(team, Upgrades.PLAN_REQUIRES): return "Requires " + lbl(team, Upgrades.PLAN_REQUIRES, Upgrades.DEFS[Upgrades.PLAN_REQUIRES].name)
 	if plan[team] == id or plan_pending[team] == id: return "Already selected"
 	return ""
 
@@ -1816,7 +1817,7 @@ func _update_plans() -> void:
 	for t in 2:
 		if plan_pending[t] != "" and sim_time >= plan_switch_t[t]:
 			plan[t] = plan_pending[t]; plan_pending[t] = ""
-			if t == 0 and hud: hud.flash_message("Battle plan active: %s" % Upgrades.PLANS[plan[t]].name)
+			if t == 0 and hud: hud.flash_message("Battle plan active: %s" % lbl(t, plan[t], Upgrades.PLANS[plan[t]].name))
 
 
 func _plan_effect(team: int, key: String) -> float:
@@ -1920,3 +1921,12 @@ func _update_drones(dt: float) -> void:
 				if dist < d.splash: o.take_damage(d.dmg * (1.0 - 0.6 * dist / d.splash), null)
 			n.queue_free()
 			drones.erase(d)
+
+
+## Display name in the team's own terminology (structures, upgrades, battle plans, powers).
+func lbl(team: int, id: String, fallback: String) -> String:
+	return Nations.label(nation_of(team), id, fallback) if team >= 0 and team < 2 else fallback
+
+
+func bname(team: int, k: String) -> String:
+	return lbl(team, k, str(BuildingDefs.DEFS[k].name))

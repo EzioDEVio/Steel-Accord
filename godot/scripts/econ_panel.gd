@@ -79,7 +79,7 @@ func _process(_dt: float) -> void:
 	var dz: Array = commander.dozers()
 	var sig := ""
 	var trs: Array = commander.live_selection().filter(func(x): return x.is_transport())
-	if b: sig = "b%d:%s" % [b.uid, str(b.built)]
+	if b: sig = "b%d:%s:%s" % [b.uid, str(b.built), tab]
 	elif not dz.is_empty(): sig = "dozer"
 	elif trs.size() == 1: sig = "tr%d:%d" % [trs[0].uid, trs[0].passengers.size()]
 	if sig != _sig:
@@ -101,17 +101,17 @@ func _process(_dt: float) -> void:
 		for k in BuildingDefs.BUILD_MENU:
 			var why := ""
 			if not battle.requirements_met(team, k):
-				why = "Requires " + ", ".join(BuildingDefs.DEFS[k].requires.map(func(x): return BuildingDefs.DEFS[x].name))
+				why = "Requires " + ", ".join(BuildingDefs.DEFS[k].requires.map(func(x): return battle.bname(team, x)))
 			elif battle.cash[team] < int(BuildingDefs.DEFS[k].cost): why = "Not enough cash"
 			buttons[k].disabled = why != ""
-			buttons[k].tooltip_text = "%s - $%d, %d s, power %+d\n%s%s" % [BuildingDefs.DEFS[k].name, BuildingDefs.DEFS[k].cost,
+			buttons[k].tooltip_text = "%s - $%d, %d s, power %+d\n%s%s" % [battle.bname(team, k), BuildingDefs.DEFS[k].cost,
 				int(BuildingDefs.DEFS[k].build_time), int(BuildingDefs.DEFS[k].power), BuildingDefs.DEFS[k].desc, ("\n" + why) if why != "" else ""]
 		info.text = "DOZER - choose a structure, then click the map to place it (Esc / right click cancels)."
 		info.position = Vector2(0, 8)
 		_draw_queue([])
 	elif b:
 		if not b.built:
-			info.text = "%s - under construction %d%%  (a Dozer must work on it)" % [b.bdef.name, int(b.progress * 100.0)]
+			info.text = "%s - under construction %d%%  (a Dozer must work on it)" % [b.def.name, int(b.progress * 100.0)]
 		else:
 			var pw: int = b.bdef.power
 			var extra := ""
@@ -130,8 +130,8 @@ func _process(_dt: float) -> void:
 				extra += "  CH-47s hauling %d  piles $%d" % [hauling, stock]
 			if b.bdef.has("drop"): extra += "  next drop %d s" % int(b.drop_t)
 			if b.bdef.power < 0 and not battle.power_ok(team): extra += "  LOW POWER"
-			info.text = "%s  %+d power%s" % [b.bdef.name, pw, extra]
-		info.position = Vector2(2 * (BTN.x + 4) + 6, 6) if b.built else Vector2(270, 6)
+			info.text = "%s  %+d power%s" % [b.def.name, pw, extra]
+		info.position = Vector2(0, -18) if b.built else Vector2(270, 6)
 		for k in b.produces_list():
 			if not buttons.has(k): continue
 			var why: String = battle.produce_problem(b, k)
@@ -153,8 +153,9 @@ func _process(_dt: float) -> void:
 				bt.disabled = state == "" and why != ""
 				if state == "INSTALLED": bt.disabled = true
 				var lab := bt.get_child(bt.get_child_count() - 1) as Label
-				lab.text = ("%s  %s" % [d.name, state]) if state != "" else "%s  $%d" % [d.name, int(d.cost)]
-				bt.tooltip_text = "%s - $%d, %d s research\n%s\nAffects: %s%s" % [d.name, int(d.cost), int(d.time), d.desc,
+				var un: String = battle.lbl(team, id, d.name)
+				lab.text = ("%s  %s" % [un, state]) if state != "" else "%s  $%d" % [un, int(d.cost)]
+				bt.tooltip_text = "%s - $%d, %d s research\n%s\nAffects: %s%s" % [un, int(d.cost), int(d.time), d.desc,
 					Upgrades.SCOPE_TEXT[d.scope], ("\n" + why) if why != "" and state == "" else ""]
 			elif key.begins_with("plan:"):
 				var pid: String = key.substr(5)
@@ -164,8 +165,9 @@ func _process(_dt: float) -> void:
 				var st2 := "ACTIVE" if battle.plan[team] == pid else ("preparing %d s" % int(ceil(battle.plan_switch_t[team] - battle.sim_time)) if battle.plan_pending[team] == pid else "")
 				pb.disabled = why2 != ""
 				var lab2 := pb.get_child(pb.get_child_count() - 1) as Label
-				lab2.text = "Plan: %s %s" % [pd.name, st2]
-				pb.tooltip_text = "Battle plan %s: %s\nOne plan at a time; switching takes %d s (no plan while switching).%s" % [pd.name, pd.desc,
+				var pn: String = battle.lbl(team, pid, pd.name)
+				lab2.text = "%s %s" % [pn, st2]
+				pb.tooltip_text = "Battle plan %s: %s\nOne plan at a time; switching takes %d s (no plan while switching).%s" % [pn, pd.desc,
 					int(Upgrades.PLAN_SWITCH_S), ("\n" + why2) if why2 != "" and st2 == "" else ""]
 		if buttons.has("sell"): buttons["sell"].disabled = not b.built or b.bkind == "command_center"
 		if buttons.has("repair"):
@@ -186,9 +188,21 @@ func _build_dozer_menu() -> void:
 		var d: Dictionary = BuildingDefs.DEFS[k]
 		var art := UsArt.building(d.art)
 		var cb := func(): commander.set_mode("place:" + k)
-		_make(k, d.name, int(d.cost), str(art.get("icon", "")), cb, _cell(i), "")
+		_make(k, battle.bname(commander.team, k), int(d.cost), str(art.get("icon", "")), cb, _cell(i), "")
 		i += 1
 	height = _cell(i - 1).y + BTN.y
+
+
+## Structure command card. Production and research are separate tabs (never one mixed row); the action row holds
+## Repair / Sell and the tab switches. Only real options appear (nation roster, research located here).
+var tab := "production"
+
+
+func _research_ids(b: Building) -> Array:
+	var out: Array = []
+	for id in Upgrades.DEFS:
+		if Upgrades.DEFS[id].at == b.bkind: out.append(id)
+	return out
 
 
 func _build_structure_menu(b: Building) -> void:
@@ -201,36 +215,42 @@ func _build_structure_menu(b: Building) -> void:
 		add_child(cb); buttons["cancel"] = cb
 		height = 30.0
 		return
-	if b.produces_list().is_empty() and not b.bdef.produces.is_empty():
-		var note := Label.new()
-		note.text = "%s aircraft arrive with the %s art pack." % [Nations.name_of(battle.nation_of(team)), Nations.name_of(battle.nation_of(team))]
-		note.position = Vector2(4, 36)
-		note.add_theme_font_size_override("font_size", 12)
-		add_child(note)
-	for k in b.produces_list():
-		var d: Dictionary = UnitDefs.def_of(k)
-		var icon: String = str(d.get("icon", ""))
-		if icon == "" and d.get("visual", "") == "vehicle_art": icon = str(UsArt.vehicle(d.art).get("icon", ""))
-		elif icon == "" and d.get("visual", "") == "infantry": icon = str(UsArt.infantry(d.art).get("icon", ""))
-		var cb := func(): battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": k})
-		var nm: String = d.name.split(" (")[0]
-		_make(k, nm, int(BuildingDefs.UNIT_COST[k][0]), icon, cb, _cell(i), "")
-		i += 1
-	# research at this structure, then battle plans (Command Center)
-	for id in Upgrades.DEFS:
-		if Upgrades.DEFS[id].at != b.bkind: continue
-		var uid: String = id
-		var cbr := func():
-			if b.research_id == uid: battle.issue({"type": "cancel_research", "team": team, "id": b.uid})
-			else: battle.issue({"type": "research", "team": team, "id": b.uid, "upgrade": uid})
-		_make("up:" + id, Upgrades.DEFS[id].name, int(Upgrades.DEFS[id].cost), "", cbr, _cell(i), "")
-		i += 1
-	if b.bkind == "command_center":
-		for pid in Upgrades.PLANS:
-			var pp: String = pid
-			_make("plan:" + pid, "Plan: " + Upgrades.PLANS[pid].name, 0, "", func(): battle.issue({"type": "plan", "team": team, "plan": pp}), _cell(i), "")
+	var prod: Array = b.produces_list()
+	var res: Array = _research_ids(b)
+	var has_plans: bool = b.bkind == "command_center"
+	var n_up: int = res.size() + (Upgrades.PLANS.size() if has_plans else 0)
+	if prod.is_empty() and n_up > 0: tab = "upgrades"
+	elif n_up == 0: tab = "production"
+	if tab == "production":
+		if prod.is_empty() and not b.bdef.produces.is_empty():
+			var note := Label.new()
+			note.text = "Nothing to build here yet for %s." % Nations.name_of(battle.nation_of(team))
+			note.position = Vector2(4, GRID_Y + 2)
+			note.add_theme_font_size_override("font_size", 12)
+			add_child(note); buttons["_note"] = note
+		for k in prod:
+			var d: Dictionary = UnitDefs.def_of(k)
+			var icon: String = str(d.get("icon", ""))
+			if icon == "" and d.get("visual", "") == "vehicle_art": icon = str(UsArt.vehicle(d.art).get("icon", ""))
+			elif icon == "" and d.get("visual", "") == "infantry": icon = str(UsArt.infantry(d.art).get("icon", ""))
+			var cb := func(): battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": k})
+			var nm: String = d.name.split(" (")[0]
+			_make(k, nm, int(BuildingDefs.UNIT_COST[k][0]), icon, cb, _cell(i), "")
 			i += 1
-	# action row: Repair / Sell
+	else:
+		for id in res:
+			var uid: String = id
+			var cbr := func():
+				if b.research_id == uid: battle.issue({"type": "cancel_research", "team": team, "id": b.uid})
+				else: battle.issue({"type": "research", "team": team, "id": b.uid, "upgrade": uid})
+			_make("up:" + id, battle.lbl(team, id, Upgrades.DEFS[id].name), int(Upgrades.DEFS[id].cost), "", cbr, _cell(i), "")
+			i += 1
+		if has_plans:
+			for pid in Upgrades.PLANS:
+				var pp: String = pid
+				_make("plan:" + pid, battle.lbl(team, pid, Upgrades.PLANS[pid].name), 0, "", func(): battle.issue({"type": "plan", "team": team, "plan": pp}), _cell(i), "")
+				i += 1
+	# action row: Repair / Sell, then the Production / Upgrades tabs when the structure has both
 	var rep := func(): battle.issue({"type": "repair", "team": team, "id": b.uid, "on": not b.repairing})
 	var rb: Button = hud._button("Repair", rep, Vector2(BTN.x, 28))
 	rb.position = Vector2(0, 0)
@@ -242,7 +262,18 @@ func _build_structure_menu(b: Building) -> void:
 	sb.tooltip_text = "Sell this structure for half its cost (scaled by damage)"
 	add_child(sb)
 	buttons["sell"] = sb
-	height = (_cell(i - 1).y + BTN.y if i > 0 else GRID_Y) + 32.0
+	if not prod.is_empty() and n_up > 0:
+		var x0 := 2 * (BTN.x + 4) + 12
+		for t in [["production", "Production (%d)" % prod.size()], ["upgrades", ("Upgrades & Plans (%d)" if has_plans else "Upgrades (%d)") % n_up]]:
+			var tid: String = t[0]
+			var tb: Button = hud._button(t[1], func(): tab = tid; _sig = "", Vector2(150, 28))
+			tb.position = Vector2(x0, 0)
+			tb.tooltip_text = "Show what this structure can %s" % ("build" if tid == "production" else "research")
+			if tab == tid:
+				tb.add_theme_stylebox_override("normal", hud._style(Color(0.18, 0.32, 0.27, 1.0), hud.ACCENT))
+			add_child(tb); buttons["tab:" + tid] = tb
+			x0 += 154
+	height = (_cell(i - 1).y + BTN.y if i > 0 else GRID_Y + 24.0) + 32.0
 
 
 func _build_transport_menu(tr: Unit) -> void:

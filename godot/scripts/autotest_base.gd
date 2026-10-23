@@ -427,7 +427,7 @@ func _qa_m7(ccp: Vector3) -> void:
 		battle.commander._set_selection([]); battle.commander.sel_building = b
 		await _wait_sim(0.5)
 		txt = insp.body.get_parsed_text()
-		_log("inspector_building_queue", insp.title.text == b.bdef.name and "Production" in txt and "ETA" in txt, txt.substr(0, 160).replace("\n", " | "))
+		_log("inspector_building_queue", insp.title.text == b.def.name and "Production" in txt and "ETA" in txt, txt.substr(0, 160).replace("\n", " | "))
 	var af: Array = battle.structures(0, "airfield")
 	if not af.is_empty():
 		battle.commander.sel_building = af[0]
@@ -472,6 +472,9 @@ func _qa_m8(ccp: Vector3) -> void:
 	var wf: Building = wfs[0] if not wfs.is_empty() else battle.add_structure("war_factory", 0, ccp + Vector3(0, 0, -70), true)
 	await _sel([]); battle.commander.sel_building = wf
 	await _wait_sim(0.4)
+	var tabb: Button = battle.hud.econ.buttons.get("tab:upgrades")
+	if tabb: _press_button(tabb)
+	await _wait_sim(0.3)
 	var btn: Button = battle.hud.econ.buttons.get("up:composite_armor")
 	var c0: int = battle.cash[0]
 	if btn and not btn.disabled: _press_button(btn)

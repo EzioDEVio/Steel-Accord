@@ -21,6 +21,8 @@ var roster: VBoxContainer
 var pin_btn: Button
 var close_btn: Button
 var hp_bar: Control
+var portrait: TextureRect
+var _icons := {}
 var pinned: Unit = null
 var closed_sig := ""
 var _sig := ""
@@ -41,6 +43,11 @@ func _ready() -> void:
 	add_child(v)
 	var top := HBoxContainer.new()
 	v.add_child(top)
+	portrait = TextureRect.new()
+	portrait.custom_minimum_size = Vector2(56, 36)
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	top.add_child(portrait)
 	title = Label.new()
 	title.add_theme_font_size_override("font_size", 16)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -116,6 +123,8 @@ func _process(dt: float) -> void:
 	_t = 0.25
 	if sig != _sig: _rebuild_roster(objs)
 	_sig = sig
+	portrait.texture = _icon_for(objs[0])
+	portrait.visible = portrait.texture != null
 	if objs.size() == 1:
 		subject = objs[0]; group = []
 		_describe(subject)
@@ -138,7 +147,7 @@ func _kv(k: String, v: String) -> String:
 func _owner(u: Unit) -> String:
 	var nat: String = battle.nation_of(u.team) if u.team >= 0 else ""
 	var who := "You" if u.team == commander.team else ("Enemy" if u.team >= 0 else "Neutral")
-	return "%s - %s%s" % [who, UnitDefs.TEAM_NAMES[u.team] if u.team >= 0 else "", (" (%s)" % Nations.name_of(nat)) if nat != "" else ""]
+	return "%s - %s%s" % [who, UnitDefs.team_name(u.team) if u.team >= 0 else "", (" (%s)" % Nations.name_of(nat)) if nat != "" else ""]
 
 
 const TARGET_NAMES := {"ground": "ground", "heli": "helicopters", "jet": "jets"}
@@ -160,7 +169,7 @@ func _state(u: Unit) -> String:
 	if u.dead: return "destroyed"
 	if u.para_alt > 0.0: return "parachuting in"
 	match u.state:
-		Unit.S.IDLE: return "idle" + (" - engaging %s" % u.target.def.name if u.target and not u.target.dead else "")
+		Unit.S.IDLE: return ("engaging %s" % u.target.def.name) if u.target and not u.target.dead else "idle"
 		Unit.S.MOVE: return "moving"
 		Unit.S.ATTACK: return "attacking %s" % (u.target.def.name if u.target and not u.target.dead else "target")
 		Unit.S.ATTACK_MOVE: return "attack-moving"
@@ -171,7 +180,7 @@ func _state(u: Unit) -> String:
 		Unit.S.BUILD:
 			var s: Variant = u.site
 			if s and is_instance_valid(s) and not s.dead:
-				return ("building %s (%d%%)" % [s.bdef.name, int(s.progress * 100.0)]) if not s.built else "repairing %s" % s.bdef.name
+				return ("building %s (%d%%)" % [s.def.name, int(s.progress * 100.0)]) if not s.built else "repairing %s" % s.def.name
 			return "building"
 		Unit.S.HAUL: return "hauling supplies" + (" ($%d aboard)" % u.cargo if u.cargo > 0 else "")
 	return "-"
@@ -228,23 +237,23 @@ func _upgrade_lines(u: Unit) -> String:
 			if rb: st = "Researching %d%%" % int(100.0 * (1.0 - rb.research_left / float(d.time)))
 			else:
 				var at: Array = battle.structures(u.team, d.at)
-				if at.is_empty(): st = "[color=#d9b36c]Locked[/color] - needs a %s" % BuildingDefs.DEFS[d.at].name
+				if at.is_empty(): st = "[color=#d9b36c]Locked[/color] - needs a %s" % battle.bname(u.team, d.at)
 				else:
 					var why: String = battle.research_problem(at[0], id)
-					st = "Available at the %s ($%d)" % [BuildingDefs.DEFS[d.at].name, int(d.cost)] if why == "" or why == "Not enough cash" or why == "This building is researching" \
+					st = "Available at the %s ($%d)" % [battle.bname(u.team, d.at), int(d.cost)] if why == "" or why == "Not enough cash" or why == "This building is researching" \
 						else "[color=#d9b36c]Locked[/color] - %s" % why
-		lines += "  %s: %s\n" % [d.name, st]
+		lines += "  %s: %s\n" % [battle.lbl(u.team, id, d.name), st]
 	var pl: String = battle.plan[u.team]
 	if pl != "" and (u.domain == "ground" or pl == "recon"):
-		lines += "  Battle plan %s: %s\n" % [Upgrades.PLANS[pl].name, Upgrades.PLANS[pl].desc]
+		lines += "  Battle plan %s: %s\n" % [battle.lbl(u.team, pl, Upgrades.PLANS[pl].name), Upgrades.PLANS[pl].desc]
 	return (_h("Upgrades") + lines) if lines != "" else ""
 
 
 # ------------------------------------------------------------------ structures
 func _describe_building(b: Building) -> void:
-	title.text = b.bdef.name
+	title.text = b.def.name
 	sub.text = "Structure  |  %s" % _owner(b)
-	var t := "[color=#c9d4cf]%s[/color]\n" % b.bdef.desc
+	var t := _h("Overview") + "[color=#c9d4cf]%s[/color]\n" % b.bdef.desc
 	var pw: int = int(b.bdef.power)
 	var powered: bool = battle.power_ok(b.team) if b.team >= 0 else true
 	var st := ""
@@ -255,7 +264,7 @@ func _describe_building(b: Building) -> void:
 	t += _kv("Status", st)
 	if pw != 0: t += _kv("Power", "%+d  (base: %d used / %d generated)" % [pw, battle.power_use(b.team), battle.power_gen(b.team)])
 	var req: Array = b.bdef.get("requires", [])
-	if not req.is_empty(): t += _kv("Requires", ", ".join(req.map(func(x): return BuildingDefs.DEFS[x].name)))
+	if not req.is_empty(): t += _kv("Requires", ", ".join(req.map(func(x): return battle.bname(b.team, x))))
 	if not b.def.weapons.is_empty(): t += _h("Weapons") + _weapons(b)
 	# production
 	var plist: Array = b.produces_list()
@@ -273,7 +282,26 @@ func _describe_building(b: Building) -> void:
 				t += "  queued: " + ", ".join(rest.keys().map(func(k): return "%d x %s" % [rest[k], UnitDefs.def_of(k).name])) + "\n"
 		if b.has_rally: t += _kv("Rally point", "set (%d m away)" % int(b.flat_dist(b.rally)))
 	elif b.built and not b.bdef.produces.is_empty() and plist.is_empty():
-		t += _kv("Production", "none yet for %s (arrives with its art pack)" % Nations.name_of(battle.nation_of(b.team)))
+		t += _kv("Production", "nothing to build here yet for %s" % Nations.name_of(battle.nation_of(b.team)))
+	# services: what this structure does for the base right now
+	var svc := ""
+	if b.bkind == "command_center":
+		var bl: Array = battle.units.filter(func(u): return u.team == b.team and not u.dead and u.def.get("builder", false))
+		var busy: int = bl.filter(func(u): return u.state == Unit.S.BUILD).size()
+		svc += _kv("Builders", "%d (%d working, %d available) - %d structure types to build" % [bl.size(), busy, bl.size() - busy, BuildingDefs.BUILD_MENU.size()])
+	if b.bdef.get("repair", false): svc += _kv("Repair bay", "servicing a vehicle" if b.servicing else "free - send damaged vehicles here")
+	if b.bkind == "radar": svc += _kv("Radar", "online" if battle.radar_online(b.team) else "offline (low power)")
+	if b.bdef.has("drop"): svc += _kv("Next supply drop", ("%d s" % int(b.drop_t)) if powered else "paused (low power)")
+	if b.bkind == "supply_depot":
+		var hauling := 0
+		var hname := ""
+		for u in battle.units:
+			if u.team == b.team and not u.dead and u.def.get("hauler", false):
+				hauling += 1; hname = u.def.name.split(" (")[0]
+		var stock := 0
+		for pl in battle.piles: stock += int(pl.cash)
+		svc += _kv("Supply", "%d %s haulers, piles hold $%d, delivered $%d" % [hauling, hname if hname != "" else "supply", stock, battle.income[b.team] - battle.drop_income[b.team] - battle.derrick_income[b.team]])
+	if svc != "": t += _h("Services") + svc
 	# airfield pads
 	if not b.pads.is_empty():
 		t += _h("Pads %d / %d in use" % [b.pads.filter(func(p): return p.uid >= 0).size(), b.pads.size()])
@@ -282,18 +310,6 @@ func _describe_building(b: Building) -> void:
 			var a: Unit = battle.by_id.get(p.uid) if p.uid >= 0 else null
 			if a and not a.dead: t += "  Pad %d: %s - %s\n" % [i + 1, a.def.name, _state(a)]
 			else: t += "  Pad %d: free\n" % (i + 1)
-	# economy buildings
-	if b.bkind == "supply_depot":
-		var hauling := 0
-		for u in battle.units:
-			if u.team == b.team and not u.dead and u.def.get("hauler", false): hauling += 1
-		var stock := 0
-		for pl in battle.piles: stock += int(pl.cash)
-		t += _kv("Supply", "%d CH-47 haulers, piles hold $%d, delivered $%d" % [hauling, stock, battle.income[b.team] - battle.drop_income[b.team] - battle.derrick_income[b.team]])
-	if b.bdef.has("drop"):
-		t += _kv("Next supply drop", ("%d s" % int(b.drop_t)) if powered else "paused (low power)")
-	if b.bdef.get("repair", false): t += _kv("Repair bay", "servicing a vehicle" if b.servicing else "free - send damaged vehicles here")
-	if b.bkind == "radar": t += _kv("Radar", "online" if battle.radar_online(b.team) else "offline (low power)")
 	var res := ""
 	for id in Upgrades.DEFS:
 		if Upgrades.DEFS[id].at != b.bkind: continue
@@ -304,14 +320,14 @@ func _describe_building(b: Building) -> void:
 		else:
 			var why: String = battle.research_problem(b, id)
 			rst = ("Available ($%d, %d s)" % [int(d.cost), int(d.time)]) if why == "" else "Locked - %s" % why
-		res += "  %s: %s\n    %s\n" % [d.name, rst, d.desc]
-	if res != "": t += _h("Research") + res
+		res += "  %s: %s\n    %s\n" % [battle.lbl(b.team, id, d.name), rst, d.desc]
+	if res != "": t += _h("Upgrades") + res
 	if b.bkind == "command_center":
 		var tm: int = b.team
 		var cur: String = battle.plan[tm]
 		var pend: String = battle.plan_pending[tm]
-		var ptxt: String = Upgrades.PLANS[cur].name if cur != "" else "none"
-		if pend != "": ptxt += "  (switching to %s in %d s)" % [Upgrades.PLANS[pend].name, int(ceil(battle.plan_switch_t[tm] - battle.sim_time))]
+		var ptxt: String = battle.lbl(tm, cur, Upgrades.PLANS[cur].name) if cur != "" else "none"
+		if pend != "": ptxt += "  (switching to %s in %d s)" % [battle.lbl(tm, pend, Upgrades.PLANS[pend].name), int(ceil(battle.plan_switch_t[tm] - battle.sim_time))]
 		var why3: String = battle.plan_problem(tm, "assault")
 		t += _kv("Battle plan", ptxt + (("  - " + why3) if why3.begins_with("Requires") else ""))
 	body.text = t.strip_edges()
@@ -348,3 +364,16 @@ func _rebuild_roster(objs: Array) -> void:
 		roster.add_child(b)
 		n += 1
 		if n >= 8: break
+
+
+## Portrait: the unit's icon (nation-specific when it has one), the structure's build icon otherwise.
+func _icon_for(u: Unit) -> Texture2D:
+	var path := ""
+	if u is Building: path = str(UsArt.building((u as Building).bdef.art).get("icon", ""))
+	else:
+		path = str(u.def.get("icon", ""))
+		if path == "" and u.def.get("visual") == "infantry": path = str(UsArt.infantry(u.def.get("art", "")).get("icon", ""))
+		elif path == "" and u.def.has("art"): path = str(UsArt.vehicle(u.def.art).get("icon", ""))
+	if path == "" or not ResourceLoader.exists(path): return null
+	if not _icons.has(path): _icons[path] = load(path)
+	return _icons[path]

@@ -1,0 +1,102 @@
+# Prompt 2 — Recon follow-up
+
+Use when Claude has access to the source or needs to deepen its findings.
+
+```text
+Proceed with Recon as the senior game developer. Assign the engine/platform, content pipeline, AI, map, and QA agents independent investigations. Inspect the exact repository commit and my current build/test paths before modifying them. Trace startup through file systems, INI loads, shell/UI, map loading, model/texture/audio lookups, AI, save/replay and network dependencies. Produce docs/RECON.md with a source map, a dependency and asset inventory, legal/packaging boundary, reproducible build commands, and a risk-ranked first implementation ticket. Mark each fact observed, inferred, or unverified. Keep moving toward B1.1; do not stop at a high-level report.
+```
+
+## Prompt 3 — Architecture and integration follow-up
+
+```text
+Act as chief architect and integrator. Based on the verified Recon report, define the product branch and folder structure, original content schema, asset manifest, content-reference validator, map/model/audio export pipeline, startup without EA archives, AI command boundary, fixed-step simulation, and test strategy. Produce docs/ARCHITECTURE.md plus concise architecture decisions for the old engine's renderer and multiplayer limitations. Give every specialist agent an interface contract and owner for integration. Provide an exact dependency order for B1.1 and B2 and begin the code/content implementation immediately after the decisions that unblock it. If you propose changing engines, present measured evidence and wait for my approval before switching.
+```
+
+## Prompt 4 — Game design and creative direction follow-up
+
+```text
+Lead the game design, art, map, texture/3D, UI and audio agents. Make this an original fictional modern RTS with competitive clarity. Create nine faction sheets for Iran, Iraq, North Korea, Taiwan, China, Japan, Europe coalition, Ukraine and USA. Specify each faction's economy, builder, power, tech, unit silhouettes, strengths, counters, support ability, AI build behavior and visual/audio identity. Make a shared rules and counter matrix so matches are fair. Design Harbor Divide as the first original two-player test map, including starts, supply locations, alternate routes, buildable areas and pathfinding checks. Deliver inspectable concepts and production-ready specifications; then integrate one new unit, one building, one map and a readable original HUD/menu treatment for B1. Do not pass off generated images as engine-ready assets until they import and render.
+```
+
+## Prompt 5 — Build the first genuinely new game content
+
+```text
+Implement B1.1 now. Use the pinned product branch, not my Steam installation. The outcome I want to see is an original unit on an original test map inside the running engine. Have the asset agents deliver an original simple model/texture/icon with provenance, the gameplay agent wire object/weapon/button/command definitions, the map agent create the playable map, and QA validate every referenced ID and runtime file. Integrate and run it. Show build output and an in-game screenshot or video and list the exact paths changed. The unit must be constructible/produced, selected, moved, attack, receive damage and be destroyed. If runtime verification is blocked because you cannot access my Windows repo, create a patch bundle and asset files with a deterministic apply/test procedure, and identify the one precise missing input. Do not call the milestone complete until I can run and observe the new content.
+```
+
+## Prompt 6 — Standalone, AI and competitive readiness review
+
+```text
+Audit the current build against B2 and later competitive requirements. In a clean Windows folder with no original Steam archives, verify the new game boots and completes a human-versus-AI skirmish using only our content. Check both initial factions' economy, build order, counterplay, map pathfinding, UI, save/load, victory/defeat, asset manifest and licenses. Record missing runtime dependencies and any accidental EA asset loads. Demonstrate the AI scouting, building, producing, attacking and responding to losses. Then propose the next small batch of factions and maps. Keep multiplayer in a later gate until deterministic two-client tests, content hashes, replay tests and desync logs pass. Provide an evidence table: requirement, actual observation, file/log/screenshot, result, next fix. Fix concrete failures before claiming readiness.
+```
+
+## Mechanics addendum to paste after Prompt 1
+
+The client-supplied breakdown is useful for identifying gameplay systems. It also mixes observed Zero Hour behavior, uncertain implementation claims, and suggested new architecture. These prompts tell Claude to keep those categories separate.
+
+| Claim in the supplied description | How to use it |
+| --- | --- |
+| Three factions split into three Generals equals nine playable factions | Zero Hour has three base factions **and** nine specialist armies. Our new project has the nine *country/coalition sides requested by Mohammed*; optional commander doctrines can come later. |
+| Dual resource framework | Specify one spendable credit balance plus power/capacity and other constraints. Cash may come from several sources; power is not a second currency. |
+| China passively collects from supply docks | Supply Trucks physically shuttle to depots; Hackers are a separate secondary income method. USA Chinooks and GLA Workers are different active gatherers. |
+| Persistent right-side command console | Mohammed's tested Zero Hour UI has a bottom command bar and lower-left minimap. Make the new layout original and scalable rather than treating a right sidebar as a required replica. |
+| Particle Cannon is a General's Power | It is a constructed superweapon. Keep constructed superweapons, experience/rank purchases, and unit veterancy as distinct systems. |
+| Hierarchical A* with group flow fields, mandatory ECS, snap grid and radius-limited base placement, or lockstep **or rollback** as a fixed requirement | Inspect the actual source and benchmark. Existing code has pathfinding cells, object templates and behavior modules, plus frame-numbered network command packets. Flow fields, a replacement ECS, snap placement, and rollback are **proposals**, not proven properties or mandatory upgrades. |
+| Every oil well is unraidable, all bridges repairable, all props destructible | Treat these as map/object design options. Specify capture, damage, sight and pathfinding behavior per object and verify each in-engine. |
+
+### Prompt 7 — verify and translate the mechanics brief
+
+```text
+Here is my additional mechanics brief for a game inspired by Zero Hour. Use it as a feature inventory, not an authoritative implementation specification. Lead the engine, gameplay and design agents in a focused evidence audit. Produce docs/MECHANICS_REFERENCE_AUDIT.md with columns: supplied claim, verified behavior/source, whether we want an analogous mechanic, original design for our game, engine/data implementation location, and acceptance test. Verify against EA's released source, the actual community-fork revision, the game data and the game manual as appropriate.
+
+Correct important distinctions before implementation: the three original base factions coexist with nine specialist armies; cash is spendable and power is a constraint; USA Chinooks, GLA Workers and China Supply Trucks physically collect finite supplies while secondary income follows different rules; the Particle Cannon is a structure-based superweapon; unit veterancy, commander rank purchases and construction upgrades are different progression tracks. The original interface is not a mandatory right-side sidebar. Source inspection must decide pathfinding details; do not assert group flow fields from a vague description. Treat a full ECS rewrite, mandatory snap grid/base radius, and rollback netcode as optional architecture decisions requiring a measured reason. Capture and bridge/prop behavior should be verified per map object.
+
+Classify each requested feature as: B1 proof, B2 standalone slice, later competitive release, or optional campaign/challenge content. Do the audit quickly enough to inform implementation, then continue the current build ticket. Do not claim that writing this document is itself a playable game change.
+```
+
+### Prompt 8 — economy, logistics and faction differentiation
+
+```text
+Implement the economy and faction systems for our original RTS, beginning with the two-faction vertical slice and leaving an extensible design for all nine sides: Iran, Iraq, North Korea, Taiwan, China, Japan, Europe coalition, Ukraine and USA. Model one spendable credit balance, finite contestable deposits, active gatherers that travel and can be intercepted, optional faction-specific secondary income, neutral capturable economic sites, builder construction, production costs/times and a power/capacity rule where relevant. Do not copy Zero Hour's unit names, values, interfaces or artwork. Treat the old game's Chinook/Worker/Supply Truck contrast as a reference for asymmetry, not a demand that our nine factions each get a clone of one.
+
+The gameplay and balance agents must write an economy specification with units for every quantity and formulas for cargo value, trip time, delivery, depletion, income tick, investment payback, build time, power availability and cap, plus rounding rules and fixed-step behavior. Define when an income source can be raided, denied, rebuilt or recaptured. Document each faction's intended economic advantage and its counterplay; avoid a passive income strategy that makes map control irrelevant. The map agent must place deposits and neutral sites so mirrored starts have comparable travel time and expansion opportunities.
+
+Implement a minimal real version in B2: both sides can gather, spend, lose gatherers, replace them, contest a neutral objective and recover from a depleted starting node. Verify credit conservation, power/build behavior, opening build orders, replacement time, income curve, snowball risk and a human-versus-AI match. Return a table of actual measured timings and balance issues. Expand the remaining seven sides only after the two-side economy is playable.
+```
+
+### Prompt 9 — combat, progression, terrain and interaction contracts
+
+```text
+Design and implement distinct but compatible combat systems: data-defined weapons/damage tags and armor classes; projectile travel and splash/area effects where supported; target priority, sight/fog, movement and pathfinding; unit counters; unit veterancy; a separate commander rank/ability tree; upgrades researched at buildings; and optional late-game constructed superweapons. Write explicit timing, range, cost, cooldown, damage and counter rules for each object, with data validation and no unexplained hardcoded balance constants. Make the first roster show infantry, vehicle and anti-vehicle/air counterplay without requiring every faction to use identical units.
+
+The map and gameplay agents should specify occupancy and combat behavior for garrisons, capturable neutral structures, elevation, chokepoints and route alternatives. Bridges may be destructible/repairable only if the engine and a specific original map support reliable pathfinding updates. Destructible cover/props and hazard zones need visibility, lifetime, damage, cleanup and save/replay rules. The art/audio agents must give every selected unit, weapon impact, veterancy change and ability a readable in-game visual/audio cue, with original content provenance.
+
+Deliver a combat matrix of attacker role versus armor/target role; a progression table showing how unit veterancy differs from commander powers; and small reproducible test scenarios for target acquisition, garrison entry/exit, cover destruction, sight on elevation, ability cooldown, damage over time and counterplay. Implement the B2 subset first. Mark every unimplemented feature as a future ticket, not a working menu button.
+```
+
+### Prompt 10 — modes, AI and competitive engineering
+
+```text
+Plan a complete RTS product without trying to finish every mode in the first build. For skirmish, support selectable maps, sides, teams, starting credits, difficulty, victory conditions and fair AI personalities (for example aggressive expansion, defense-first and air-focused). For a later original challenge ladder, design distinct scripted commander encounters and rules for unlocks/rewards. For campaigns, prepare original missions, briefings, triggers, secondary objectives and in-engine cinematics; do not copy Zero Hour's stories, generals, actors, news footage or exact mission sequence. Show which systems are reusable between skirmish, challenges and campaigns.
+
+The AI agent should first deliver reliable deterministic macro and tactical behaviors that share the normal economy and actions available to players. Scripted boss modifiers must be disclosed by the mode. Optional local LLM advisers or directors belong to a later single-player experiment with bounded actions, latency handling and save/replay semantics; they are not a substitute for core combat AI.
+
+For competitive multiplayer, inspect the existing frame-command networking, replay and CRC behavior. Preserve deterministic fixed-step state and validate identical content hashes and desync logs. Evaluate whether the current command synchronization can be improved; do not casually replace it with rollback or promise rollback support. Define authoritative match settings, lobbies, reconnect/leave handling, observers, replays, balance telemetry, map veto or pool rules, fair starting positions and anti-cheat boundaries for a later release. Build single-player B2 first, then use repeatable two-client tests as the network gate. Report evidence for each mode separately.
+```
+
+## Handoff notes for the project
+
+1. Paste Prompt 1 first, then Prompts 7–10 as the mechanics addendum. Prompt 1 contains the client brief, team structure, authorization, existing machine paths and the initial coding ticket.
+2. Let Claude inspect its environment. If it cannot see the Windows path, share **a source checkout/branch or targeted files and logs**, not the complete Steam game archives for distribution. The public fork can be inspected for the initial source mapping.
+3. Prompt 5 is the quickest way to correct a planning-only response. It demands a visible in-game result and honest test evidence.
+4. The separate project blueprint provides additional implementation context: **Modern RTS — Recon Architect Design Build**.
+
+## Reference links
+
+- EA source: https://github.com/electronicarts/CnC_Generals_Zero_Hour
+- EA license terms: https://github.com/electronicarts/CnC_Generals_Zero_Hour/blob/main/LICENSE.md
+- Community engine fork: https://github.com/TheSuperHackers/GeneralsGameCode
+- EA franchise mod guidelines: https://www.ea.com/games/command-and-conquer/news/modding-faq
+- Zero Hour expansion manual (mechanics, economy, rank and modes): https://static.wikia.nocookie.net/cnc_gamepedia_en/images/b/b1/CNC_Generals_Zero_Hour_Manual_2015.pdf/revision/latest?cb=20180801163919&format=original
+- EA pathfinding code: https://github.com/electronicarts/CnC_Generals_Zero_Hour/blob/main/GeneralsMD/Code/GameEngine/Source/GameLogic/AI/AIPathfind.cpp
+- EA network packet definitions: https://github.com/electronicarts/CnC_Generals_Zero_Hour/blob/main/GeneralsMD/Code/GameEngine/Include/GameNetwork/NetworkDefs.h

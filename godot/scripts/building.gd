@@ -39,7 +39,7 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 	kind = building_kind
 	domain = "ground"
 	half = bdef.size * 0.5
-	def = {"name": bdef.name, "hp": bdef.hp, "radius": maxf(half.x, half.y) * 0.8, "height": 6.0, "sight": bdef.sight,
+	def = {"name": Nations.label(b.nation_of(t), building_kind, bdef.name), "hp": bdef.hp, "radius": maxf(half.x, half.y) * 0.8, "height": 6.0, "sight": bdef.sight,
 		"speed": 0.0, "accel": 0.0, "turn_deg": 0.0, "weapons": bdef.get("weapons", []), "structure": true,
 		"icon": "", "armor": "structure", "visual": "structure"}
 	hp = bdef.hp if start_built else bdef.hp * 0.1
@@ -311,7 +311,7 @@ func _build_card() -> void:
 	q.material = card_mat
 	card_mat.set_shader_parameter("art", tex)
 	card_mat.set_shader_parameter("art_px", Vector2(wpx, hpx))
-	card_mat.set_shader_parameter("team_color", UnitDefs.TEAM_COLORS[team])
+	card_mat.set_shader_parameter("team_color", UnitDefs.team_color(team))
 	card_mat.set_shader_parameter("team_tint", 0.0 if team == 0 else 0.12)
 	card_mat.set_shader_parameter("progress", progress)
 	card_mat.set_shader_parameter("fog_xz", Vector2(position.x, position.z))
@@ -328,7 +328,7 @@ func _build_outline() -> void:
 	var im := ImmediateMesh.new()
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.albedo_color = UnitDefs.TEAM_COLORS[team].lightened(0.25)
+	m.albedo_color = UnitDefs.team_color(team).lightened(0.25)
 	im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, m)
 	var w := 0.5
 	for e in [[Vector2(-half.x, -half.y), Vector2(half.x, -half.y)], [Vector2(half.x, -half.y), Vector2(half.x, half.y)],

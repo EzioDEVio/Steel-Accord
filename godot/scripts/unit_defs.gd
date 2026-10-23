@@ -6,6 +6,21 @@ class_name UnitDefs
 const TEAM_COLORS := [Color(0.12, 0.30, 0.72), Color(0.70, 0.13, 0.10), Color(0.15, 0.55, 0.25), Color(0.75, 0.6, 0.1)]
 const TEAM_NAMES := ["Blue", "Red", "Green", "Gold"]
 
+
+## Colour of a team: the player's choice from the Skirmish screen (automated runs keep the defaults).
+static func team_color(t: int) -> Color:
+	if t < 0 or t > 1: return Color(0.6, 0.6, 0.6)
+	return TEAM_COLORS[team_color_index(t)]
+
+
+static func team_color_index(t: int) -> int:
+	if t < 0 or t > 1: return t
+	return clampi(int(Game.settings.get("color%d" % t, t)), 0, TEAM_COLORS.size() - 1)
+
+
+static func team_name(t: int) -> String:
+	return TEAM_NAMES[team_color_index(t)] if t >= 0 and t <= 1 else "Neutral"
+
 # weapon "targets": which movement layers it can engage: ground, heli, jet
 const W_TANK_GUN := {"id": "120mm", "range": 60.0, "reload": 2.4, "damage": 170.0, "splash": 2.5, "proj": "shell",
 	"speed": 260.0, "spread": 1.4, "targets": ["ground"], "turret": true}
@@ -126,15 +141,15 @@ static func def_of(k: String) -> Dictionary:
 ## Iranian units derived from a base type. Infantry: same movement, animation set and mechanics as the U.S. counterpart (the user's direction), with
 ## their own 3D models, names and small stat differences. PROVISIONAL values.
 const IRAN_DERIVED := {
-	"ir_rifleman": ["rifleman", {"name": "Rifleman (Iran)", "role": "Infantry - effective vs infantry, weak vs armour", "weapon_id": "g3"}],
+	"ir_rifleman": ["rifleman", {"name": "Artesh Rifleman", "role": "Infantry - effective vs infantry, weak vs armour", "weapon_id": "g3"}],
 	"ir_rpg": ["at4", {"name": "RPG Gunner", "role": "Anti-tank rocket launcher - effective vs vehicles", "weapon_id": "rpg7"}],
-	"ir_mg": ["m240_gunner", {"name": "Machine Gunner (Iran)", "role": "Belt-fed machine gun - heavy anti-infantry fire", "weapon_id": "pkm"}],
-	"ir_medic": ["medic", {"name": "Medic (Iran)", "role": "Heals nearby infantry; light carbine"}],
-	"ir_sniper": ["sniper", {"name": "Sniper (Iran)", "role": "Long-range marksman - deadly vs infantry", "weapon_id": "sniper_rifle"}],
-	"ir_engineer": ["eod_engineer", {"name": "Combat Engineer (Iran)", "role": "Repairs nearby friendly vehicles and structures; unarmed"}],
+	"ir_mg": ["m240_gunner", {"name": "PKM Machine Gunner", "role": "Belt-fed machine gun - heavy anti-infantry fire", "weapon_id": "pkm"}],
+	"ir_medic": ["medic", {"name": "Combat Medic", "role": "Heals nearby infantry; light carbine"}],
+	"ir_sniper": ["sniper", {"name": "Marksman", "role": "Long-range marksman - deadly vs infantry", "weapon_id": "sniper_rifle"}],
+	"ir_engineer": ["eod_engineer", {"name": "Combat Engineer", "role": "Repairs nearby friendly vehicles and structures; unarmed"}],
 	"irgc_sf": ["special_forces", {"name": "IRGC Special Forces", "role": "Elite IRGC operator - tough, long-range rifle, high damage",
 		"hp": 190.0, "sight": 72.0, "weapon_id": "irgc_rifle", "damage_mult": 1.1}],
-	"ir_paratrooper": ["paratrooper", {"name": "Paratrooper (Iran)", "role": "Airborne rifleman - arrives by parachute"}],
+	"ir_paratrooper": ["paratrooper", {"name": "Airborne Rifleman", "role": "Airborne rifleman - arrives by parachute"}],
 	# Iranian aircraft (wave 1): own 3D models with Iranian roundels / fin flash; mechanics follow the base type
 	"ir_f14": ["f22", {"name": "F-14 (interceptor)", "role": "Long-range interceptor - hunts aircraft, light ground strike", "length": 19.1, "hp": 400.0, "speed": 54.0}],
 	"ir_f4": ["f16", {"name": "F-4 (fighter-bomber)", "role": "Fighter-bomber - missile strikes on ground targets; rearms at its pad", "length": 19.2, "hp": 380.0, "speed": 48.0}],

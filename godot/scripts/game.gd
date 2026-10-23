@@ -18,6 +18,10 @@ var settings := {
 	"nation0": "usa",
 	"nation1": "iran",
 	"ui_scale": 0.0,
+	"color0": 0,
+	"color1": 1,
+	"start_cash": 10000,
+	"game_speed": 1.0,
 }
 
 ## Skirmish maps offered in the menu (id -> label). Heightfield maps live in res://maps/<id>/.
@@ -62,6 +66,7 @@ func restart_match() -> void:
 
 func main_menu() -> void:
 	get_tree().paused = false
+	Engine.time_scale = 1.0
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 

@@ -27,7 +27,7 @@ func _ready() -> void:
 	left.add_theme_constant_override("separation", 12)
 	add_child(left)
 	left.add_child(UIKit.label("STEEL ACCORD", 64, Color(0.95, 0.97, 0.95)))
-	left.add_child(UIKit.label("Development build B1.2 - base-building prototype", 16, UIKit.ACCENT))
+	left.add_child(UIKit.label("Development build B1.7 - USA and Iran", 16, UIKit.ACCENT))
 	var spacer := Control.new(); spacer.custom_minimum_size = Vector2(0, 30)
 	left.add_child(spacer)
 	left.add_child(UIKit.button("Skirmish", func(): _show_skirmish()))
@@ -48,7 +48,10 @@ func _ready() -> void:
 	if "menushot" in OS.get_cmdline_user_args():
 		for i in 8: await get_tree().process_frame
 		await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png("/home/claude/sa/ui/menu.png")
+		var out := "/tmp/sa_menu.png"
+		for a in OS.get_cmdline_user_args():
+			if a.begins_with("out="): out = a.substr(4)
+		get_viewport().get_texture().get_image().save_png(out)
 		get_tree().quit()
 
 
@@ -58,50 +61,129 @@ func _clear() -> void:
 
 func _show_skirmish() -> void:
 	_clear()
-	content.add_child(UIKit.label("SKIRMISH", 22, UIKit.ACCENT))
+	side.position = Vector2(560, 230)
+	content.add_child(UIKit.label("SKIRMISH SETUP", 22, UIKit.ACCENT))
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 26)
+	content.add_child(cols)
+	var leftc := VBoxContainer.new(); leftc.add_theme_constant_override("separation", 10)
+	var rightc := VBoxContainer.new(); rightc.add_theme_constant_override("separation", 8)
+	cols.add_child(leftc); cols.add_child(rightc)
+	# ---- players: slot, army (nation), colour, team, controller
+	leftc.add_child(UIKit.label("PLAYERS", 15, Color(0.75, 0.82, 0.78)))
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 6)
+	leftc.add_child(grid)
+	for h in ["Slot", "Army", "Colour", "Team", "Control"]:
+		grid.add_child(UIKit.label(h, 12, Color(0.6, 0.66, 0.63)))
+	var nat_names: Array = Nations.ORDER.map(func(n): return Nations.name_of(n))
+	var col_names: Array = UnitDefs.TEAM_NAMES.duplicate()
+	for t in 2:
+		var tt := t
+		grid.add_child(UIKit.label("Player %d" % (t + 1), 15))
+		var on := UIKit.option(nat_names, Nations.name_of(str(Game.settings.get("nation%d" % t, "usa"))), func(x):
+			Game.settings["nation%d" % tt] = Nations.ORDER[nat_names.find(x)]
+			Game.save())
+		on.custom_minimum_size = Vector2(150, 32)
+		grid.add_child(on)
+		var oc := UIKit.option(col_names, col_names[UnitDefs.team_color_index(t)], func(x):
+			var ci: int = col_names.find(x)
+			if ci == UnitDefs.team_color_index(1 - tt): Game.settings["color%d" % (1 - tt)] = UnitDefs.team_color_index(tt)   # swap, never equal
+			Game.settings["color%d" % tt] = ci
+			Game.save()
+			_show_skirmish())
+		oc.custom_minimum_size = Vector2(100, 32)
+		var sw := ColorRect.new(); sw.color = UnitDefs.team_color(t); sw.custom_minimum_size = Vector2(14, 14)
+		var cb := HBoxContainer.new(); cb.add_child(sw); cb.add_child(oc)
+		grid.add_child(cb)
+		grid.add_child(UIKit.label("Team %d" % (t + 1), 15))
+		if t == 0:
+			grid.add_child(UIKit.label("You", 15, UIKit.ACCENT))
+		else:
+			var od := UIKit.option(["Easy", "Normal", "Hard"], Game.settings.difficulty, func(x):
+				Game.settings.difficulty = x
+				Game.save())
+			od.custom_minimum_size = Vector2(110, 32)
+			od.tooltip_text = "Computer opponent. Easy: attacks late with a big wave. Hard: thinks faster, attacks early."
+			grid.add_child(od)
+	leftc.add_child(UIKit.label("Two players, one vs one (more slots and allied teams arrive with multiplayer).", 11, Color(0.55, 0.6, 0.58)))
+	# ---- match settings
+	leftc.add_child(UIKit.label("MATCH", 15, Color(0.75, 0.82, 0.78)))
+	var cash_opts := {"$5,000": 5000, "$10,000": 10000, "$20,000": 20000}
+	var cur_cash := "$10,000"
+	for k in cash_opts:
+		if int(cash_opts[k]) == int(Game.settings.get("start_cash", 10000)): cur_cash = k
+	leftc.add_child(_row("Starting cash", UIKit.option(cash_opts.keys(), cur_cash, func(x):
+		Game.settings["start_cash"] = cash_opts[x]
+		Game.save())))
+	var spd := {"Slow (75%)": 0.75, "Normal": 1.0, "Fast (125%)": 1.25}
+	var cur_spd := "Normal"
+	for k in spd:
+		if is_equal_approx(float(spd[k]), float(Game.settings.get("game_speed", 1.0))): cur_spd = k
+	leftc.add_child(_row("Game speed", UIKit.option(spd.keys(), cur_spd, func(x):
+		Game.settings["game_speed"] = spd[x]
+		Game.save())))
+	leftc.add_child(_row("Victory", UIKit.label("Destroy every enemy structure and unit", 14)))
+	leftc.add_child(_row("Start", UIKit.label("Command Center + one builder", 14)))
+	# ---- map: choice, preview, facts
+	rightc.add_child(UIKit.label("MAP", 15, Color(0.75, 0.82, 0.78)))
 	var maps: Array = Game.MAPS.keys().filter(func(m): return m == "proving_ground" or TerrainMap.exists(m))
 	var labels: Array = maps.map(func(m): return Game.MAPS[m])
 	if not (Game.settings.get("map", "") in maps): Game.settings.map = "proving_ground"
-	var rm := HBoxContainer.new()
-	rm.add_child(UIKit.label("Map  ", 15))
 	var om := UIKit.option(labels, Game.MAPS[Game.settings.map], func(x):
 		Game.settings.map = maps[labels.find(x)]
-		Game.save())
-	om.custom_minimum_size = Vector2(380, 34)
-	rm.add_child(om)
-	content.add_child(rm)
-	var nat_names: Array = Nations.ORDER.map(func(n): return Nations.name_of(n))
-	for t in 2:
-		var rn := HBoxContainer.new()
-		rn.add_child(UIKit.label(("You (Blue)  " if t == 0 else "AI (Red)    "), 15))
-		var key := "nation%d" % t
-		var tt := t
-		rn.add_child(UIKit.option(nat_names, Nations.name_of(str(Game.settings.get(key, "usa"))), func(x):
-			Game.settings["nation%d" % tt] = Nations.ORDER[nat_names.find(x)]
-			Game.save()))
-		content.add_child(rn)
-	content.add_child(UIKit.label("Start: Command Center, one Dozer, $10,000. Destroy every enemy structure and unit.", 13))
-	content.add_child(UIKit.label("Iran: own infantry (incl. IRGC Special Forces); vehicles are shared placeholders until the Iran art pack.", 12, Color(0.6, 0.66, 0.63)))
-	var r := HBoxContainer.new()
-	r.add_child(UIKit.label("AI difficulty  ", 15))
-	var set_diff := func(x):
-		Game.settings.difficulty = x
 		Game.save()
-	r.add_child(UIKit.option(["Easy", "Normal", "Hard"], Game.settings.difficulty, set_diff))
-	content.add_child(r)
-	content.add_child(UIKit.label("Easy: AI attacks late with a big wave.  Hard: thinks faster, attacks early.", 12, Color(0.6, 0.66, 0.63)))
-	var sp := Control.new(); sp.custom_minimum_size = Vector2(0, 12)
-	content.add_child(sp)
-	content.add_child(UIKit.button("Start Match", func(): Game.start_match(), Vector2(260, 46), 19))
+		_show_skirmish())
+	om.custom_minimum_size = Vector2(300, 34)
+	rightc.add_child(om)
+	var prev := TextureRect.new()
+	var pp := "res://maps/%s/preview.png" % Game.settings.map
+	if ResourceLoader.exists(pp): prev.texture = load(pp)
+	prev.custom_minimum_size = Vector2(300, 300)
+	prev.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	prev.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rightc.add_child(prev)
+	rightc.add_child(UIKit.label(MAP_FACTS.get(Game.settings.map, ""), 12, Color(0.7, 0.76, 0.73)))
+	# ---- launch / back
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 14)
+	bar.add_child(UIKit.button("Start Match", func(): Game.start_match(), Vector2(240, 46), 19))
+	bar.add_child(UIKit.button("Back", func(): _show_home(), Vector2(140, 46), 17))
+	content.add_child(bar)
+
+
+const MAP_FACTS := {
+	"proving_ground": "600 x 600 m flat test range. 2 players. 5 supply piles.\nBlue/red dots: starts. Yellow: supply piles.",
+	"zagros_basin": "1200 x 1200 m foothills and dry basin. 2 players.\n7 supply piles (yellow), 4 oil derricks (purple),\n3 passes between the bases. Blue/red: starts.",
+}
+
+
+func _row(name: String, ctl: Control) -> HBoxContainer:
+	var r := HBoxContainer.new()
+	var l := UIKit.label(name, 14)
+	l.custom_minimum_size = Vector2(120, 0)
+	r.add_child(l); r.add_child(ctl)
+	return r
+
+
+func _show_home() -> void:
+	_clear()
+	side.position = Vector2(500, 170)
+	content.add_child(UIKit.label("STEEL ACCORD", 22, UIKit.ACCENT))
+	content.add_child(UIKit.label("Choose Skirmish to set up a match against the computer.", 14))
 
 
 func _show_options() -> void:
 	_clear()
+	side.position = Vector2(500, 170)
 	content.add_child(UIKit.options_box())
 
 
 func _show_controls() -> void:
 	_clear()
+	side.position = Vector2(500, 170)
 	content.add_child(UIKit.label("CONTROLS", 22, UIKit.ACCENT))
 	for t in [
 		"Left click unit: select     Left drag: box select     Double-click: all of that type",
@@ -124,6 +206,7 @@ func _show_controls() -> void:
 
 func _show_credits() -> void:
 	_clear()
+	side.position = Vector2(500, 170)
 	content.add_child(UIKit.label("CREDITS", 22, UIKit.ACCENT))
 	for t in [
 		"Steel Accord - original RTS by Mohammed Aldaraji (EzioDEVio).",
@@ -141,6 +224,7 @@ func _show_credits() -> void:
 
 func _show_last_result() -> void:
 	_clear()
+	side.position = Vector2(500, 170)
 	var r := Game.last_result
 	content.add_child(UIKit.label("LAST MATCH: " + str(r.get("result", "")), 22, UIKit.ACCENT))
 	content.add_child(UIKit.label("Duration %s   Enemy destroyed %d   Units lost %d" % [r.get("time", "-"), r.get("kills", 0), r.get("losses", 0)], 15))

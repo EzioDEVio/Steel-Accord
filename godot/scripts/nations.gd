@@ -25,6 +25,16 @@ const DEFS := {
 		"c130_model": "res://assets/units3d/ir_c130/ir_c130.glb",
 		"powers": ["shahed", "paradrop"],
 		"power_icons": {"paradrop": "res://assets/iran/icons/ir_c130_icon.png"},
+		# Iran's own terminology for shared structures, research and battle plans (same mechanics, own names)
+		"labels": {
+			"command_center": "Command Headquarters", "power_plant": "Power Station", "barracks": "Garrison Barracks",
+			"supply_depot": "Logistics Depot", "war_factory": "Armour Works", "airfield": "Air Base", "defense_tower": "Missile Post",
+			"drop_zone": "Airdrop Zone", "radar": "Radar Station", "hesco": "Earth Barrier",
+			"adv_armor": "Infantry Body Armour", "composite_armor": "Reactive Armour Kits", "guided_munitions": "Precision Strike Kits",
+			"supply_efficiency": "Logistics Network", "adv_training": "Combat Training Programme",
+			"assault": "Offensive Doctrine", "fortify": "Defensive Doctrine", "recon": "Reconnaissance Doctrine",
+			"paradrop": "Airborne Insertion",
+		},
 		"placeholder": ["avenger", "paladin"],
 	},
 }
@@ -75,3 +85,8 @@ static func powers(nation: String) -> Array:
 
 static func power_icon(nation: String, id: String) -> String:
 	return str(DEFS.get(nation, DEFS.usa).get("power_icons", {}).get(id, UnitDefs.POWERS[id].icon))
+
+
+## Nation-specific display name for a structure, upgrade, battle plan or power id (falls back to the shared name).
+static func label(nation: String, id: String, fallback: String) -> String:
+	return str(DEFS.get(nation, DEFS.usa).get("labels", {}).get(id, fallback))

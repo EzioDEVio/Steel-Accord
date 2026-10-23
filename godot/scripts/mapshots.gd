@@ -73,6 +73,10 @@ func _run() -> void:
 		u.reset_physics_interpolation(); col.append(u)
 	battle.issue({"type": "move", "team": 0, "ids": col.map(func(u): return u.uid), "points": col.map(func(u): return u.position + Vector3(0, 0, -120))})
 	await _wait(2.0)
+	if "uiiran" in battle.args:
+		await _ui_iran()
+		get_tree().quit()
+		return
 	if "ironly" in battle.args:
 		# Iranian vehicles and aircraft lined up on open ground for close review
 		var o: Vector3 = battle.grounded(Vector3(60, 0, -150))
@@ -136,3 +140,48 @@ func _run() -> void:
 		elif e.owner == 0:
 			_cam(e.pos, 40.0, 30.0, 40.0); await _shot("zb_derrick_usa")
 	get_tree().quit()
+
+
+## UI review with the player as Iran: inspector + command card for a soldier, tank, tactical vehicle, aircraft and the
+## main structures (run with nation0=iran; resolution from --resolution).
+func _ui_iran() -> void:
+	var tag := str(battle.args.get("tag", "1080"))
+	get_tree().root.size = DisplayServer.window_get_size()
+	var c: Vector3 = battle.start_pos[0]
+	var f := -1.0
+	battle.cash[0] = 60000
+	var blds := {}
+	for e in [["power_plant", Vector3(-45, 0, 10)], ["power_plant", Vector3(-45, 0, 40)], ["barracks", Vector3(45, 0, 0)], ["supply_depot", Vector3(-50, 0, -40)],
+			["war_factory", Vector3(10, 0, -55)], ["airfield", Vector3(110, 0, -40)]]:
+		var k: String = e[0]
+		blds[k] = battle.add_structure(k, 0, _flat(0, k, c + Vector3(e[1].x, 0, e[1].z * f * -1.0)), true)
+	await _wait(0.5)
+	var af: Building = blds.airfield
+	battle.spawn_produced(af, "ir_f14"); battle.spawn_produced(af, "ir_ah1j")
+	var sol: Unit = battle._spawn("irgc_sf", 0, c + Vector3(-10, 0, -70), 0.0)
+	var tank: Unit = battle._spawn("ir_karrar", 0, c + Vector3(5, 0, -75), 0.0)
+	var apc: Unit = battle._spawn("ir_boragh", 0, c + Vector3(20, 0, -75), 0.0)
+	tank.take_damage(260.0, null)
+	var foe: Unit = battle._spawn("rifleman", 1, c + Vector3(5, 0, -110), PI)
+	tank.add_xp(120.0)
+	battle.issue({"type": "produce", "team": 0, "id": blds.war_factory.uid, "kind": "ir_karrar"})
+	battle.issue({"type": "produce", "team": 0, "id": blds.war_factory.uid, "kind": "ir_bmp2"})
+	battle.issue({"type": "produce", "team": 0, "id": blds.barracks.uid, "kind": "ir_rifleman"})
+	battle.issue({"type": "research", "team": 0, "id": blds.war_factory.uid, "upgrade": "composite_armor"})
+	await _wait(2.0)
+	var cmd: Commander = battle.commander
+	var shots := [["soldier", [sol], null], ["karrar", [tank], null], ["boragh", [apc], null], ["f14", battle.units.filter(func(u): return u.kind == "ir_f14").slice(0, 1), null],
+		["group", [sol, tank, apc], null], ["warfactory", [], blds.war_factory], ["airfield", [], af], ["barracks", [], blds.barracks],
+		["cc", [], battle.structures(0, "command_center")[0]]]
+	for sh in shots:
+		cmd._set_selection(sh[1]); cmd.sel_building = sh[2]
+		var focus: Vector3 = sh[2].position if sh[2] else (sh[1][0].position if not sh[1].is_empty() else c)
+		_cam(focus, 70.0, 0.0, 52.0)
+		await _wait(0.5)
+		await _shot("ui_%s_%s" % [tag, sh[0]])
+	# upgrades tab of the War Factory
+	cmd._set_selection([]); cmd.sel_building = blds.war_factory
+	battle.hud.econ.tab = "upgrades"
+	await _wait(0.5)
+	await _shot("ui_%s_warfactory_upgrades" % tag)
+	foe.take_damage(9999.0, null)
