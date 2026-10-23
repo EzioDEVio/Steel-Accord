@@ -471,6 +471,11 @@ func _draw_bar() -> void:
 			grid_rect.grow(6), panel_rect.grow(4)]:
 		draw_rect(well, Color(0.035, 0.05, 0.055, 0.96))
 		draw_rect(well, Color(0.2, 0.27, 0.27), false, 1.0)
+	# the 14 grid slots, drawn empty underneath the tiles so the grid keeps its shape
+	for i in EconPanel.SLOTS:
+		var sp := grid_rect.position + Vector2((i % EconPanel.COLS) * (EconPanel.TILE.x + EconPanel.GAP), (i / EconPanel.COLS) * (EconPanel.TILE.y + EconPanel.GAP))
+		draw_rect(Rect2(sp, EconPanel.TILE), Color(0.06, 0.08, 0.09, 0.9))
+		draw_rect(Rect2(sp, EconPanel.TILE), Color(0.16, 0.21, 0.21), false, 1.0)
 	# cash tab
 	var t: int = commander.team
 	if battle.scenario == "base":
