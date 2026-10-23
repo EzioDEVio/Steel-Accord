@@ -9,6 +9,10 @@ extends "res://scripts/autotest_base.gd"
 
 func _run() -> void:
 	await _wait_sim(0.5)
+	if "aironly" in battle.args:          # B3 scripted-flight terrain checks alone: maptest map=zagros_basin aironly
+		await _map_air()
+		_finish()
+		return
 	var tm: TerrainMap = battle.terrain
 	_log("map_loads", tm != null and battle.map_id == battle.args.get("map", "zagros_basin"),
 		"map=%s samples=%d step=%.1f half=%.0f playable=%.0f" % [battle.map_id, tm.n if tm else 0, tm.step if tm else 0.0, tm.half_size() if tm else 0.0, battle.MAP_HALF])
@@ -193,6 +197,7 @@ func _run() -> void:
 	_log("aircraft_clear_terrain", min_clear.ah64 > 4.0 and min_clear.f16 > 4.0 and peak > 20.0,
 		"lowest clearance above the ground: AH-64 %.1f m, F-16 %.1f m (highest ground overflown %.0f m)" % [min_clear.ah64, min_clear.f16, peak])
 	heli.take_damage(99999.0, null); jet.take_damage(99999.0, null)
+	await _map_air()
 	# ---- civilian buildings: placed, grounded, neutral; infantry occupy them, fire from inside, heal in the hospital,
 	# get out when the building falls; an occupied building survives save / load
 	var civ: Array = battle.units.filter(func(u): return u is Building and (u as Building).is_civic() and not u.dead)
@@ -356,3 +361,89 @@ func _shots() -> void:
 	for e in battle.derricks:
 		_cam(e.pos, 55.0, 30.0, 45.0); await _wait_sim(0.3); await _shot("map_derrick_" + str(e.id))
 		break
+
+
+## B3: scripted support flights keep clear of the ridges. Supply drops at several base positions (both sides) pick the
+## approach heading with the lowest terrain and keep >= 25 m over the terrain under the fuselage and both wingtips for
+## the whole flight (design clearance 30 m); the old fixed-height track is measured for comparison. The C-17 drop and
+## the AC-130 orbit near the highest ridge are checked the same way.
+func _map_air() -> void:
+	if DisplayServer.get_name() != "headless" and battle.args.has("res"):
+		var rs: PackedStringArray = str(battle.args.res).split("x")
+		DisplayServer.window_set_size(Vector2i(int(rs[0]), int(rs[1]))); get_tree().root.size = Vector2i(int(rs[0]), int(rs[1]))
+	var a: Vector3 = battle.start_pos[0]; var b: Vector3 = battle.start_pos[1]
+	var top := Vector3.ZERO
+	var top_h := -INF
+	var mb: Rect2 = battle.map_bounds.grow(-60.0)
+	var gx := mb.position.x
+	while gx < mb.end.x:
+		var gz := mb.position.y
+		while gz < mb.end.y:
+			var hh: float = battle.ground_h(gx, gz)
+			if hh > top_h: top_h = hh; top = Vector3(gx, 0, gz)
+			gz += 10.0
+		gx += 10.0
+	var ab := (b - a); ab.y = 0.0
+	var side := Vector3(-ab.z, 0, ab.x).normalized()
+	var spots := [[0, a + ab * 0.12], [0, a + ab * 0.42 + side * 60.0], [0, top - ab.normalized() * 70.0], [1, b - ab * 0.12], [1, top + ab.normalized() * 70.0]]
+	var d: Dictionary = BuildingDefs.DEFS.drop_zone.drop
+	var fl: Array = []
+	var old: Array = []
+	for sp in spots:
+		var t: Vector3 = battle.grounded(sp[1])
+		fl.append(battle.launch_drop_at(sp[0], t, d))
+		# the previous behaviour: straight in from (target.x + 60, team edge) at a fixed 34 m over the target's ground
+		var edge_z: float = battle.map_bounds.end.y + 140.0 if sp[0] == 0 else battle.map_bounds.position.y - 140.0
+		var o_start := Vector3(t.x + 60.0, 0, edge_z)
+		var o_dir := (t - o_start); o_dir.y = 0.0; o_dir = o_dir.normalized()
+		var o_y: float = battle.ground_h(t.x, t.z) + 34.0
+		var o_min := INF
+		var x := -(o_start - t).length()
+		while x < 300.0:
+			var q: Vector3 = t + o_dir * x
+			if battle.map_bounds.has_point(Vector2(q.x, q.z)): o_min = minf(o_min, o_y - battle.ground_h(q.x, q.z))
+			x += 5.0
+		old.append(o_min)
+	var shot_ridge := false
+	var i0: int = battle.drop_income[0] + battle.drop_income[1]
+	var t0: float = battle.sim_time
+	while battle.sim_time - t0 < 60.0 and fl.any(func(f): return f in battle.drop_flights):
+		await _wait_sim(0.1)
+		if not shot_ridge and DisplayServer.get_name() != "headless":
+			for f in fl:
+				if f in battle.drop_flights and Vector2(f.pos.x - top.x, f.pos.z - top.z).length() < 90.0 and battle.clearance(f.pos, f.dir, 12.0) < 60.0:
+					shot_ridge = true
+					_cam(Vector3(f.pos.x, 0, f.pos.z), 95.0, rad_to_deg(atan2(-f.dir.x, -f.dir.z)) + 70.0, 18.0)
+					await _wait_sim(0.05)
+					await _shot("b3_c130_over_ridge")
+					if "airshots" in battle.args: return
+					break
+	await _until(func(): return battle.drop_crates.is_empty(), 30.0)
+	var rows := []
+	var ok := true
+	for i in fl.size():
+		ok = ok and fl[i].min_clear >= 25.0
+		rows.append("team %d drop at (%.0f,%.0f): turn %+.0f deg, min clearance %.1f m (old fixed track %.1f m)" % [fl[i].team, fl[i].target.x, fl[i].target.z, fl[i].turn, fl[i].min_clear, old[i]])
+	var paid: int = battle.drop_income[0] + battle.drop_income[1] - i0
+	_log("supply_drop_terrain_clearance", ok and paid > 0, "highest ground %.0f m; %s; crates paid $%d" % [top_h, "; ".join(rows), paid])
+	# C-17 airborne armour and the AC-130 orbit right next to the highest ridge
+	var tgt: Vector3 = battle.grounded(top + side * 50.0)
+	battle._launch_airdrop(0, "airborne_armor", tgt)
+	var c17: Dictionary = battle.airdrops[battle.airdrops.size() - 1]
+	battle._launch_gunship(0, "gunship", top - side * 40.0)
+	var gs: Dictionary = battle.gunships[battle.gunships.size() - 1]
+	var g_min := INF
+	var d0: int = battle.airdrop_delivered[0]
+	t0 = battle.sim_time
+	while battle.sim_time - t0 < 120.0 and (c17 in battle.airdrops or gs in battle.gunships or not battle.pallets.is_empty()):
+		await _wait_sim(0.1)
+		if not is_instance_valid(gs.u): continue
+		var gu: Unit = gs.u
+		if not gu.dead and gu in battle.units:
+			g_min = minf(g_min, gu.position.y + gu.altitude - battle.ground_h(gu.position.x, gu.position.z))
+	var landed: Array = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind in ["hmmwv_50cal", "stryker"] and u.flat_dist(tgt) < 70.0)
+	var grounded_ok: bool = landed.all(func(u): return absf(u.position.y - battle.ground_h(u.position.x, u.position.z)) < 0.3)
+	_log("airlift_flights_clear_terrain", c17.min_clear >= 40.0 and g_min >= 25.0 and battle.airdrop_delivered[0] - d0 == 3 and grounded_ok,
+		"C-17 min clearance %.1f m (design 45), vehicles delivered %d grounded %s; AC-130 min height over the ground %.1f m (orbit altitude 48)" % [
+		c17.min_clear, battle.airdrop_delivered[0] - d0, str(grounded_ok), g_min])
+	for u in landed: u.take_damage(99999.0, null)

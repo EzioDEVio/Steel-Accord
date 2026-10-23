@@ -131,6 +131,11 @@ func _key(k: InputEventKey) -> void:
 		_:
 			if k.keycode >= KEY_0 and k.keycode <= KEY_9:
 				var g := int(k.keycode - KEY_0)
+				if k.alt_pressed:                     # Alt+1..9: support power in the order of the power bar
+					var pw: Array = Nations.powers(battle.nation_of(team))
+					if g >= 1 and g <= pw.size() and battle.power_problem(team, pw[g - 1]) == "" and battle.power_cooldown_left(team, pw[g - 1]) <= 0.0:
+						set_mode("power:" + pw[g - 1])
+					return
 				if k.ctrl_pressed: assign_group(g)
 				else: _recall(g)
 

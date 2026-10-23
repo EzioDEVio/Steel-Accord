@@ -79,6 +79,11 @@ func _run_qa() -> void:
 		else: ok += 1
 	_log("all_models_load", bad.is_empty(), "%d loaded; failed: %s" % [ok, ", ".join(bad)])
 	var ccp: Vector3 = battle.structures(0, "command_center")[0].position
+	if "aironly" in battle.args:          # B3 air-operations checks alone (quick iteration): basetest qa aironly
+		battle.base_ai = null              # no enemy waves on the undefended test base
+		await _qa_air(ccp)
+		_finish()
+		return
 	battle.cash[0] += 20000
 	var pp := await _place("power_plant", ccp + Vector3(-40, 0, -6))
 	await _until(func(): return pp != null and pp.built, 30.0)
@@ -90,6 +95,7 @@ func _run_qa() -> void:
 	await _until(func(): return wf != null and wf.built, 45.0)
 	await _qa_checks(ccp, bk, wf)
 	await _qa_m1(ccp)
+	await _qa_air(ccp)
 	await _qa_m7(ccp)
 	await _qa_m8(ccp)
 	await _qa_ai_retreat(ccp)
@@ -618,3 +624,338 @@ func _finish() -> void:
 	f.store_line("commands logged: %d" % battle.command_log.size())
 	f.close()
 	get_tree().quit()
+
+
+# ------------------------------------------------------------------ B3 air operations
+## Runway take-off / landing sequence for every jet type, taxi queueing, the AC-130 gunship (orbit, fire, shot down
+## by AA), C-17 airborne armour, C-5 airlift on the runway (with jets held off it), Iran's airdrop, Alt+N hotkeys.
+func _qa_air(ccp: Vector3) -> void:
+	if DisplayServer.get_name() != "headless" and battle.args.has("res"):
+		var rs: PackedStringArray = str(battle.args.res).split("x")
+		DisplayServer.window_set_size(Vector2i(int(rs[0]), int(rs[1]))); get_tree().root.size = Vector2i(int(rs[0]), int(rs[1]))
+	battle.cash[0] += 50000
+	var afs: Array = battle.structures(0, "airfield")
+	var af: Building = afs[0] if not afs.is_empty() else battle.add_structure("airfield", 0, ccp + Vector3(90, 0, -20), true)
+	await _wait_sim(0.3)
+	for pd in af.pads:                     # clear the apron (earlier checks parked aircraft here)
+		var o: Unit = battle.by_id.get(int(pd.uid))
+		if o and not o.dead: battle._remove_transient(o)
+		pd.uid = -1
+	await _wait_sim(0.2)
+	var jets: Array = []
+	for k in ["f16", "fa18", "f22", "a10"]:
+		battle.spawn_produced(af, k)
+		jets.append(battle.units[battle.units.size() - 1])
+	await _wait_sim(0.5)
+	var part := str(battle.args.get("airpart", "all"))      # airpart=jets|powers|c5 runs one group (quick iteration)
+	if part in ["all", "jets"]: await _air_jets(ccp, af, jets)
+	if part in ["all", "powers", "gunship"]: await _air_powers(ccp)
+	if part in ["all", "powers", "c17"]: await _air_c17(ccp)
+	if part in ["all", "c5"]: await _air_c5(ccp, af, jets)
+
+
+## Runway sequence for every jet type: taxi queue, hold short, backtrack, line up at '27', roll, land toward '09'.
+func _air_jets(ccp: Vector3, af: Building, jets: Array) -> void:
+	var t0 := 0.0
+	var hang_bad: Array = []
+	var stats := {"users": 0, "overlap": 0, "pair": "", "min_d": INF, "park_d": INF}
+	var sample := func():
+		var ground: Array = jets.filter(func(j): return is_instance_valid(j) and not j.dead and not j.airborne)
+		var users: int = jets.filter(func(j): return is_instance_valid(j) and not j.dead and j.uses_runway()).size()
+		stats.users = maxi(stats.users, users)
+		for j in ground:
+			var lp: Vector3 = af.to_local(j.position)
+			if lp.x > -30.0 and lp.x < -4.5 and lp.z > -9.0 and lp.z < 10.0: hang_bad.append("%s@(%.0f,%.0f)" % [j.kind, lp.x, lp.z])
+		var moving: Array = ground.filter(func(j): return j.state != Unit.S.LANDED and not (j.taxi_phase == 0 and j.taxi_i == 0 and j.flat_dist(j.home) < 1.5))
+		for i in moving.size():
+			for b in ground:
+				var a: Unit = moving[i]
+				if a == b: continue
+				var d: float = a.flat_dist(b.position)
+				if b in moving:
+					if moving.find(b) < i: continue
+					stats.min_d = minf(stats.min_d, d)
+					if _jets_overlap(a, b):
+						stats.overlap += 1
+						if stats.pair == "": stats.pair = "%s/%s %.1f m (phases %d/%d, local %s / %s, route idx %d/%d, hdg %.0f/%.0f)" % [a.kind, b.kind, d, a.taxi_phase, b.taxi_phase,
+							str(Vector2i(int(af.to_local(a.position).x), int(af.to_local(a.position).z))), str(Vector2i(int(af.to_local(b.position).x), int(af.to_local(b.position).z))),
+							a.taxi_i, b.taxi_i, rad_to_deg(a.heading), rad_to_deg(b.heading)]
+				else:
+					stats.park_d = minf(stats.park_d, d)
+	# --- four jets ordered out at once: queue on the taxiway, one at a time on the runway, roll from the '27' end
+	var n0: int = battle.takeoff_log.size()
+	var shot_lined := false
+	battle.issue({"type": "move", "team": 0, "ids": jets.map(func(u): return u.uid), "points": jets.map(func(u): return ccp + Vector3(0, 0, -260))})
+	t0 = battle.sim_time
+	while battle.sim_time - t0 < 180.0 and not jets.all(func(j): return j.airborne):
+		await _wait_sim(0.1); sample.call()
+		if not shot_lined and jets.any(func(j): return j.taxi_phase == 1 and not j.airborne and j.speed_cur < 3.0):
+			shot_lined = true
+			var lj: Unit = jets.filter(func(j): return j.taxi_phase == 1 and not j.airborne)[0]
+			await _cam_air(lj.position, 48.0, rad_to_deg(lj.heading) + 150.0, 32.0)
+			await _shot("b3_jet_lined_up_27")
+			if "airshots" in battle.args: return
+	var tl: Array = battle.takeoff_log.slice(n0)
+	var per: Array = []
+	var ok_to := tl.size() >= jets.size()
+	for e in tl:
+		var good: bool = e.start_from_end <= 4.0 and e.heading_err <= 3.0 and e.frac >= 0.70 and e.frac <= 1.0
+		ok_to = ok_to and good
+		per.append("%s start %.1f m from 27, hdg err %.1f, lift-off at %.0f%%" % [e.kind, e.start_from_end, e.heading_err, e.frac * 100.0])
+	_log("jet_takeoff_from_27_end", ok_to, "; ".join(per))
+	_log("jet_runway_one_at_a_time", stats.users <= 1, "most jets owning the runway at once: %d" % stats.users)
+	_log("jet_taxi_queue_no_overlap", stats.overlap == 0, "footprint overlaps between taxiing jets: %d %s; closest taxiing pair %.1f m; closest pass by a parked jet %.1f m" % [
+		stats.overlap, stats.pair, stats.min_d, stats.park_d])
+	# --- all return: land toward '09', roll out, taxi in one way, park
+	await _wait_sim(6.0)
+	stats.users = 0; stats.overlap = 0; stats.pair = ""; stats.min_d = INF; stats.park_d = INF
+	var td_ok := []
+	var was_air := {}
+	for j in jets: was_air[j.uid] = true
+	battle.issue({"type": "return", "ids": jets.map(func(u): return u.uid)})
+	t0 = battle.sim_time
+	while battle.sim_time - t0 < 240.0 and not jets.all(func(j): return j.state == Unit.S.LANDED):
+		await _wait_sim(0.1); sample.call()
+		for j in jets:
+			if was_air[j.uid] and not j.airborne and j.taxi_phase == 2:
+				was_air[j.uid] = false
+				var s: float = (j.position - j.rw_end).dot(j._takeoff_dir())
+				td_ok.append([j.kind, rad_to_deg(absf(wrapf(j.heading - j._takeoff_heading(), -PI, PI))), s])
+	var land_ok: bool = td_ok.size() == jets.size() and td_ok.all(func(e): return e[1] < 1.0 and e[2] > -2.0 and e[2] < 25.0)
+	var parked: int = jets.filter(func(j): return j.state == Unit.S.LANDED and j.flat_dist(j.home) < 1.0).size()
+	_log("jet_landing_toward_09_and_park", land_ok and parked == jets.size(), "touchdowns %s; parked %d/%d" % [
+		str(td_ok.map(func(e): return "%s hdg err %.1f, %.0f m past 27" % [e[0], e[1], e[2]])), parked, jets.size()])
+	_log("jet_taxi_in_no_overlap", stats.overlap == 0 and stats.users <= 1, "footprint overlaps between taxiing jets: %d %s; closest taxiing pair %.1f m; closest pass by a parked jet %.1f m; runway owners at once %d" % [
+		stats.overlap, stats.pair, stats.min_d, stats.park_d, stats.users])
+	_log("jet_taxi_avoids_hangar_b3", hang_bad.is_empty(), "ground positions inside the hangar block (out and in, 4 jets): %d %s" % [hang_bad.size(), str(hang_bad.slice(0, 4))])
+	# --- the fifth jet type alone (F-35 replaces the F/A-18 on its pad)
+	var fa: Unit = jets[1]
+	var pad_i: int = -1
+	for i in af.pads.size():
+		if int(af.pads[i].uid) == fa.uid: pad_i = i
+	battle._remove_transient(fa)
+	af.pads[pad_i].uid = -1
+	battle.spawn_produced(af, "f35")
+	var f35: Unit = battle.units[battle.units.size() - 1]
+	jets[1] = f35
+	await _wait_sim(0.3)
+	n0 = battle.takeoff_log.size()
+	battle.issue({"type": "move", "team": 0, "ids": [f35.uid], "points": [ccp + Vector3(0, 0, -260)]})
+	await _until(func(): return f35.airborne, 60.0)
+	var e35: Array = battle.takeoff_log.slice(n0)
+	_log("jet_takeoff_f35", e35.size() == 1 and e35[0].start_from_end <= 4.0 and e35[0].frac >= 0.70, str(e35.map(func(e): return "%s start %.1f m, lift-off %.0f%%" % [e.kind, e.start_from_end, e.frac * 100.0])))
+	battle.issue({"type": "return", "ids": [f35.uid]})
+	await _until(func(): return f35.state == Unit.S.LANDED, 120.0)
+
+
+
+## Support powers: Alt+N hotkey, AC-130 (orbit, fire, shot down by AA), C-17 airborne armour, Iran's airdrop.
+func _air_powers(ccp: Vector3) -> void:
+	var t0 := 0.0
+	# --- Alt+N hotkey arms the support power in the power bar
+	var pw: Array = Nations.powers(battle.nation_of(0))
+	var gi: int = pw.find("gunship") + 1
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_0 + gi; ev.physical_keycode = KEY_0 + gi; ev.pressed = true; ev.alt_pressed = true
+	Input.parse_input_event(ev)
+	await _frames(3)
+	var mode_ok: bool = battle.commander.mode == "power:gunship"
+	battle.commander.set_mode("")
+	var hb: Button = battle.hud.power_buttons.get("gunship")
+	_log("air_powers_in_bar", mode_ok and hb != null and hb.tooltip_text.contains("Alt+%d" % gi) and battle.hud.power_buttons.has("airlift") and battle.hud.power_buttons.has("airborne_armor"),
+		"Alt+%d -> mode '%s'; tooltip: %s" % [gi, battle.commander.mode if not mode_ok else "power:gunship", hb.tooltip_text.replace("\n", " | ") if hb else "none"])
+
+	# --- AC-130: orbit left-hand round the target, fire all three guns, damage enemies, leave
+	var P: Vector3 = battle.grounded(ccp + Vector3(-20, 0, -150))
+	var foes: Array = []
+	for i in 2: foes.append(battle._spawn("abrams", 1, P + Vector3(i * 9 - 4.5, 0, 4), 0.0))
+	for i in 4: foes.append(battle._spawn("rifleman", 1, P + Vector3(i * 4 - 6, 0, -8), 0.0))
+	for f in foes: f.order_stop()
+	await _wait_sim(0.2)
+	var hp0 := 0.0
+	for f in foes: hp0 += f.hp
+	var s0: Dictionary = battle.gunship_shots.duplicate()
+	battle.issue({"type": "power", "team": 0, "id": "gunship", "pos": P})
+	await _until(func(): return not battle.gunships.is_empty(), 5.0)
+	var gs: Dictionary = battle.gunships[0] if not battle.gunships.is_empty() else {}
+	var gu: Unit = gs.get("u")
+	var rmin := INF; var rmax := 0.0; var left_ok := true; var shot_g := false; var orbit_s := 0.0
+	t0 = battle.sim_time
+	while not battle.gunships.is_empty() and battle.sim_time - t0 < 150.0:
+		await _wait_sim(0.1)
+		for f in foes:
+			if not f.dead: f.order_stop()
+		if gs.get("phase", "") == "orbit" and is_instance_valid(gu) and not gu.dead:
+			orbit_s += 0.1
+			var rel := Vector3(gs.c.x - gu.position.x, 0, gs.c.z - gu.position.z)
+			rmin = minf(rmin, rel.length()); rmax = maxf(rmax, rel.length())
+			if Vector3(-cos(gu.heading), 0, sin(gu.heading)).dot(rel.normalized()) < 0.95: left_ok = false
+			if not shot_g and orbit_s > 8.0:
+				shot_g = true
+				await _cam_air(gs.c, 120.0, 20.0, 40.0)
+				await _shot("b3_ac130_orbit_firing")
+				if "airshots" in battle.args: return
+	var hp1 := 0.0
+	for f in foes: hp1 += maxf(f.hp, 0.0)
+	var fired := []
+	for w in ["gunship_105", "gunship_40", "gunship_25"]: fired.append("%s %d" % [w, int(battle.gunship_shots.get(w, 0)) - int(s0.get(w, 0))])
+	var all_fired: bool = ["gunship_105", "gunship_40", "gunship_25"].all(func(w): return int(battle.gunship_shots.get(w, 0)) > int(s0.get(w, 0)))
+	_log("ac130_orbit_and_fire", absf(rmin - 70.0) < 3.0 and absf(rmax - 70.0) < 3.0 and left_ok and orbit_s >= 29.0 and all_fired and hp0 - hp1 > 400.0,
+		"orbit r %.1f-%.1f m for %.0f s, left side to the centre %s; rounds %s; enemy damage %.0f of %.0f hp (%d of %d destroyed)" % [
+		rmin, rmax, orbit_s, str(left_ok), ", ".join(fired), hp0 - hp1, hp0, foes.filter(func(f): return f.dead).size(), foes.size()])
+	_log("ac130_leaves_and_is_removed", is_instance_valid(gu) == false or not (gu in battle.units), "gunship removed after its orbit: %s" % str(not is_instance_valid(gu) or not (gu in battle.units)))
+	for f in foes:
+		if not f.dead: f.take_damage(99999.0, null)
+	# --- AC-130 versus anti-air: Avengers in the orbit area shoot it down
+	var aa: Array = []
+	for i in 3: aa.append(battle._spawn("avenger", 1, P + Vector3(i * 8 - 8, 0, 0), 0.0))
+	for a in aa: a.order_stop()
+	battle.power_ready[0]["gunship"] = 0.0
+	battle.issue({"type": "power", "team": 0, "id": "gunship", "pos": P})
+	await _until(func(): return not battle.gunships.is_empty(), 5.0)
+	var g2: Unit = battle.gunships[0].u if not battle.gunships.is_empty() else null
+	var gh0: float = g2.hp if g2 else 0.0
+	await _until(func(): return g2 == null or not is_instance_valid(g2) or g2.dead or battle.gunships.is_empty(), 120.0)
+	var downed: bool = g2 != null and is_instance_valid(g2) and g2.dead
+	_log("ac130_shot_down_by_aa", downed, "gunship hp %.0f -> %s, 3 Avengers in the area" % [gh0, "destroyed" if downed else ("%.0f" % g2.hp if g2 and is_instance_valid(g2) else "left the area")])
+	await _wait_sim(3.0)
+	for a in aa:
+		if not a.dead: a.take_damage(99999.0, null)
+
+
+
+## C-17 airborne armour and Iran's airdrop from its own C-130.
+func _air_c17(ccp: Vector3) -> void:
+	var t0 := 0.0
+	# --- C-17 airborne armour: 2 HMMWV .50 + Stryker under canopies, land, become controllable units
+	var T: Vector3 = battle.grounded(ccp + Vector3(60, 0, -125))
+	var before: Array = _team(["hmmwv_50cal", "stryker"])
+	var d0: int = battle.airdrop_delivered[0]
+	battle.issue({"type": "power", "team": 0, "id": "airborne_armor", "pos": T})
+	var shot_c17 := false
+	t0 = battle.sim_time
+	while battle.airdrop_delivered[0] < d0 + 3 and battle.sim_time - t0 < 90.0:
+		await _wait_sim(0.1)
+		if not shot_c17 and battle.pallets.size() >= 2 and battle.pallets.all(func(pl): return pl.t > 1.8):
+			shot_c17 = true
+			await _cam_air(T + Vector3(0, 12, 0), 75.0, 25.0, 22.0)
+			await _shot("b3_c17_drop")
+			if "airshots" in battle.args: return
+	await _wait_sim(0.5)
+	var new_v: Array = _team(["hmmwv_50cal", "stryker"]).filter(func(u): return not (u in before))
+	var near_ok: bool = new_v.all(func(u): return u.flat_dist(T) < 50.0 and absf(u.position.y - battle.ground_h(u.position.x, u.position.z)) < 0.3)
+	var p_before: Array = new_v.map(func(u): return u.position)
+	battle.issue({"type": "move", "team": 0, "ids": new_v.map(func(u): return u.uid), "points": new_v.map(func(u): return T + Vector3(0, 0, 35))})
+	await _wait_sim(8.0)
+	var moved := 0
+	for i in new_v.size():
+		if new_v[i].position.distance_to(p_before[i]) > 8.0: moved += 1
+	_log("c17_airborne_armor", new_v.size() == 3 and near_ok and moved == 3 and battle.pallets.is_empty(),
+		"delivered %s within 50 m of the target and grounded: %s; moved on order: %d/3; canopies detached: %s" % [str(new_v.map(func(u): return u.kind)), str(near_ok), moved, str(battle.pallets.is_empty())])
+	# --- Iran: airdrop from its own C-130 (team 1)
+	var T2: Vector3 = battle.grounded(ccp + Vector3(-70, 0, -170))
+	var nat1_saved: Variant = battle.args.get("nation1", null)
+	battle.args["nation1"] = "iran"           # the Iranian power with Iran's own transport, whatever the QA opponent is
+	var i0: int = battle.airdrop_delivered[1]
+	var ib: Array = battle.units.filter(func(u): return u.team == 1 and u.kind == "ir_boragh")
+	battle._launch_airdrop(1, "ir_airborne_armor", T2)
+	var ir_model := ""
+	if not battle.airdrops.is_empty(): ir_model = str(battle.airdrops[battle.airdrops.size() - 1].node.get_meta("model", ""))
+	await _until(func(): return battle.airdrop_delivered[1] >= i0 + 2, 90.0)
+	var ib2: Array = battle.units.filter(func(u): return u.team == 1 and u.kind == "ir_boragh" and not (u in ib))
+	if nat1_saved == null: battle.args.erase("nation1")
+	else: battle.args["nation1"] = nat1_saved
+	_log("iran_airdrop", ib2.size() == 2 and ir_model.contains("ir_c130"),
+		"nation %s, aircraft %s, delivered %s" % [battle.nation_of(1), ir_model, str(ib2.map(func(u): return u.kind))])
+	for u in ib2: u.take_damage(99999.0, null)
+
+
+
+## C-5 airlift on the player's runway with jets departing and recalled around it.
+func _air_c5(ccp: Vector3, af: Building, jets: Array) -> void:
+	var t0 := 0.0
+	# --- C-5 airlift: lands on our runway, opens the nose, unloads 2 Abrams + 2 Bradleys, leaves; no jet conflict
+	var A: Vector3 = battle.grounded(ccp + Vector3(40, 0, -100))
+	var tanks0: Array = _team(["abrams", "bradley"])
+	var dl0: int = battle.airlift_delivered[0]
+	var lg0: int = battle.airlift_log.size()
+	# two jets take off just before the C-5 arrives and are recalled while it is on the runway; the A-10 is ordered out then
+	battle.issue({"type": "move", "team": 0, "ids": [jets[0].uid, jets[2].uid], "points": [ccp + Vector3(0, 0, -260), ccp + Vector3(30, 0, -260)]})
+	battle.issue({"type": "power", "team": 0, "id": "airlift", "pos": A})
+	var conflicts := []
+	var recalled := false
+	var a10_out := false
+	var shot_c5 := false
+	var held_pad := true
+	t0 = battle.sim_time
+	while battle.sim_time - t0 < 300.0 and (not battle.airlifts.is_empty() or battle.sim_time - t0 < 2.0):
+		await _wait_sim(0.1)
+		if battle.airlifts.is_empty(): continue
+		var f: Dictionary = battle.airlifts[0]
+		if f.reserved:
+			for j in jets:
+				if j.dead: continue
+				if j.uses_runway() or (not j.airborne and j.taxi_phase in [4, 5, 1]): conflicts.append("%s phase %d at %s" % [j.kind, j.taxi_phase, f.phase])
+		if f.phase in ["rollout", "open", "unload"] and not recalled:
+			recalled = true
+			battle.issue({"type": "return", "ids": [jets[0].uid, jets[2].uid]})
+		if f.phase == "open" and not a10_out:
+			a10_out = true
+			battle.issue({"type": "move", "team": 0, "ids": [jets[3].uid], "points": [ccp + Vector3(0, 0, -260)]})
+		if f.phase in ["open", "unload", "close", "pivot"] and jets[3].taxiing_out(): held_pad = false
+		if f.phase == "unload" and f.door >= 1.0 and f.spawned >= 2 and not shot_c5:
+			shot_c5 = true
+			await _cam_air(f.pos + _fwd_air(f.h) * 10.0, 70.0, rad_to_deg(f.h) + 140.0, 30.0)
+			await _shot("b3_c5_nose_open")
+			if "airshots" in battle.args: return
+	var phases: Array = battle.airlift_log.slice(lg0).map(func(e): return e[1])
+	var want_ph := ["final", "rollout", "open", "unload", "close", "pivot", "takeoff", "climb", "runway_released"]
+	var seq_ok: bool = want_ph.all(func(ph): return ph in phases)
+	await _wait_sim(1.0)
+	var tanks: Array = _team(["abrams", "bradley"]).filter(func(u): return not (u in tanks0))
+	var kinds := {}
+	for u in tanks: kinds[u.kind] = int(kinds.get(u.kind, 0)) + 1
+	var off_rw: bool = tanks.all(func(u): var lp: Vector3 = af.to_local(u.position); return absf(lp.x) > af.half.x or absf(lp.z) > af.half.y - 0.5 or u.flat_dist(af.position) > 30.0)
+	_log("c5_airlift_lands_unloads_leaves", seq_ok and battle.airlift_delivered[0] - dl0 == 4 and kinds.get("abrams", 0) == 2 and kinds.get("bradley", 0) == 2 and battle.airlifts.is_empty() and off_rw,
+		"phases %s; delivered %d (%s), clear of the airfield %s" % [" > ".join(phases), battle.airlift_delivered[0] - dl0, str(kinds), str(off_rw)])
+	var tp0: Array = tanks.map(func(u): return u.position)
+	battle.issue({"type": "move", "team": 0, "ids": tanks.map(func(u): return u.uid), "points": tanks.map(func(u): return u.position + Vector3(0, 0, -30))})
+	await _wait_sim(8.0)
+	var tmoved := 0
+	for i in tanks.size():
+		if tanks[i].position.distance_to(tp0[i]) > 6.0: tmoved += 1
+	_log("c5_vehicles_controllable", tanks.size() == 4 and tmoved == 4, "moved on order %d/%d" % [tmoved, tanks.size()])
+	_log("c5_runway_reserved_no_jet_conflict", conflicts.is_empty() and recalled and a10_out and held_pad,
+		"jets on the runway while the C-5 held it: %d %s; recalled jets held in orbit; A-10 held on its pad: %s" % [conflicts.size(), str(conflicts.slice(0, 3)), str(held_pad)])
+	await _until(func(): return jets[0].state == Unit.S.LANDED and jets[2].state == Unit.S.LANDED and jets[3].airborne, 150.0)
+	_log("jets_resume_after_c5", jets[0].state == Unit.S.LANDED and jets[2].state == Unit.S.LANDED and jets[3].airborne,
+		"recalled jets parked %s/%s, A-10 departed %s" % [str(jets[0].state == Unit.S.LANDED), str(jets[2].state == Unit.S.LANDED), str(jets[3].airborne)])
+
+
+## Plan-view footprints (drawn length x span, oriented by heading) of two jets intersect (separating-axis test).
+const JET_SPAN := {"f16": 9.96, "fa18": 12.3, "f35": 10.7, "f22": 13.6, "a10": 17.5}
+
+func _jets_overlap(a: Unit, b: Unit) -> bool:
+	var ra := [a.forward(), Vector3(-a.forward().z, 0, a.forward().x)]
+	var rb := [b.forward(), Vector3(-b.forward().z, 0, b.forward().x)]
+	var ha := Vector2(float(a.def.length), float(a.def.get("span", JET_SPAN.get(a.kind, a.def.length)))) * 0.5 * UnitDefs.SCALE.aircraft
+	var hb := Vector2(float(b.def.length), float(b.def.get("span", JET_SPAN.get(b.kind, b.def.length)))) * 0.5 * UnitDefs.SCALE.aircraft
+	var d := b.position - a.position; d.y = 0.0
+	for ax in ra + rb:
+		var pa: float = ha.x * absf(ra[0].dot(ax)) + ha.y * absf(ra[1].dot(ax))
+		var pb: float = hb.x * absf(rb[0].dot(ax)) + hb.y * absf(rb[1].dot(ax))
+		if absf(d.dot(ax)) > pa + pb: return false
+	return true
+
+
+func _fwd_air(h: float) -> Vector3:
+	return Vector3(-sin(h), 0, -cos(h))
+
+
+func _cam_air(p: Vector3, zoom: float, yaw_deg: float, pitch: float) -> void:
+	if DisplayServer.get_name() == "headless": return
+	var cam: RTSCamera = battle.camera
+	cam.zoom = zoom; cam.yaw = deg_to_rad(yaw_deg); cam.pitch_deg = pitch
+	cam._apply(); cam.focus(p)
+	battle.hud.visible = true
+	await _frames(2)

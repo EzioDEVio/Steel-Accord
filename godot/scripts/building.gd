@@ -109,21 +109,24 @@ static func pad_positions(pos: Vector3, d: Dictionary) -> Array:
 	return out
 
 
-## Airfield taxi route for pad i (world points, y = 0). Out: pad -> taxiway lane -> onto the runway -> along the
-## centreline to the take-off end. In: from the runway at the lane -> down the lane -> pad. The lane runs between the
-## pad columns, so jets never cross the hangar or the tower.
+## Airfield taxi route for pad i (world points, y = 0), built in the airfield's local space so a rotated airfield
+## works. Out: lane abeam the pad -> hold-short line -> runway centreline at the lane -> RunwayEnd (the '27' end,
+## where jets turn round for a take-off roll toward '09'). In: runway at the lane -> hold-short -> lane abeam the
+## pad -> pad. The lane runs between the pad columns, so jets never cross the hangar or the tower.
+const HOLD_SHORT := 12.5    # hold-short point: metres from the runway centreline back along the lane
+
 func taxi_route(i: int, out: bool) -> Array:
 	if runway.size() != 2 or i < 0 or i >= pads.size(): return []
 	var ls: Vector3 = to_local(runway[0])
+	var le: Vector3 = to_local(runway[1])
 	var lane_x := 0.0
 	for p in pads: lane_x += to_local(p.pos).x
 	lane_x /= pads.size()
 	var lp: Vector3 = to_local(pads[i].pos)
-	var pts: Array = []
 	var a := Vector3(lane_x, 0, lp.z)        # lane abeam the pad
 	var b := Vector3(lane_x, 0, ls.z)        # lane meets the runway centreline
-	if out: pts = [a, b, Vector3(ls.x, 0, ls.z)]
-	else: pts = [b, a, Vector3(lp.x, 0, lp.z)]
+	var h := b + Vector3(0, 0, signf(lp.z - ls.z) * HOLD_SHORT)
+	var pts: Array = [a, h, b, Vector3(le.x, 0, le.z)] if out else [b, h, a, Vector3(lp.x, 0, lp.z)]
 	return pts.map(func(q): var g: Vector3 = to_global(q); return Vector3(g.x, 0, g.z))
 
 
