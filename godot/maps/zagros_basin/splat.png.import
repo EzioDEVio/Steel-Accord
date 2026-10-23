@@ -2,6 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
+uid="uid://d1xngwmt2e5py"
+path="res://.godot/imported/splat.png-2dda2f3a81c41f9fcfb678fc1845d0f4.ctex"
+metadata={
+"vram_texture": false
+}
+
+[deps]
+
+source_file="res://maps/zagros_basin/splat.png"
+dest_files=["res://.godot/imported/splat.png-2dda2f3a81c41f9fcfb678fc1845d0f4.ctex"]
 
 [params]
 

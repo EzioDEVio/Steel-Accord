@@ -14,32 +14,61 @@
   {
    "id": "civ_house_a",
    "path": "res://assets/units3d/civic/civ_house_a/civ_house_a.glb",
-   "footprint_m": [10, 9],
-   "description": "Single-storey sand-plaster house: flat roof with a low parapet, teal door under a hood, four windows (green shutters / bars), black and white roof water tanks, front terrace"
+   "footprint_m": [
+    10,
+    9
+   ],
+   "description": "Single-storey sand-plaster house: flat roof with a low parapet, teal door under a hood, four windows (green shutters / bars), black and white roof water tanks, front terrace",
+   "icon": "res://assets/ui/civic/civ_house_a_icon.png"
   },
   {
    "id": "civ_house_b",
    "path": "res://assets/units3d/civic/civ_house_b/civ_house_b.glb",
-   "footprint_m": [12, 10],
-   "description": "Two-storey beige house: front balcony with a metal railing and awning, roof stair hut with tanks, solar water heater and dish, walled courtyard on the east side with a gate and a tree"
+   "footprint_m": [
+    12,
+    10
+   ],
+   "description": "Two-storey beige house: front balcony with a metal railing and awning, roof stair hut with tanks, solar water heater and dish, walled courtyard on the east side with a gate and a tree",
+   "icon": "res://assets/ui/civic/civ_house_b_icon.png"
   },
   {
    "id": "civ_apartment",
    "path": "res://assets/units3d/civic/civ_apartment/civ_apartment.glb",
-   "footprint_m": [18, 12],
-   "description": "Four-storey apartment block: ground-floor shops with roller shutters and blank colour fascias, two balconies per floor, wall AC units, rooftop stair hut, tank rack, solar heaters, dishes and antenna"
+   "footprint_m": [
+    18,
+    12
+   ],
+   "description": "Four-storey apartment block: ground-floor shops with roller shutters and blank colour fascias, two balconies per floor, wall AC units, rooftop stair hut, tank rack, solar heaters, dishes and antenna",
+   "icon": "res://assets/ui/civic/civ_apartment_icon.png"
   },
   {
    "id": "civ_center",
    "path": "res://assets/units3d/civic/civ_center/civ_center.glb",
-   "footprint_m": [22, 16],
-   "description": "Two-storey community centre: stone-clad ground floor, glazed entrance bay with a canopy on columns, bare flagpole (no flag), monument and fascia sign boards with abstract shapes only, paved forecourt with planters and benches"
+   "footprint_m": [
+    22,
+    16
+   ],
+   "description": "Two-storey community centre: stone-clad ground floor, glazed entrance bay with a canopy on columns, bare flagpole (no flag), monument and fascia sign boards with abstract shapes only, paved forecourt with planters and benches",
+   "icon": "res://assets/ui/civic/civ_center_icon.png"
   },
   {
    "id": "civ_hospital",
    "path": "res://assets/units3d/civic/civ_hospital/civ_hospital.glb",
-   "footprint_m": [24, 18],
-   "description": "Three-storey hospital: ribbon windows, glazed lobby behind an ambulance-bay canopy and drive, white 'H' on green sign panels (canopy, pylon, stair core), rooftop plant room and helipad with a white 'H' in a circle"
+   "footprint_m": [
+    24,
+    18
+   ],
+   "description": "Three-storey hospital: ribbon windows, glazed lobby behind an ambulance-bay canopy and drive, white 'H' on green sign panels (canopy, pylon, stair core), rooftop plant room and helipad with a white 'H' in a circle",
+   "icon": "res://assets/ui/civic/civ_hospital_icon.png"
   }
- ]
+ ],
+ "icons": {
+  "generator_option": "--icons godot/assets/ui/civic",
+  "method": "Cycles CPU render of each exported GLB: front-3/4 perspective camera (az -35, el 30, 40 deg vertical FOV) fitted so the above-ground building fills 85% of the frame, soft sun (12 deg) + sky fill, shadow-catcher ground, composited on plain neutral grey RGB(64,66,68), rendered at 3x and LANCZOS-downsampled",
+  "size_px": [
+   256,
+   192
+  ],
+  "mode": "RGB"
+ }
 }
