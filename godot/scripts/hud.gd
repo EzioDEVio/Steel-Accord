@@ -460,6 +460,7 @@ func _draw_minimap() -> void:
 ## the cash tab on its top edge and the power gauge along it.
 func _draw_bar() -> void:
 	var r := bar_rect
+	if r.size.x < 100.0: return   # not laid out yet (first frame)
 	var cut := 18.0
 	var plate := PackedVector2Array([r.position + Vector2(cut, 0), Vector2(r.end.x - cut, r.position.y), Vector2(r.end.x, r.position.y + cut),
 		r.end, Vector2(r.position.x, r.end.y), r.position + Vector2(0, cut)])
