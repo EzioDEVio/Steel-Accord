@@ -18,5 +18,5 @@ ir_boragh: tris total 6732
 RWS ring (0.0, 0.1, 2.2), trunnion (y,z) (0.1, 2.66), muzzle y 1.62
 wheel radius 0.58 m, tyre width 0.42 m, rim r 0.33, wheel track x +-1.28, axles y F:2.4, M:1.05, M2:-0.75, R:-2.1
 8 wheels: WheelFL/FR, WheelML/MR, WheelM2L/M2R, WheelRL/RR; first two axles steer (SteerFL/FR, SteerML/MR empties)
-atlas coverage 0.613
+atlas coverage 0.614
 normals check: OK (signed volume per component, zero-length normals)
