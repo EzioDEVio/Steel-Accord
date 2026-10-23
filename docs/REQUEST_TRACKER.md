@@ -2,7 +2,7 @@
 
 Oct 22, 2026 · @Ezio
 
-Every request from the 10 handoff briefs and the chat, checked against the code and the latest test runs: 327 done, 164 partial, 57 not started, 15 deferred by design, 16 superseded.
+Every request from the 10 handoff briefs and the chat, checked against the code and the latest test runs: 341 done, 166 partial, 58 not started, 15 deferred by design, 17 superseded.
 
 ## Summary
 
@@ -681,3 +681,28 @@ Reference: the Zero Hour engine source (`ControlBar.cpp`: 14 command buttons in 
 | 11 | Units stacking in single file | Done | AI group orders spread into a grid; infantry spacing widened |
 | 12 | 1080p / 1440p / 4K | Done | scr:`b18/ui_*`; bar shrinks to fit screens narrower than 1404 px |
 | 13 | Windows build | Done | B1.8; Wine: map 24/24, QA 35/35 (not a real Windows PC) |
+
+## 12: B2 and playtest findings (brief 11, Oct 23)
+
+Full report: `docs/B2_REPORT.md`; audit: `docs/B2_STANDALONE_AUDIT.md`; screens: `docs/screens/b2/`.
+
+| # | Request | Status | Evidence / what is missing |
+| --- | --- | --- | --- |
+| 1 | B2: save / load | Done | Pause menu, main menu, F5/F9; `AB: save_writes_and_reads`, `load_restores_state`, `load_restores_links`, `play_continues_after_load`; end-to-end load from the main menu `RESULT 1/1` |
+| 2 | B2: separate clean installation | Done | Wine trace: only `SteelAccord.exe` read from the folder; no EA/Steam path touched (not a real Windows PC) |
+| 3 | B2: only licensed / shipped content | Partial | 24 of 503 assets cleared; U.S. art from AI concept sheets, audio sources and others pending (audit blocker list) |
+| 4 | B2: two playable factions | Done | USA, Iran |
+| 5 | B2: one original map | Done | Zagros Basin |
+| 6 | B2: economy and construction | Done | QA / base suites |
+| 7 | B2: three combat roles per faction | Done | Infantry, armour, air |
+| 8 | B2: victory / defeat | Done | `AB: victory_when_enemy_destroyed`; civic buildings excluded |
+| 9 | B2: one functional AI | Done | Scouts, remembers what it saw, attacks, defends, retreats, garrisons; `AB: ai_scouts_and_remembers`, `ai_retreats_when_hurt` |
+| 10 | B2: recorded human-vs-AI match | Not started | Needs a person at a PC |
+| 11 | Game slow and sluggish | Partial | CPU stalls removed (worst opening frame 4.3 s -> 0.29 s; separation 5.6 -> 1.6 ms at 41 units); Graphics quality + FPS options added; GPU cost on your PC unmeasured |
+| 12 | Aircraft fly through hills | Done | Terrain look-ahead; `AM: aircraft_clear_terrain` (AH-64 9 m, F-16 16 m over an 80 m ridge) |
+| 13 | Map repeats in parcels | Done | Non-repeating shader layers + broader ridge benches; `docs/TERRAIN_TILING.md`; fine cross-hatch on steep faces still to check on a GPU |
+| 14 | Map has buildings, centres, hospitals | Done | 21 civic buildings on Zagros; `AM: civic_buildings_placed` |
+| 15 | Troops occupy buildings | Done | `AM: garrison_enter`, `garrison_fires_from_inside`, `garrison_ejected_when_destroyed`, `garrison_survives_save_load` |
+| 16 | Hospital heals the occupants | Done | `AM: hospital_heals` (36 -> 74 health in 10 s) |
+| 17 | Jets taxi instead of crossing the hangar | Done | Taxiway route; `AB: jet_taxi_avoids_hangar`; scr:`b2/b2_taxi_*` |
+| 18 | Enlarge the airfield if needed | Superseded | Not needed: the taxiway route fits the existing layout |

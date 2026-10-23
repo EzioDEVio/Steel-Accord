@@ -47,7 +47,11 @@ Environment: Linux container, Godot 4.5.1 (headless and software-rendered). The 
 
 ## Test results (Linux)
 
-QA 41/41, base 19/19, army 22/22, map 31/31, end-to-end load 1/1. Wine results for the B2 build are in the build notes.
+QA 41/41, base 19/19, army 22/22, map 31/31, end-to-end load 1/1.
+
+## Test results (exported Windows build under Wine)
+
+Map suite 31/31, QA 41/41. Package: `build/SteelAccord_B2_win64.zip` (270,558,997 bytes). Wine is not a real Windows PC; a Windows run on your machine is still needed.
 
 ## Open items and risks
 
