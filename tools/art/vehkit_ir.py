@@ -247,8 +247,8 @@ def camo(P, cfg):
     n1 = fbm(Q, cfg.get("camo_scale", 1.6), seed=cfg.get("seed", 1), octaves=3)
     n2 = fbm(Q + 11.7, cfg.get("camo_scale", 1.6) * 0.8, seed=cfg.get("seed", 1) + 7, octaves=3)
     col = np.tile(PAL["sand"], (len(P), 1))
-    m_ol = n1 > cfg.get("olive_t", 0.56)
-    m_br = (n2 > cfg.get("brown_t", 0.63)) & ~m_ol
+    m_ol = n1 > cfg.get("olive_t", 0.585)
+    m_br = (n2 > cfg.get("brown_t", 0.60)) & ~m_ol
     col[m_ol] = PAL["olive"]
     col[m_br] = PAL["brown"]
     return col
@@ -770,8 +770,9 @@ def t72_hull(H, C=T72, skirts="armour", deck_louvres=True, rear_log=False, drums
     lo, hi = C["half_lo"], C["half_hi"]
     H.t("camo")
     # lower hull between the tracks (closed side profile)
-    H.side([(3.05, b), (n, 0.92), (n, 0.98), (gy, d), (r + 0.12, d), (r, d - 0.12), (r, 0.72), (r + 0.26, b)],
-           -lo, lo)
+    # (kept below / inside the sponson shell so no faces are coplanar with it -> no z-fighting)
+    H.side([(3.05, b), (n - 0.01, 0.92), (n - 0.01, 0.97), (n - 0.60, 1.15), (r + 0.02, 1.15), (r + 0.02, 0.72),
+            (r + 0.28, b)], -lo, lo)
     # upper hull / sponsons over the tracks
     H.side([(n - 0.03, sz), (n, 0.98), (gy, d), (r + 0.12, d), (r, d - 0.12), (r, sz)], -hi, hi)
     # fender lips (thin plates over the track run), front mudguards turned up
@@ -800,7 +801,8 @@ def t72_skirts(H, C=T72, kind="armour", y0=2.25, y1=None):
     H.t("camo")
 
 
-def t72_details(H, C=T72, rear_log=False, drums=False, exhaust=True, lights=True, louvres=True, rear_boxes=True):
+def t72_details(H, C=T72, rear_log=False, drums=False, exhaust=True, lights=True, louvres=True, rear_boxes=True,
+                fender_boxes=True):
     n, r, d = C["nose"], C["rear"], C["deck"]
     hi = C["half_hi"]
     # driver's hatch + vision block on the glacis line
@@ -835,7 +837,7 @@ def t72_details(H, C=T72, rear_log=False, drums=False, exhaust=True, lights=True
         for s in (-1, 1):
             H.box((s * 1.25, r - 0.10, d - 0.18), (0.55, 0.20, 0.30))
     # fender stowage boxes on the sponsons
-    for s in (-1, 1):
+    for s in ((-1, 1) if fender_boxes else ()):
         for k, y in enumerate((0.95, -0.35)):
             H.box((s * (hi - 0.22), y, d + 0.17), (0.40, 1.10, 0.34))
 

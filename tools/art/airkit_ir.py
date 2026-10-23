@@ -47,8 +47,8 @@ SAND = (0.74, 0.63, 0.44)
 BROWN = (0.50, 0.38, 0.24)
 GREEN = (0.37, 0.39, 0.27)
 UNDER_GREY = (0.68, 0.69, 0.67)
-GREY_A = (0.61, 0.64, 0.67)
-GREY_B = (0.47, 0.51, 0.55)
+GREY_A = (0.64, 0.66, 0.67)
+GREY_B = (0.55, 0.58, 0.60)
 LIGHT_GREY = (0.78, 0.79, 0.78)
 RADOME_BLACK = (0.09, 0.09, 0.09)
 GEAR = (0.16, 0.16, 0.16)
@@ -65,7 +65,7 @@ SCHEMES = {
     "desert": (SAND, BROWN, GREEN, 0.32, 0.30),
     "desert2": (SAND, GREEN, BROWN, 0.40, 0.18),       # transports: sand + olive bands, little brown
     "grey": (GREY_A, GREY_B, GREY_B, 0.28, 0.0),
-    "light": (LIGHT_GREY, (0.70, 0.71, 0.70), (0.70, 0.71, 0.70), 0.18, 0.0),
+    "light": (LIGHT_GREY, (0.745, 0.755, 0.745), (0.745, 0.755, 0.745), 0.25, 0.0),
 }
 
 
@@ -306,10 +306,13 @@ class Painter:
             g = np.tile(np.array(GLASS), (m.sum(), 1))
             sheen = np.clip(N[m, 2], 0, 1) ** 2 * 0.10
             g = g + sheen[:, None]
-            yy = P[m, 1]
+            yy, xx = P[m, 1], P[m, 0]
             fr = np.zeros(m.sum(), bool)
-            for yf in frames:
+            fy, fx = (frames.get("y", ()), frames.get("x", ())) if isinstance(frames, dict) else (frames, ())
+            for yf in fy:
                 fr |= np.abs(yy - yf) < self.frame_w * 0.5
+            for xf in fx:
+                fr |= (np.abs(xx - xf) < self.frame_w * 0.5) & (N[m, 2] > 0.3)
             g[fr] = np.array(self.scheme[0]) * 0.85
             col[m] = g
         # weathering

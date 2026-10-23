@@ -18,7 +18,7 @@ from vehkit_ir import TPart, PI  # noqa: E402
 VID = "ir_karrar"
 C = ik.T72
 TURRET_O = (0.0, 0.35, 1.42)
-TRUNNION = (0.0, 1.30, 1.86)
+TRUNNION = (0.0, 1.30, 1.90)
 MUZZLE_Y = 6.05
 
 
@@ -48,7 +48,7 @@ def build(ctx):
     # ------------------------------------------------------------ turret (origin on the yaw axis)
     T = TPart("Turret")
     cy = TURRET_O[1]
-    zb, zt = d + 0.06, 2.20
+    zb, zt = d + 0.06, 2.28
     bot = [(-0.42, cy + 1.92), (0.42, cy + 1.92), (1.46, cy + 1.08), (1.52, cy - 0.70), (1.38, cy - 1.32),
            (-1.38, cy - 1.32), (-1.52, cy - 0.70), (-1.46, cy + 1.08)]
     top = [(-0.36, cy + 1.66), (0.36, cy + 1.66), (1.32, cy + 0.95), (1.40, cy - 0.70), (1.28, cy - 1.26),
@@ -60,7 +60,7 @@ def build(ctx):
     # wedge cheek modules ahead of the turret face, either side of the mantlet
     for s in (-1, 1):
         TD.slab([(s * 0.30, cy + 2.02), (s * 0.40, cy + 2.10), (s * 1.38, cy + 1.20), (s * 1.30, cy + 1.10)], 1.62,
-                [(s * 0.32, cy + 1.90), (s * 0.40, cy + 1.96), (s * 1.30, cy + 1.14), (s * 1.24, cy + 1.06)], 2.12)
+                [(s * 0.32, cy + 1.90), (s * 0.40, cy + 1.96), (s * 1.30, cy + 1.14), (s * 1.24, cy + 1.06)], 2.22)
         # side armour boxes along the turret flanks
         TD.t("skirt").obox((s * 1.56, cy + 0.15, 1.86), (0.12, 1.55, 0.46), (0, 1, 0), (0, 0, 1))
         TD.t("camo").box((s * 1.45, cy - 1.05, 1.95), (0.18, 0.40, 0.40))
@@ -142,7 +142,8 @@ def build(ctx):
     def post_uv(objs):
         objs.update(ik.vk.mirror_gear(objs, left_gear))
 
-    flag = [dict(kind="flag", axis=ax, c=(cy - 0.05, 1.80), size=(0.42, 0.26), obj="Turret") for ax in ("-x", "+x")]
+    flag = [dict(kind="flag", axis=ax, c=(cy - 0.05, 1.80), size=(0.42, 0.26), obj="Turret", depth=dx, dtol=0.03)
+            for ax, dx in (("-x", -1.62), ("+x", 1.62))]
     flag += [dict(kind="flag", axis="-y", c=(0.85, 1.20), size=(0.36, 0.22), obj="Hull", depth=C["rear"], dtol=0.08)]
     cfg = dict(
         seams_y=[2.05, 0.55, -0.85, -1.70], seams_x=[0.88], seams_z=[],

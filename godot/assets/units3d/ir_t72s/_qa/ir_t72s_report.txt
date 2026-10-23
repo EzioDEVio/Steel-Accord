@@ -1,0 +1,29 @@
+ir_t72s: tris total 10241
+  Hull         MESH  tris   2069 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
+  Turret       MESH  tris   1728 parent -          world (0.0, 0.3, 1.42) local (0.0, 0.3, 1.42)
+  Gun          MESH  tris    596 parent Turret     world (0.0, 1.1, 1.88) local (0.0, 0.8, 0.46)
+  Muzzle       EMPTY tris      0 parent Gun        world (0.0, 6.07, 1.88) local (0.0, 4.97, 0.0)
+  WheelL0      MESH  tris    188 parent -          world (-1.4, 2.3, 0.475) local (-1.4, 2.3, 0.475)
+  WheelL1      MESH  tris    188 parent -          world (-1.4, 1.47, 0.475) local (-1.4, 1.47, 0.475)
+  WheelL2      MESH  tris    188 parent -          world (-1.4, 0.66, 0.475) local (-1.4, 0.66, 0.475)
+  WheelL3      MESH  tris    188 parent -          world (-1.4, -0.16, 0.475) local (-1.4, -0.16, 0.475)
+  WheelL4      MESH  tris    188 parent -          world (-1.4, -0.98, 0.475) local (-1.4, -0.98, 0.475)
+  WheelL5      MESH  tris    188 parent -          world (-1.4, -1.95, 0.475) local (-1.4, -1.95, 0.475)
+  WheelR0      MESH  tris    188 parent -          world (1.4, 2.3, 0.475) local (1.4, 2.3, 0.475)
+  WheelR1      MESH  tris    188 parent -          world (1.4, 1.47, 0.475) local (1.4, 1.47, 0.475)
+  WheelR2      MESH  tris    188 parent -          world (1.4, 0.66, 0.475) local (1.4, 0.66, 0.475)
+  WheelR3      MESH  tris    188 parent -          world (1.4, -0.16, 0.475) local (1.4, -0.16, 0.475)
+  WheelR4      MESH  tris    188 parent -          world (1.4, -0.98, 0.475) local (1.4, -0.98, 0.475)
+  WheelR5      MESH  tris    188 parent -          world (1.4, -1.95, 0.475) local (1.4, -1.95, 0.475)
+  IdlerL       MESH  tris    188 parent -          world (-1.4, 3.02, 0.55) local (-1.4, 3.02, 0.55)
+  IdlerR       MESH  tris    188 parent -          world (1.4, 3.02, 0.55) local (1.4, 3.02, 0.55)
+  SprocketL    MESH  tris    464 parent -          world (-1.4, -3.05, 0.62) local (-1.4, -3.05, 0.62)
+  SprocketR    MESH  tris    464 parent -          world (1.4, -3.05, 0.62) local (1.4, -3.05, 0.62)
+  TrackL       MESH  tris   1144 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
+  TrackR       MESH  tris   1144 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
+turret pivot (0.0, 0.3, 1.42), gun trunnion (0.0, 1.1, 1.88), muzzle y 6.05
+hull 6.90 m, 9.50 m with gun, 3.55 m over skirts+ERA, dome roof 2.13 m, cupola MG 2.44 m
+road wheel r 0.375, idler (front) r 0.27, sprocket (rear) r 0.31
+track loop 14.329 m, links 96, link pitch 0.1493 m, metres per V (track_m_per_v) 0.8956 (tile = 6 links)
+atlas coverage 0.447
+normals check: OK (signed volume per component, zero-length normals)

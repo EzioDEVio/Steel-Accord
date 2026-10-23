@@ -1,0 +1,22 @@
+ir_boragh: tris total 6732
+  Hull         MESH  tris   1076 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
+  Turret       MESH  tris    272 parent -          world (0.0, 0.1, 2.2) local (0.0, 0.1, 2.2)
+  Gun          MESH  tris    104 parent Turret     world (0.0, 0.1, 2.66) local (0.0, 0.0, 0.46)
+  Muzzle       EMPTY tris      0 parent Gun        world (0.0, 1.63, 2.66) local (0.0, 1.53, 0.0)
+  SteerFL      EMPTY tris      0 parent -          world (-1.28, 2.4, 0.58) local (-1.28, 2.4, 0.58)
+  WheelFL      MESH  tris    660 parent SteerFL    world (-1.28, 2.4, 0.58) local (0.0, 0.0, 0.0)
+  SteerFR      EMPTY tris      0 parent -          world (1.28, 2.4, 0.58) local (1.28, 2.4, 0.58)
+  WheelFR      MESH  tris    660 parent SteerFR    world (1.28, 2.4, 0.58) local (0.0, 0.0, 0.0)
+  SteerML      EMPTY tris      0 parent -          world (-1.28, 1.05, 0.58) local (-1.28, 1.05, 0.58)
+  WheelML      MESH  tris    660 parent SteerML    world (-1.28, 1.05, 0.58) local (0.0, 0.0, 0.0)
+  SteerMR      EMPTY tris      0 parent -          world (1.28, 1.05, 0.58) local (1.28, 1.05, 0.58)
+  WheelMR      MESH  tris    660 parent SteerMR    world (1.28, 1.05, 0.58) local (0.0, 0.0, 0.0)
+  WheelM2L     MESH  tris    660 parent -          world (-1.28, -0.75, 0.58) local (-1.28, -0.75, 0.58)
+  WheelM2R     MESH  tris    660 parent -          world (1.28, -0.75, 0.58) local (1.28, -0.75, 0.58)
+  WheelRL      MESH  tris    660 parent -          world (-1.28, -2.1, 0.58) local (-1.28, -2.1, 0.58)
+  WheelRR      MESH  tris    660 parent -          world (1.28, -2.1, 0.58) local (1.28, -2.1, 0.58)
+RWS ring (0.0, 0.1, 2.2), trunnion (y,z) (0.1, 2.66), muzzle y 1.62
+wheel radius 0.58 m, tyre width 0.42 m, rim r 0.33, wheel track x +-1.28, axles y F:2.4, M:1.05, M2:-0.75, R:-2.1
+8 wheels: WheelFL/FR, WheelML/MR, WheelM2L/M2R, WheelRL/RR; first two axles steer (SteerFL/FR, SteerML/MR empties)
+atlas coverage 0.613
+normals check: OK (signed volume per component, zero-length normals)
