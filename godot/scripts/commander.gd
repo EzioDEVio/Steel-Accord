@@ -529,9 +529,9 @@ func _left_release(mb: InputEventMouseButton) -> void:
 		if gr != null:
 			var rb: Dictionary = battle.rubble_at(gr, team)
 			if not rb.is_empty():
-				var why: String = battle.placement_problem(team, rb.kind, rb.pos, float(rb.get("yaw", 0.0)))
+				var why: String = battle.placement_problem(team, rb.kind, rb.pos, float(rb.get("yaw", 0.0)), float(rb.get("sx", 1.0)))
 				if why == "":
-					battle.issue({"type": "place", "team": team, "id": rb.kind, "pos": rb.pos, "yaw": float(rb.get("yaw", 0.0)), "builder": dozers()[0].uid})
+					battle.issue({"type": "place", "team": team, "id": rb.kind, "pos": rb.pos, "yaw": float(rb.get("yaw", 0.0)), "sx": float(rb.get("sx", 1.0)), "builder": dozers()[0].uid})
 					FX.order_marker(battle, rb.pos, Color(1, 0.8, 0.3, 0.9))
 				elif battle.hud:
 					battle.hud.flash_message("Cannot rebuild %s: %s" % [BuildingDefs.DEFS[rb.kind].name, why])

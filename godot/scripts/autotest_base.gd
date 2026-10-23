@@ -688,7 +688,7 @@ func _path_crosses(path: PackedVector3Array, a: Vector3, b: Vector3) -> bool:
 	return false
 
 
-func _path_len(path: PackedVector3Array) -> float:
+func _plen(path: PackedVector3Array) -> float:
 	var l := 0.0
 	for i in path.size() - 1: l += Vector2(path[i + 1].x - path[i].x, path[i + 1].z - path[i].z).length()
 	return l
@@ -752,7 +752,7 @@ func _run_build() -> void:
 	var why_rot: String = battle.placement_problem(0, "hesco", hpos, 0.0)
 	var free_far: String = battle.placement_problem(0, "hesco", c1 + Vector3(26, 0, 0), 0.0)
 	var hb: Array = await _place_input("hesco", hpos)
-	_log("placement_rejects_rotated_overlap", why_rot == "Blocked" and free_far == "" and hb.is_empty(),
+	_log("placement_rejects_rotated_overlap", why_rot.begins_with("Blocked") and free_far == "" and hb.is_empty(),
 		"hesco 16 m east of the 45-degree plant: '%s' (input placement made %d); 26 m east: '%s'" % [why_rot, hb.size(), free_far])
 	# --- 4. concrete wall drawn between two Defence Towers: N connected segments, no gaps
 	var wc := Vector3.INF          # centre of a clear 70 x 60 m patch for the wall test (the map has random boulders)
@@ -778,7 +778,7 @@ func _run_build() -> void:
 	_log("dozer_builds_whole_wall_line", built, "built %d/%d t=%.0f" % [walls.filter(func(w): return w.built).size(), walls.size(), battle.sim_time])
 	var south := wc + Vector3(0, 0, 16); var north := wc + Vector3(0, 0, -16)
 	var pth: PackedVector3Array = battle.find_path(south, north, "infantry")
-	var blocked_ok: bool = not _path_crosses(pth, ta.position, tb.position) and _path_len(pth) > 45.0
+	var blocked_ok: bool = not _path_crosses(pth, ta.position, tb.position) and _plen(pth) > 45.0
 	# hesco line from tower A going north-west: snaps to the tower, faces away from the base
 	battle.commander.place_yaw = 0.0
 	var hend := ta.position + Vector3(-28, 0, -24)
@@ -799,8 +799,8 @@ func _run_build() -> void:
 	battle.issue({"type": "move", "ids": [rf.uid], "points": [north]})
 	await _until(func(): return rf.flat_dist(north) < 3.0, 25.0)
 	_log("wall_blocks_until_breached", blocked_ok and _path_crosses(pth2, ta.position, tb.position) and rf.flat_dist(north) < 3.0,
-		"intact: path %.0f m, crosses=%s | one segment destroyed: path %.0f m crosses=%s, rifleman reached the far side=%s" % [_path_len(pth),
-			str(_path_crosses(pth, ta.position, tb.position)), _path_len(pth2), str(_path_crosses(pth2, ta.position, tb.position)), str(rf.flat_dist(north) < 3.0)])
+		"intact: path %.0f m, crosses=%s | one segment destroyed: path %.0f m crosses=%s, rifleman reached the far side=%s" % [_plen(pth),
+			str(_path_crosses(pth, ta.position, tb.position)), _plen(pth2), str(_path_crosses(pth2, ta.position, tb.position)), str(rf.flat_dist(north) < 3.0)])
 	battle.camera.yaw = 0.0
 	battle.camera.zoom = 75.0; battle.camera._apply(); battle.camera.focus(wc + Vector3(-10, 0, -2))
 	await _shot("wall_towers_hesco")

@@ -606,6 +606,8 @@ func _draw_help() -> void:
 		"Ctrl+A select all   Ctrl+0..9 set group (number shows over units)   0..9 recall (twice: jump)",
 		"Q all combat units on screen (twice: whole map)   E same type on screen (twice: map)   H Command Center",
 		". find builder   I details panel   Space: centre on selection",
+		"Placing: R / Shift+R turn 45 deg, press + drag to face; walls: press + drag draws a line",
+		"Occupied building selected: click an enemy (or A, click) - occupants attack it; S stops",
 		"Support powers (right edge): click, then click a target",
 		"Minimap: left click/drag moves camera, right click moves units",
 		"Esc (nothing selected) or F10: pause menu - Resume, Restart, Options, Main Menu, Exit",

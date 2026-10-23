@@ -1292,8 +1292,10 @@ func requirements_met(team: int, k: String) -> bool:
 
 ## "" when a structure of kind k may be placed at pos for team, otherwise the reason (shown to the player).
 ## yaw: placement rotation (radians about +Y); the footprint is tested as an oriented box everywhere.
-func placement_problem(team: int, k: String, pos: Vector3, yaw := 0.0) -> String:
+func placement_problem(team: int, k: String, pos: Vector3, yaw := 0.0, sx := 1.0) -> String:
 	var d: Dictionary = BuildingDefs.DEFS[k]
+	if d.get("wall", false):      # a single wall segment: may touch other walls end to end
+		return wall_problem(team, k, {"segs": [{"pos": pos, "yaw": yaw, "sx": sx}], "cost": int(d.cost), "joints": []})
 	if cash[team] < int(d.cost): return "Not enough cash"
 	if not requirements_met(team, k): return "Requires " + ", ".join(d.requires.map(func(x): return bname(team, x)))
 	var h: Vector2 = d.size * 0.5 + Vector2(1.0, 1.0)
@@ -1518,11 +1520,12 @@ func _execute_econ(cmd: Dictionary) -> void:
 			var dz: Unit = by_id.get(cmd.get("builder", -1))
 			if dz == null or dz.dead or dz.team != team or not dz.def.get("builder", false): return
 			var yaw := float(cmd.get("yaw", 0.0))
-			if placement_problem(team, k, cmd.pos, yaw) != "":
+			var sx := clampf(float(cmd.get("sx", 1.0)), 0.5, 1.35) if BuildingDefs.DEFS[k].get("wall", false) else 1.0
+			if placement_problem(team, k, cmd.pos, yaw, sx) != "":
 				return
 			spend(team, int(BuildingDefs.DEFS[k].cost))
 			_clear_rubble(cmd.pos, Building.aabb_half(BuildingDefs.DEFS[k].size * 0.5, yaw))
-			var b := add_structure(k, team, cmd.pos, false, yaw)
+			var b := add_structure(k, team, cmd.pos, false, yaw, sx)
 			wall_jobs.erase(dz.uid)
 			dz.order_build(b)
 			if b.is_wall(): _update_wall_posts()
@@ -1668,6 +1671,7 @@ var rubble: Array = []   # {"pos", "kind", "team", "half", "node"}
 ## there through the normal construction flow (normal cost, prerequisites and build time).
 func add_rubble(b: Building) -> void:
 	add_rubble_at(b.position, b.bkind, -2 if b.is_civic() else b.team, b.half, b.uid, b.yaw)
+	rubble[rubble.size() - 1]["sx"] = b.seg_scale      # a wall segment is rebuilt at its own length
 
 
 func add_rubble_at(pos: Vector3, bkind: String, bteam: int, bhalf: Vector2, seed_id: int, yaw := 0.0) -> void:
