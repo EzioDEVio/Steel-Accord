@@ -381,9 +381,9 @@ func _draw() -> void:
 	if show_help: _draw_help()
 	if commander.mode != "":
 		var label: String = {"attack_move": "ATTACK-MOVE", "guard": "GUARD - click ground or a friendly unit", "force": "FORCE FIRE",
-			"waypoint": "WAYPOINTS - right click to finish"}.get(commander.mode, "")
+			"waypoint": "WAYPOINTS - right click to finish", "gattack": "ATTACK - click an enemy for the occupants"}.get(commander.mode, "")
 		if commander.mode.begins_with("place:"):
-			label = "PLACE %s - %s" % [battle.bname(commander.team, commander.mode.substr(6)).to_upper(), "click to build" if commander.ghost_ok else commander.ghost_reason]
+			label = commander.place_hint()
 		if commander.mode.begins_with("power:"): label = String(UnitDefs.POWERS[commander.mode.substr(6)].name).to_upper() + " - click target"
 		_text(get_local_mouse_position() + Vector2(18, 26), label, 13, Color(1, 0.65, 0.3))
 	if banner != "":
@@ -455,8 +455,14 @@ func _draw_minimap() -> void:
 		var p := _world_to_mini(u.global_position)
 		var c: Color = UnitDefs.team_color(u.team).lightened(0.35 if u.selected else 0.1)
 		if u is Building:
-			var hs: Vector2 = (u as Building).half / battle.map_bounds.size.x * mini_rect.size.x
-			draw_rect(Rect2(p - hs, hs * 2.0).grow(0.5), c)
+			var bb := u as Building
+			if absf(bb.yaw) < 0.01:
+				var hs: Vector2 = bb.half / battle.map_bounds.size.x * mini_rect.size.x
+				draw_rect(Rect2(p - hs, hs * 2.0).grow(0.5), c)
+			else:   # rotated footprint (placement rotation)
+				var poly := PackedVector2Array()
+				for q in Building.corners(bb.global_position, bb.half + Vector2(0.6, 0.6), bb.yaw): poly.append(_world_to_mini(q))
+				draw_colored_polygon(poly, c)
 		elif u.domain == "ground":
 			draw_rect(Rect2(p - Vector2(2.5, 2.5), Vector2(5, 5)), c)
 		else:

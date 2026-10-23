@@ -619,7 +619,7 @@ func _site_approach() -> Vector3:
 	to.y = 0.0
 	if to.length() < 0.1: to = Vector3(0, 0, 1)
 	to = to.normalized()
-	return site.position + to * (absf(to.x) * site.half.x + absf(to.z) * site.half.y + 3.0)
+	return site.position + to * (site.reach_along(to) + 3.0)     # oriented footprint (placement rotation)
 
 
 ## Supply hauler (CH-47): loops pile -> depot automatically until given another order.

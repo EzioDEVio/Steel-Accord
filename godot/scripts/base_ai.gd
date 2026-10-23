@@ -105,13 +105,16 @@ func _construct(anchor: Vector3) -> void:
 		if battle.cash[team] < int(BuildingDefs.DEFS[k].cost) + 200: return   # keep a small reserve for units
 		if not battle.requirements_met(team, k): return
 		var pos := _slot(anchor, float(e[1]), float(e[2]))
+		# barriers and towers face the enemy base; other structures keep their authored orientation
+		var to_enemy: Vector3 = battle.start_pos[1 - team] - anchor
+		var yaw := atan2(to_enemy.x, to_enemy.z) if k in ["hesco", "concrete_wall", "defense_tower"] else 0.0
 		var n_try := 40 if battle.terrain else 12      # hills: search wider for flat ground
 		for tries in n_try:
-			if battle.placement_problem(team, k, pos) == "": break
+			if battle.placement_problem(team, k, pos, yaw) == "": break
 			var a := tries * 0.9
 			pos = _slot(anchor, float(e[1]) + cos(a) * (6.0 + tries * 2.0), float(e[2]) + sin(a) * (6.0 + tries * 2.0))
-		if battle.placement_problem(team, k, pos) == "":
-			battle.issue({"type": "place", "team": team, "id": k, "pos": pos, "builder": dz.uid})
+		if battle.placement_problem(team, k, pos, yaw) == "":
+			battle.issue({"type": "place", "team": team, "id": k, "pos": pos, "yaw": yaw, "builder": dz.uid})
 		return
 
 

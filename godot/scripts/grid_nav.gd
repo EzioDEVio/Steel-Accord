@@ -63,18 +63,28 @@ func block_circle(center: Vector3, r: float) -> void:
 				astar.set_point_solid(c, true)
 
 
-## Structure footprints are reference counted so overlapping walls / removal behave.
-func set_structure(center: Vector3, half: Vector2, on: bool) -> void:
-	for c in _cells_in_box(center, half, 0.0):
+## Structure footprints are reference counted so overlapping walls / removal behave. `yaw` rotates the footprint
+## (placement rotation). Thin footprints are widened to 0.75 cell per side so a diagonal wall still rasterises to a
+## 4-connected band of cells (no corner gaps a path could slip through).
+func set_structure(center: Vector3, half: Vector2, on: bool, yaw := 0.0) -> void:
+	var h := Vector2(maxf(half.x, CELL * 0.75), maxf(half.y, CELL * 0.75))
+	for c in _cells_in_box(center, h, yaw):
 		var k: int = int(owners.get(c, 0)) + (1 if on else -1)
 		if k <= 0: owners.erase(c)
 		else: owners[c] = k
 		astar.set_point_solid(c, k > 0 or static_solid.has(c))
 
 
-func box_free(center: Vector3, half: Vector2) -> bool:
-	for c in _cells_in_box(center, half, 0.0):
+func box_free(center: Vector3, half: Vector2, yaw := 0.0) -> bool:
+	for c in _cells_in_box(center, half, yaw):
 		if is_blocked(c): return false
+	return true
+
+
+## Like box_free, but ignores structures (terrain obstacles, slopes and props only).
+func box_free_static(center: Vector3, half: Vector2, yaw := 0.0) -> bool:
+	for c in _cells_in_box(center, half, yaw):
+		if c.x < 0 or c.y < 0 or c.x >= n or c.y >= n or static_solid.has(c): return false
 	return true
 
 

@@ -55,6 +55,7 @@ static func unit_icon_path(k: String) -> String:
 
 static func building_icon_path(k: String) -> String:
 	if BuildingDefs.DEFS[k].get("civic", false): return "res://assets/ui/civic/%s_icon.png" % k
+	if BuildingDefs.DEFS[k].has("icon"): return str(BuildingDefs.DEFS[k].icon)
 	return str(UsArt.building(BuildingDefs.DEFS[k].art).get("icon", ""))
 
 
@@ -192,7 +193,11 @@ func _process(_dt: float) -> void:
 		var heal: float = float(b.bdef.get("garrison_heal", 0.0))
 		info = "%s - %d / %d inside. They fire from the windows (+15%% range) and cannot be hit until it falls.%s" % [b.def.name,
 			b.passengers.size(), int(b.def.transport.capacity), (" Occupants heal %d%% per second." % int(heal * 100.0)) if heal > 0.0 else ""]
-		if buttons.has("unload"): buttons["unload"].disabled = b.passengers.is_empty()
+		if buttons.has("unload"): buttons["unload"].disabled = b.passengers.is_empty() or b.team != team
+		for kk in ["gattack", "gstop"]:
+			if buttons.has(kk): buttons[kk].disabled = b.passengers.is_empty() or b.team != team
+		if b.gar_target and is_instance_valid(b.gar_target) and not b.gar_target.dead:
+			info += " Attacking: %s." % b.gar_target.def.name
 	elif b: _update_structure(b, team)
 	elif sig == "dozer": _update_dozer(team)
 	else: _update_orders(live)
@@ -337,7 +342,10 @@ func _build_civic(b: Building) -> void:
 	var team: int = commander.team
 	var bid := b.uid
 	_tile("unload", 0, "order", ICON_DIR + "unload.png", "Evacuate (D) - everyone leaves the building", func(): battle.issue({"type": "unload", "team": team, "ids": [bid]}), {"hot": "D"})
-	var slot := 1
+	_tile("gattack", 1, "order", ICON_DIR + "attack_move.png", "Attack (A, or click an enemy) - every occupant in reach fires at the chosen enemy until it is destroyed",
+		func(): commander.set_mode("gattack"), {"hot": "A"})
+	_tile("gstop", 2, "order", ICON_DIR + "stop.png", "Stop (S) - cancel the attack order; occupants pick their own targets", func(): commander.cmd_garrison_stop(), {"hot": "S"})
+	var slot := 3
 	for p in b.passengers:
 		if slot >= SLOTS: break
 		var pu: Unit = p

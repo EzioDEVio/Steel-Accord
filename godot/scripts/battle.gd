@@ -366,8 +366,8 @@ func nav_block_circle(p: Vector3, r: float) -> void:
 	for g in _nav_set(): g.block_circle(p, r)
 
 
-func nav_set_structure(p: Vector3, half: Vector2, on: bool) -> void:
-	for g in _nav_set(): g.set_structure(p, half, on)
+func nav_set_structure(p: Vector3, half: Vector2, on: bool, yaw := 0.0) -> void:
+	for g in _nav_set(): g.set_structure(p, half, on, yaw)
 
 
 func _nav_set() -> Array:
@@ -467,7 +467,10 @@ func _execute(cmd: Dictionary) -> void:
 		plan_switch_t[cmd.team] = sim_time + (Upgrades.PLAN_SWITCH_S if plan[cmd.team] != "" else 5.0)
 		plan[cmd.team] = ""      # the old plan stops while the new one is being prepared
 		return
-	if cmd.type in ["place", "produce", "cancel_unit", "rally", "sell", "cancel_build", "repair"]:
+	if cmd.type in ["garrison_attack", "garrison_stop"]:
+		_execute_garrison(cmd)
+		return
+	if cmd.type in ["place", "place_wall", "produce", "cancel_unit", "rally", "sell", "cancel_build", "repair"]:
 		_execute_econ(cmd)
 		return
 	var ids: Array = cmd.get("ids", [])
@@ -552,6 +555,8 @@ func sim_tick(dt: float) -> void:
 	if p: _pmark("ground")
 	_update_derricks(dt)
 	_update_garrisons(dt)
+	_update_wall_jobs()
+	if tick_n % 5 == 0: _update_civic_flags()
 	_update_plans()
 	if tick_n % 150 == 0:
 		trend_samples.append([sim_time, income[0], spent[0], income[1], spent[1]])
@@ -677,13 +682,7 @@ func _separate() -> void:
 		if ga:
 			for bb in blds:
 				var b: Building = bb
-				var dx := a.position.x - b.position.x
-				var dz := a.position.z - b.position.z
-				var ex: float = b.half.x + a.def.radius * 0.5 - absf(dx)
-				var ez: float = b.half.y + a.def.radius * 0.5 - absf(dz)
-				if ex > 0.0 and ez > 0.0:
-					if ex < ez: a.position.x += signf(dx if dx != 0.0 else 1.0) * ex
-					else: a.position.z += signf(dz if dz != 0.0 else 1.0) * ez
+				a.position = b.push_out(a.position, a.def.radius * 0.5)    # oriented footprint (placement rotation)
 			var oc: Variant = og.get(Vector2i(int(floor(a.position.x / 16.0)), int(floor(a.position.z / 16.0))))
 			if oc != null:
 				for o in oc:
@@ -1001,6 +1000,7 @@ func on_unit_died(u: Unit) -> void:
 	if u.team == 0: losses += 1
 	else: kills += 1
 	var vis_kind: String = u.def.get("visual", "model")
+	if u is Building and (u as Building).is_wall(): _update_wall_posts.call_deferred()
 	if u is Building:
 		FX.explosion(self, u.global_position + Vector3(0, 2, 0), 2.2)
 		FX.wreck_fire(u.body)
@@ -1222,11 +1222,11 @@ func _spawn_bases() -> void:
 	add_pile(Vector3(0, 0, 0), BuildingDefs.PILE_CASH * 2)
 
 
-func add_structure(k: String, team: int, pos: Vector3, built := false) -> Building:
-	pos = prepare_site(k, pos)
+func add_structure(k: String, team: int, pos: Vector3, built := false, yaw := 0.0, sx := 1.0) -> Building:
+	pos = prepare_site(k, pos, yaw, sx)
 	var b := Building.new()
 	add_child(b)
-	b.setup_structure(self, k, team, new_uid(), pos, built)
+	b.setup_structure(self, k, team, new_uid(), pos, built, yaw, sx)
 	b.reset_physics_interpolation()
 	units.append(b)
 	by_id[b.uid] = b
@@ -1291,19 +1291,21 @@ func requirements_met(team: int, k: String) -> bool:
 
 
 ## "" when a structure of kind k may be placed at pos for team, otherwise the reason (shown to the player).
-func placement_problem(team: int, k: String, pos: Vector3) -> String:
+## yaw: placement rotation (radians about +Y); the footprint is tested as an oriented box everywhere.
+func placement_problem(team: int, k: String, pos: Vector3, yaw := 0.0) -> String:
 	var d: Dictionary = BuildingDefs.DEFS[k]
 	if cash[team] < int(d.cost): return "Not enough cash"
 	if not requirements_met(team, k): return "Requires " + ", ".join(d.requires.map(func(x): return bname(team, x)))
 	var h: Vector2 = d.size * 0.5 + Vector2(1.0, 1.0)
+	var box_h := Building.aabb_half(h, yaw)   # enclosing axis-aligned box (terrain, derricks, apron)
 	if not map_bounds.grow(-10).has_point(Vector2(pos.x, pos.z)): return "Outside the map"
 	if terrain:
-		var st := terrain.footprint_stats(pos, d.size * 0.5)
+		var st := terrain.footprint_stats(pos, Building.aabb_half(d.size * 0.5, yaw))
 		if st.y > build_max_slope: return "Ground too steep (%.0f° > %.0f°)" % [st.y, build_max_slope]
-	if not gnav.box_free(pos, h): return "Blocked"
+	if not gnav.box_free(pos, h, yaw): return "Blocked"
 	if terrain:
 		for od in derricks:
-			if absf(od.pos.x - pos.x) < h.x + 6.0 and absf(od.pos.z - pos.z) < h.y + 6.0: return "Blocked"
+			if absf(od.pos.x - pos.x) < box_h.x + 6.0 and absf(od.pos.z - pos.z) < box_h.y + 6.0: return "Blocked"
 	# airfield aprons: the new apron must be clear and on the map; nothing may be built on an existing apron
 	var ap := Building.apron_rect(pos, d)
 	if not ap.is_empty():
@@ -1316,11 +1318,11 @@ func placement_problem(team: int, k: String, pos: Vector3) -> String:
 		var r := Building.apron_rect(af.position, af.bdef)
 		if r.is_empty(): continue
 		var rc: Vector3 = r[0]; var rh: Vector2 = r[1]
-		if absf(pos.x - rc.x) < rh.x + h.x and absf(pos.z - rc.z) < rh.y + h.y: return "On an airfield apron"
+		if absf(pos.x - rc.x) < rh.x + box_h.x and absf(pos.z - rc.z) < rh.y + box_h.y: return "On an airfield apron"
 	for u in units:
 		if u.dead or u.is_air() or u is Building: continue
-		if absf(u.position.x - pos.x) < h.x + u.def.radius * 0.5 and absf(u.position.z - pos.z) < h.y + u.def.radius * 0.5 \
-				and not u.def.get("builder", false):
+		var lu := Building.to_local_xz(pos, yaw, u.position)
+		if absf(lu.x) < h.x + u.def.radius * 0.5 and absf(lu.y) < h.y + u.def.radius * 0.5 and not u.def.get("builder", false):
 			return "Units in the way"
 	# build radius: near any own structure (Generals-style base creep)
 	var near := false
@@ -1330,6 +1332,184 @@ func placement_problem(team: int, k: String, pos: Vector3) -> String:
 	return ""
 
 
+# ------------------------------------------------------------------ walls (HESCO / concrete T-wall lines)
+## A wall is drawn as a line: it is split into equal segments (each 0.67-1.35 of the model length, scaled along
+## the line so consecutive segments butt together exactly). A line end that starts or stops near a Defence Tower
+## (WALL_TOWER_SNAP) is trimmed to just inside the tower's footprint, so the tower acts as a joint; an end near the
+## free end of another wall line (WALL_END_SNAP) starts exactly there. The barrier is therefore continuous.
+const WALL_TOWER_SNAP := 12.0
+const WALL_END_SNAP := 5.0
+const WALL_JOINT_TOWERS := ["defense_tower"]
+var wall_jobs := {}             # dozer uid -> [site uid, ...] still to construct, in order
+var wall_run_next := 1
+
+
+## Nearest joint for a wall end at p: {"pos", "joint": Building or null, "type": "tower" / "end" / ""}.
+func wall_snap(team: int, p: Vector3) -> Dictionary:
+	var best := {"pos": Vector3(p.x, 0, p.z), "joint": null, "type": ""}
+	var bd := INF
+	for b in structures(team, "", false):
+		if b.bkind in WALL_JOINT_TOWERS:
+			var d := Vector2(b.position.x - p.x, b.position.z - p.z).length()
+			if d < WALL_TOWER_SNAP and d < bd:
+				bd = d; best = {"pos": Vector3(b.position.x, 0, b.position.z), "joint": b, "type": "tower"}
+		elif b.is_wall():
+			for e in b.wall_ends():
+				var d2 := Vector2(e.x - p.x, e.z - p.z).length()
+				if d2 < WALL_END_SNAP and d2 < bd - 0.01:
+					bd = d2; best = {"pos": Vector3(e.x, 0, e.z), "joint": b, "type": "end"}
+	return best
+
+
+## Segments for a wall of kind k drawn from a to b: {"segs": [{"pos", "yaw", "sx"}], "cost", "problem", "joints"}.
+func wall_plan(team: int, k: String, a: Vector3, b: Vector3) -> Dictionary:
+	var d: Dictionary = BuildingDefs.DEFS[k]
+	var seg: float = d.size.x
+	var sa := wall_snap(team, a)
+	var sb := wall_snap(team, b)
+	var pa: Vector3 = sa.pos
+	var pb: Vector3 = sb.pos
+	if sa.joint != null and sa.joint == sb.joint: pb = Vector3(b.x, 0, b.z); sb = {"pos": pb, "joint": null, "type": ""}
+	var dir := pb - pa
+	dir.y = 0.0
+	var out := {"segs": [], "cost": 0, "problem": "", "joints": [sa.joint, sb.joint].filter(func(x): return x != null), "a": pa, "b": pb}
+	if dir.length() < 1.0:
+		out.problem = "Drag to draw a line"
+		return out
+	dir = dir.normalized()
+	if sa.type == "tower": pa += dir * ((sa.joint as Building).reach_along(dir) - 0.8)
+	if sb.type == "tower": pb -= dir * ((sb.joint as Building).reach_along(dir) - 0.8)
+	var length := (pb - pa).dot(dir)
+	if length < seg * 0.5:
+		out.problem = "Too short"
+		return out
+	var n := maxi(1, int(round(length / seg)))
+	if length / n > seg * 1.35: n += 1
+	var s := length / n
+	var yaw := atan2(-dir.z, dir.x)        # the segment's long axis (local X) runs along the line
+	# the barrier faces away from its owner's base (toward the enemy): flip the segments if their front points home
+	var home_p: Vector3 = start_pos[team] if team >= 0 and team < start_pos.size() else Vector3.ZERO
+	var ccs := structures(team, "command_center", false)
+	if not ccs.is_empty(): home_p = ccs[0].position
+	var mid := (pa + pb) * 0.5
+	if Vector3(sin(yaw), 0, cos(yaw)).dot(Vector3(mid.x - home_p.x, 0, mid.z - home_p.z)) < 0.0: yaw = wrapf(yaw + PI, -PI, PI)
+	for i in n:
+		var c := pa + dir * (s * (i + 0.5))
+		out.segs.append({"pos": Vector3(c.x, 0, c.z), "yaw": yaw, "sx": s / seg})
+	out.a = pa; out.b = pb
+	out.cost = int(d.cost) * n
+	out.problem = wall_problem(team, k, out)
+	return out
+
+
+## "" when every segment of a planned wall may be built, otherwise the reason.
+func wall_problem(team: int, k: String, plan: Dictionary) -> String:
+	var d: Dictionary = BuildingDefs.DEFS[k]
+	if cash[team] < int(plan.cost): return "Not enough cash ($%d for %d segments)" % [int(plan.cost), plan.segs.size()]
+	if not requirements_met(team, k): return "Requires " + ", ".join(d.requires.map(func(x): return bname(team, x)))
+	var near := false
+	var others: Array = []
+	for ub in units:
+		if ub is Building and not ub.dead and not (ub in plan.joints): others.append(ub)
+	for sg in plan.segs:
+		var pos: Vector3 = sg.pos
+		var h := Vector2(d.size.x * 0.5 * float(sg.sx), d.size.y * 0.5)
+		if not map_bounds.grow(-10).has_point(Vector2(pos.x, pos.z)): return "Outside the map"
+		if terrain:
+			var st := terrain.footprint_stats(pos, Building.aabb_half(h, sg.yaw))
+			if st.y > build_max_slope: return "Ground too steep (%.0f° > %.0f°)" % [st.y, build_max_slope]
+		if not gnav.box_free_static(pos, h, sg.yaw): return "Blocked"
+		for ob in others:
+			# wall lines may touch other walls end to end; everything else keeps the usual 1 m clearance
+			var grow := 0.0 if (ob as Building).is_wall() else 1.0
+			var oh: Vector2 = ob.half + Vector2(grow, grow)
+			var hh := h - Vector2(0.3, 0.1) if (ob as Building).is_wall() else h
+			if Building.obb_overlap(pos, hh, sg.yaw, ob.position, oh, ob.yaw): return "Blocked by %s" % ob.def.name
+		for od in derricks:
+			if Vector2(od.pos.x - pos.x, od.pos.z - pos.z).length() < h.x + 6.0: return "Blocked"
+		for u in units:
+			if u.dead or u.is_air() or u is Building or u.def.get("builder", false): continue
+			var lu := Building.to_local_xz(pos, sg.yaw, u.position)
+			if absf(lu.x) < h.x + u.def.radius * 0.5 and absf(lu.y) < h.y + u.def.radius * 0.5: return "Units in the way"
+		if not near:
+			for ob in structures(team, "", false):
+				if ob.position.distance_to(pos) < 140.0: near = true; break
+	if not near: return "Too far from your base"
+	return ""
+
+
+func _place_wall(cmd: Dictionary) -> void:
+	var team: int = cmd.team
+	var k: String = cmd.id
+	if not BuildingDefs.DEFS.has(k) or not BuildingDefs.DEFS[k].get("wall", false): return
+	var dz: Unit = by_id.get(cmd.get("builder", -1))
+	if dz == null or dz.dead or dz.team != team or not dz.def.get("builder", false): return
+	var plan := wall_plan(team, k, cmd.a, cmd.b)
+	if plan.problem != "" or plan.segs.is_empty(): return
+	spend(team, int(plan.cost))
+	var run := wall_run_next
+	wall_run_next += 1
+	var ids: Array = []
+	for sg in plan.segs:
+		_clear_rubble(sg.pos, Building.aabb_half(BuildingDefs.DEFS[k].size * 0.5, sg.yaw))
+		var b := add_structure(k, team, sg.pos, false, sg.yaw, sg.sx)
+		b.wall_run = run
+		ids.append(b.uid)
+	_update_wall_posts()
+	var first: Building = by_id.get(ids[0])
+	dz.order_build(first)
+	wall_jobs[dz.uid] = ids
+
+
+## A dozer given a wall line builds its segments one after another; another order from the player ends the job.
+func _update_wall_jobs() -> void:
+	if wall_jobs.is_empty(): return
+	for id in wall_jobs.keys():
+		var dz: Unit = by_id.get(id)
+		var q: Array = wall_jobs[id]
+		if dz == null or dz.dead or q.is_empty():
+			wall_jobs.erase(id); continue
+		if dz.state == Unit.S.BUILD: continue
+		var cur: Unit = by_id.get(q[0])
+		if cur and not cur.dead and not (cur as Building).built:
+			wall_jobs.erase(id); continue      # the dozer was sent elsewhere before finishing
+		while not q.is_empty():
+			var nb: Unit = by_id.get(q[0])
+			if nb and not nb.dead and not (nb as Building).built: break
+			q.pop_front()
+		if q.is_empty() or dz.state != Unit.S.IDLE:
+			wall_jobs.erase(id); continue
+		dz.order_build(by_id.get(q[0]))
+
+
+## Concrete walls show an end post wherever a line ends freely (not against another segment or a tower).
+func _update_wall_posts() -> void:
+	var walls: Array = units.filter(func(u): return u is Building and not u.dead and (u as Building).is_wall())
+	var towers: Array = units.filter(func(u): return u is Building and not u.dead and u.bkind in WALL_JOINT_TOWERS)
+	for w: Building in walls:
+		var post_path := str(w.bdef.get("post_model", ""))
+		if post_path == "" or not ResourceLoader.exists(post_path): continue
+		var ends := w.wall_ends()
+		for i in 2:
+			var e: Vector3 = ends[i]
+			var free := true
+			for o: Building in walls:
+				if o == w or o.team != w.team: continue
+				for oe in o.wall_ends():
+					if Vector2(oe.x - e.x, oe.z - e.z).length() < 1.2: free = false
+			for t: Building in towers:
+				if t.contains_xz(e, 1.0): free = false
+			var nm := "EndPost%d" % i
+			var node: Node3D = w.get_node_or_null(nm)
+			if free and node == null:
+				node = (load(post_path) as PackedScene).instantiate()
+				node.name = nm
+				node.position = Vector3(-w.half.x if i == 0 else w.half.x, 0, 0)
+				w.add_child(node)
+				w.tint_team(node)
+			elif not free and node: node.queue_free()
+
+
 func _execute_econ(cmd: Dictionary) -> void:
 	var team: int = cmd.team
 	match cmd.type:
@@ -1337,12 +1517,17 @@ func _execute_econ(cmd: Dictionary) -> void:
 			var k: String = cmd.id
 			var dz: Unit = by_id.get(cmd.get("builder", -1))
 			if dz == null or dz.dead or dz.team != team or not dz.def.get("builder", false): return
-			if placement_problem(team, k, cmd.pos) != "":
+			var yaw := float(cmd.get("yaw", 0.0))
+			if placement_problem(team, k, cmd.pos, yaw) != "":
 				return
 			spend(team, int(BuildingDefs.DEFS[k].cost))
-			_clear_rubble(cmd.pos, BuildingDefs.DEFS[k].size * 0.5)
-			var b := add_structure(k, team, cmd.pos, false)
+			_clear_rubble(cmd.pos, Building.aabb_half(BuildingDefs.DEFS[k].size * 0.5, yaw))
+			var b := add_structure(k, team, cmd.pos, false, yaw)
+			wall_jobs.erase(dz.uid)
 			dz.order_build(b)
+			if b.is_wall(): _update_wall_posts()
+		"place_wall":
+			_place_wall(cmd)
 		"cancel_build":
 			var b: Building = by_id.get(cmd.id)
 			if b and not b.dead and not b.built and b.team == team:
@@ -1402,7 +1587,7 @@ func spawn_produced(b: Building, k: String) -> void:
 	var exit_dir := (b.rally - b.position)
 	exit_dir.y = 0.0
 	exit_dir = exit_dir.normalized() if exit_dir.length() > 0.1 else Vector3(0, 0, 1.0 if team == 0 else -1.0)
-	var reach := absf(exit_dir.x) * b.half.x + absf(exit_dir.z) * b.half.y + 5.0
+	var reach := b.reach_along(exit_dir) + 5.0
 	var pos := b.position + exit_dir * reach
 	var ep: Vector3 = b.exit_point()
 	if ep != Vector3.INF:
@@ -1482,12 +1667,13 @@ var rubble: Array = []   # {"pos", "kind", "team", "half", "node"}
 ## A destroyed structure leaves rubble on its footprint (not an obstacle). A Dozer can rebuild the same structure
 ## there through the normal construction flow (normal cost, prerequisites and build time).
 func add_rubble(b: Building) -> void:
-	add_rubble_at(b.position, b.bkind, -2 if b.is_civic() else b.team, b.half, b.uid)
+	add_rubble_at(b.position, b.bkind, -2 if b.is_civic() else b.team, b.half, b.uid, b.yaw)
 
 
-func add_rubble_at(pos: Vector3, bkind: String, bteam: int, bhalf: Vector2, seed_id: int) -> void:
+func add_rubble_at(pos: Vector3, bkind: String, bteam: int, bhalf: Vector2, seed_id: int, yaw := 0.0) -> void:
 	var n := Node3D.new()
 	n.position = pos
+	n.rotation.y = yaw
 	add_child(n)
 	var dark := StandardMaterial3D.new(); dark.albedo_color = Color(0.13, 0.12, 0.11); dark.roughness = 1.0
 	var conc := StandardMaterial3D.new(); conc.albedo_color = Color(0.36, 0.34, 0.31); conc.roughness = 0.95
@@ -1506,7 +1692,7 @@ func add_rubble_at(pos: Vector3, bkind: String, bteam: int, bhalf: Vector2, seed
 		m.rotation = Vector3(r.randf_range(-0.4, 0.4), r.randf() * TAU, r.randf_range(-0.4, 0.4))
 		n.add_child(m)
 	FX.wreck_fire(n)
-	rubble.append({"pos": pos, "kind": bkind, "team": bteam, "half": bhalf, "node": n, "seed": seed_id})
+	rubble.append({"pos": pos, "kind": bkind, "team": bteam, "half": bhalf, "node": n, "seed": seed_id, "yaw": yaw})
 
 
 func _clear_rubble(pos: Vector3, h: Vector2) -> void:
@@ -1518,7 +1704,8 @@ func _clear_rubble(pos: Vector3, h: Vector2) -> void:
 
 func rubble_at(p: Vector3, team: int) -> Dictionary:
 	for r in rubble:
-		if r.team == team and absf(p.x - r.pos.x) < r.half.x and absf(p.z - r.pos.z) < r.half.y: return r
+		var l := Building.to_local_xz(r.pos, float(r.get("yaw", 0.0)), p)
+		if r.team == team and absf(l.x) < r.half.x and absf(l.y) < r.half.y: return r
 	return {}
 
 
@@ -1731,6 +1918,13 @@ func _update_garrisons(dt: float) -> void:
 		var b := u as Building
 		if not b.is_civic(): continue
 		var heal: float = float(b.bdef.get("garrison_heal", 0.0))
+		# ordered target (player / AI command) first, then whoever is damaging the building, then free choice
+		var gt: Unit = b.gar_target
+		if gt and (not is_instance_valid(gt) or gt.dead or gt.team == b.team or gt.team < 0):
+			b.gar_target = null; gt = null
+		var rt: Unit = b.retaliate
+		if rt and (not is_instance_valid(rt) or rt.dead or rt.team == b.team or rt.team < 0 or sim_time - b.retaliate_t > 8.0):
+			b.retaliate = null; rt = null
 		for i in b.passengers.size():
 			var p: Unit = b.passengers[i]
 			if heal > 0.0 and p.hp < p.def.hp:
@@ -1741,7 +1935,9 @@ func _update_garrisons(dt: float) -> void:
 			if p.target and (p.target.dead or p.target.team == p.team or p.target.team < 0): p.target = null
 			for wi in p.def.weapons.size():
 				p.w_reload[wi] = maxf(0.0, float(p.w_reload[wi]) - dt)
-			if p.target == null and (tick_n + p.uid) % 6 == 0:
+			if gt and garrison_reaches(p, pp, gt): p.target = gt
+			elif rt and p.target != gt and garrison_reaches(p, pp, rt): p.target = rt
+			elif p.target == null and (tick_n + p.uid) % 6 == 0:
 				p.target = find_enemy_near_point(p, pp, p.max_range_any() * GARRISON_RANGE)
 			if p.target == null: continue
 			var d := Vector2(p.target.position.x - pp.x, p.target.position.z - pp.z).length()
@@ -1753,6 +1949,50 @@ func _update_garrisons(dt: float) -> void:
 				p.w_reload[wi] = float(w.reload) * Veterancy.mult(p, "reload")
 				p.last_fire_t = sim_time
 			if d > p.max_range_any() * GARRISON_RANGE * 1.2: p.target = null
+
+
+## True when one of the occupant's weapons can hit t from window port pp (garrison range bonus included).
+func garrison_reaches(p: Unit, pp: Vector3, t: Unit) -> bool:
+	var d := Vector2(t.position.x - pp.x, t.position.z - pp.z).length()
+	for w in p.def.weapons:
+		if t.domain in w.targets and d <= float(w.range) * GARRISON_RANGE and d >= float(w.get("min_range", 0.0)): return true
+	return false
+
+
+## Garrison orders: occupants of a held civic building focus a chosen enemy ("garrison_attack") or drop the order.
+## The order stays until the target dies (occupants out of reach keep their own targets meanwhile).
+func _execute_garrison(cmd: Dictionary) -> void:
+	var b: Building = by_id.get(int(cmd.get("id", -1))) as Building
+	if b == null or b.dead or not b.is_civic() or b.team != int(cmd.team) or b.passengers.is_empty(): return
+	if cmd.type == "garrison_stop":
+		b.gar_target = null
+		for p in b.passengers: p.target = null
+		return
+	var t: Unit = by_id.get(int(cmd.get("target", -1)))
+	if t == null or t.dead or t.team == b.team or t.team < 0: return
+	b.gar_target = t
+	var reach := 0
+	for i in b.passengers.size():
+		var p: Unit = b.passengers[i]
+		if garrison_reaches(p, b.port(i), t):
+			p.target = t; reach += 1
+	if b.team == 0 and hud:
+		if reach == 0: hud.flash_message("%s: target out of range - occupants will fire when it comes within reach" % b.def.name)
+		else: hud.flash_message("%s: %d of %d occupants engaging" % [b.def.name, reach, b.passengers.size()])
+
+
+## Occupation flags: each civic building flies the flag of the side holding it. The local player sees the current
+## owner while the building is in view, otherwise the last owner they saw (it is ownership information, like the
+## building itself, which stays on the map once scouted).
+func _update_civic_flags() -> void:
+	var reveal_all := "reveal" in args
+	for u in units:
+		if not (u is Building) or u.dead or not (u as Building).is_civic(): continue
+		var b := u as Building
+		var t := b.team if not b.passengers.is_empty() else -1
+		if t == b.flag_team: continue
+		if t == 0 or b.flag_team == 0 or reveal_all or _cell_visible(b.position) or b.flag_team == -9:
+			b.set_flag_team(t)
 
 
 ## The building is destroyed: occupants get out hurt (half their health), or die when there is no room.
@@ -1814,9 +2054,9 @@ var loaded_meta := {}          # meta of the save this battle was rebuilt from
 var flatten_log: Array = []     # [[centre with height, half size]] in order: terrain edits made by construction
 
 
-func prepare_site(k: String, pos: Vector3) -> Vector3:
+func prepare_site(k: String, pos: Vector3, yaw := 0.0, sx := 1.0) -> Vector3:
 	if terrain == null: return Vector3(pos.x, 0.0, pos.z)
-	var half: Vector2 = BuildingDefs.DEFS[k].size * 0.5
+	var half: Vector2 = Building.aabb_half(BuildingDefs.DEFS[k].size * Vector2(0.5 * sx, 0.5), yaw)   # rotated: enclosing box
 	var st := terrain.footprint_stats(pos, half)
 	terrain.flatten(pos, half + Vector2(2.0, 2.0), st.z, 8.0)
 	flatten_log.append([Vector3(pos.x, st.z, pos.z), half + Vector2(2.0, 2.0)])   # replayed when a saved game loads
