@@ -828,6 +828,9 @@ func _update_flights(dt: float) -> void:
 			flights.erase(f)
 
 
+var bomb_damage := 0.0   # damage bombs have dealt to the other side (diagnostics and tests)
+
+
 func _update_bombs(dt: float) -> void:
 	for b in bombs.duplicate():
 		b.vel.y -= 25.0 * dt
@@ -842,7 +845,10 @@ func _update_bombs(dt: float) -> void:
 			for o in units:
 				if o.dead or o.domain == "jet": continue
 				var d := o.world_center().distance_to(p)
-				if d < b.splash: o.take_damage(b.dmg * (1.0 - 0.6 * d / b.splash), null)
+				if d < b.splash:
+					var hb := o.hp
+					o.take_damage(b.dmg * (1.0 - 0.6 * d / b.splash), null)
+					if o.team != b.team: bomb_damage += hb - o.hp
 			b.node.queue_free()
 			bombs.erase(b)
 
