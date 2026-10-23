@@ -21,6 +21,9 @@ uniform sampler2D roads : filter_linear, repeat_disable;
 uniform sampler2D n_macro : filter_linear, repeat_disable;          // R ~350 m, G ~100 m, B ~30 m, A ~60 m (warp)
 uniform sampler2D n_detail : filter_linear_mipmap, repeat_enable;   // R ~6 m, G ~2 m, B ~0.7 m, A ~3 m  (at 19 m/tile)
 uniform sampler2D n_normal : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D hmap : filter_linear, repeat_disable;            // the height grid itself (R16F), for shading normals
+uniform vec4 hmap_info = vec4(-600.0, -600.0, 2.0, 601.0);          // origin x, origin z, step, samples per side
+uniform float shade_smooth = 0.8;                                   // 0 = mesh normals, 1 = smoothed height normals
 uniform vec4 map_rect = vec4(-600.0, -600.0, 1200.0, 1200.0);
 uniform float detail_tile_m = 19.0;
 uniform float grain_tile_m = 4.3;
@@ -68,6 +71,19 @@ vec4 hex_detail(vec2 uv) {
 	return (m - 0.5) / sqrt(dot(w, w)) * 0.92 + 0.5;
 }
 
+float hgt(vec2 p) {
+	return texture(hmap, ((p - hmap_info.xy) / hmap_info.z + 0.5) / hmap_info.w).r;
+}
+
+// World normal of the bilinear height grid differenced over +-d metres. The benches on the anticline flanks are
+// 2-6 m steps sampled on a 2 m grid; lit per vertex they alias into a regular field of triangular facets. This
+// normal (and the slope from it) reads them as soft bands instead. Geometry and gameplay heights are unchanged.
+vec3 smooth_normal(vec2 p, float d) {
+	float hx = hgt(p + vec2(d, 0.0)) - hgt(p - vec2(d, 0.0));
+	float hz = hgt(p + vec2(0.0, d)) - hgt(p - vec2(0.0, d));
+	return normalize(vec3(-hx, 2.0 * d, -hz));
+}
+
 // Softens a splat weight into a noisy, patchy border instead of a uniform cross-fade.
 float breakup(float w, float n) {
 	return smoothstep(0.12, 0.88, w + (n - 0.5) * 0.55) * smoothstep(0.0, 0.06, w);
@@ -87,7 +103,8 @@ void fragment() {
 	vec2 warp = (vec2(M.a, M.b) - 0.5) * 5.0 + (H.rg - 0.5) * 2.0;
 	vec4 sp = texture(splat, uv + warp / map_rect.zw);
 	float road = texture(roads, uv).r;
-	float slope = 1.0 - clamp(wnrm.y, 0.0, 1.0);
+	vec3 nw = normalize(mix(normalize(wnrm), smooth_normal(p, 3.0), shade_smooth));
+	float slope = 1.0 - clamp(nw.y, 0.0, 1.0);
 	float grain = mix(0.5, F.b, fine_amt);
 	float mid = H.r * 0.55 + M.b * 0.45;                     // 2-30 m mottling
 
@@ -136,6 +153,7 @@ void fragment() {
 	vec2 e = min(uv, 1.0 - uv);
 	c *= mix(0.45, 1.0, smoothstep(0.0, 0.015, min(e.x, e.y)));
 
+	NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
 	ALBEDO = pow(max(c, vec3(0.0)), vec3(2.2)) * sa_fog_shade(p);
 	ROUGHNESS = mix(0.96, 0.88, rd);
 	// two decorrelated normal taps (different scale and rotation) so the bump pattern has no short period

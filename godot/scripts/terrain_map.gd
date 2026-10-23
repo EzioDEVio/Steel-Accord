@@ -200,6 +200,10 @@ func build_visual() -> void:
 	mat.set_shader_parameter("n_detail", _noise_rgba(512, true, [[111, 0.006, 3], [112, 0.018, 3], [113, 0.05, 2], [114, 0.012, 2]], true))
 	mat.set_shader_parameter("n_normal", await World.noise_tex(0.05, 19, 512, true, 4))
 	print("TERRAIN noise textures %d ms" % (Time.get_ticks_msec() - t0))
+	# the height grid as a half-float texture: the shader derives smoothed shading normals from it (see shader)
+	_hmap_tex = ImageTexture.create_from_image(_hmap_image())
+	mat.set_shader_parameter("hmap", _hmap_tex)
+	mat.set_shader_parameter("hmap_info", Vector4(origin.x, origin.y, step, n))
 	if splat: mat.set_shader_parameter("splat", ImageTexture.create_from_image(splat))
 	if road_mask: mat.set_shader_parameter("roads", ImageTexture.create_from_image(road_mask))
 	mat.set_shader_parameter("map_rect", Vector4(origin.x, origin.y, step * (n - 1), step * (n - 1)))
@@ -215,6 +219,24 @@ func build_visual() -> void:
 	skirt.mesh = pm
 	skirt.position.y = -1.5
 	add_child(skirt)
+	_visual_ready = true
+
+
+var _hmap_tex: ImageTexture
+var _visual_ready := false
+var _hmap_dirty := false
+
+
+func _hmap_image() -> Image:
+	var im := Image.create_from_data(n, n, false, Image.FORMAT_RF, heights.to_byte_array())
+	im.convert(Image.FORMAT_RH)   # R16F: linear filtering is guaranteed on every Vulkan device (R32F is optional)
+	return im
+
+
+## After flatten() rebuilt chunks: re-upload the shading height texture once per frame (1.4 MB, only on edits).
+func _refresh_hmap() -> void:
+	_hmap_dirty = false
+	if _hmap_tex: _hmap_tex.update(_hmap_image())
 
 
 ## Packs up to four FastNoiseLite layers ([seed, frequency per pixel, octaves, optional noise type]) into one RGBA8
@@ -243,6 +265,9 @@ func _build_chunk(c: Vector2i) -> void:
 	var ix0 := c.x * CHUNK_CELLS; var iz0 := c.y * CHUNK_CELLS
 	var ix1 := mini(ix0 + CHUNK_CELLS, n - 1); var iz1 := mini(iz0 + CHUNK_CELLS, n - 1)
 	if ix1 <= ix0 or iz1 <= iz0: return
+	if _visual_ready and not _hmap_dirty:
+		_hmap_dirty = true
+		_refresh_hmap.call_deferred()
 	var w := ix1 - ix0 + 1; var d := iz1 - iz0 + 1
 	var verts := PackedVector3Array(); verts.resize(w * d)
 	var norms := PackedVector3Array(); norms.resize(w * d)
