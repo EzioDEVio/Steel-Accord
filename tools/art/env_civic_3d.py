@@ -169,11 +169,16 @@ def ring(P, m, x0, x1, y0, y1, z0, z1, o=0.06):
 
 def parapet(P, m, x0, x1, y0, y1, z, h=0.6, t=0.22, cap="trim", sides="fblr"):
     """Low roof parapet on top of the block edge (z = roof level) with a coping cap."""
-    rects = {"f": (x0, x1, y0, y0 + t), "b": (x0, x1, y1 - t, y1), "l": (x0, x0 + t, y0, y1), "r": (x1 - t, x1, y0, y1)}
+    # side runs stop at the front/back runs so no two boxes overlap (overlaps trap AO -> black specks)
+    rects = {"f": (x0, x1, y0, y0 + t), "b": (x0, x1, y1 - t, y1), "l": (x0, x0 + t, y0 + t, y1 - t),
+             "r": (x1 - t, x1, y0 + t, y1 - t)}
     for s in sides:
         a0, a1, b0, b1 = rects[s]
         P.span(m, a0, a1, b0, b1, z, z + h)
-        P.span(cap, a0 - 0.04, a1 + 0.04, b0 - 0.04, b1 + 0.04, z + h, z + h + 0.07)
+        if s in "fb":
+            P.span(cap, a0 - 0.04, a1 + 0.04, b0 - 0.04, b1 + 0.04, z + h, z + h + 0.07)
+        else:
+            P.span(cap, a0 - 0.04, a1 + 0.04, b0 + 0.04, b1 - 0.04, z + h, z + h + 0.07)
 
 
 def window(P, f, u, z0, w, h, glass="wglass", frame="trim", shutter=None, sill=True, bars=0, hood=False, n0=0.0):
@@ -290,7 +295,7 @@ def antenna(P, x, y, z, h=2.2):
 
 
 def spout(P, f, u, z):
-    f.span(P, "metal", u - 0.05, u + 0.05, 0, 0.45, z - 0.08, z)
+    f.span(P, "metal", u - 0.05, u + 0.05, 0, 0.35, z - 0.08, z)
 
 
 def tree(P, x, y, h=4.0, r=1.6, seed=0):
@@ -352,7 +357,7 @@ class Ports:
 # ====================================================================== buildings
 def civ_house_a(kit, P):
     """10 x 9 m single-storey house: sand plaster, low parapet, door with hood, 4 windows, roof water tank."""
-    X0, X1, Y0, Y1, H = -4.6, 4.6, -2.9, 4.3, 3.3
+    X0, X1, Y0, Y1, H = -4.6, 4.6, -2.9, 4.1, 3.3
     block(P, "plas_sand", "roofc", X0, X1, Y0, Y1, H)
     ring(P, "plas_dark", X0, X1, Y0, Y1, SUB, 0.45, o=0.04)
     ring(P, "trim", X0, X1, Y0, Y1, H - 0.2, H, o=0.05)
@@ -372,8 +377,8 @@ def civ_house_a(kit, P):
     # front terrace + path
     P.span("pave", X0 + 0.4, 1.4, -4.3, Y0, -0.1, 0.12)
     P.span("trim", X0 + 0.3, 1.5, -4.4, -4.3, -0.1, 0.18)
-    P.span("trim", X0 + 0.3, X0 + 0.4, -4.4, Y0, -0.1, 0.18)
-    P.span("trim", 1.4, 1.5, -4.4, Y0, -0.1, 0.18)
+    P.span("trim", X0 + 0.3, X0 + 0.4, -4.3, Y0, -0.1, 0.18)
+    P.span("trim", 1.4, 1.5, -4.3, Y0, -0.1, 0.18)
     planter(P, -4.1, -2.8, -4.2, -3.6, seed=11)
     # roof: tank on stand, solar-less house: AC unit, antenna, roof hatch
     tank(P, -3.2, 3.0, H, r=0.55, h=1.1, m="tank_b", stand=0.8)
@@ -815,7 +820,7 @@ def render_views(glb, bid, tmp):
             bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=6, radius=0.35 if kind == "port" else 0.6,
                                                  location=o.matrix_world.translation)
             s = bpy.context.active_object; s.data.materials.append(mk[kind]); markers.append(s)
-    scene.render.engine = "CYCLES"; scene.cycles.device = "CPU"; scene.cycles.samples = 20
+    scene.render.engine = "CYCLES"; scene.cycles.device = "CPU"; scene.cycles.samples = 12
     scene.cycles.use_denoising = True; scene.cycles.max_bounces = 3
     scene.render.resolution_x, scene.render.resolution_y = 640, 400
     scene.view_settings.view_transform = "Standard"

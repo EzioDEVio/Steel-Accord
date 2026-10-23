@@ -160,6 +160,26 @@ func _run() -> void:
 		max_off = maxf(max_off, absf(tank.position.y - battle.ground_h(tank.position.x, tank.position.z)))
 	_log("vehicle_drives_on_terrain", tank.flat_dist(goal) < 8.0 and max_off < 0.05, "dist to goal %.1f m, max off-ground %.3f m, tilt %.1f°/%.1f°" % [
 		tank.flat_dist(goal), max_off, rad_to_deg(tank.body.rotation.x), rad_to_deg(tank.body.rotation.z)])
+	# ---- aircraft cross the ridges between the bases without touching the terrain
+	var heli: Unit = battle._spawn("ah64", 0, cc.position + fwd * 20.0, 0.0)
+	var jet: Unit = battle._spawn("f16", 0, cc.position + fwd * 40.0, 0.0)
+	jet.airborne = true; jet.altitude = float(jet.def.altitude); jet.speed_cur = float(jet.def.speed); jet.body.position.y = jet.altitude
+	heli.altitude = float(heli.def.altitude); heli.body.position.y = heli.altitude
+	var far_goal: Vector3 = battle.start_pos[1]
+	battle.issue({"type": "move", "team": 0, "ids": [heli.uid, jet.uid], "points": [far_goal, far_goal]})
+	var min_clear := {"ah64": INF, "f16": INF}
+	var peak := 0.0
+	var tfly: float = battle.sim_time + 70.0
+	while battle.sim_time < tfly and heli.flat_dist(far_goal) > 30.0:
+		await _wait_sim(0.2)
+		for u in [heli, jet]:
+			if u.dead or u.altitude < float(u.def.altitude) * 0.7: continue
+			var g: float = battle.ground_h(u.position.x, u.position.z)
+			peak = maxf(peak, g)
+			min_clear[u.kind] = minf(min_clear[u.kind], u.position.y + u.altitude - g)
+	_log("aircraft_clear_terrain", min_clear.ah64 > 4.0 and min_clear.f16 > 4.0 and peak > 20.0,
+		"lowest clearance above the ground: AH-64 %.1f m, F-16 %.1f m (highest ground overflown %.0f m)" % [min_clear.ah64, min_clear.f16, peak])
+	heli.take_damage(99999.0, null); jet.take_damage(99999.0, null)
 	# ---- the computer opponent plays the map: builds on flat ground, earns, captures a derrick, trains its nation's units
 	if battle.base_ai:
 		await _until(func(): return battle.sim_time > 420.0, 600.0)
