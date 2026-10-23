@@ -1,5 +1,8 @@
-# Steel Accord - in-game HUD: clickable command card, support-power buttons, mouse-scheme toggle, selection panel
-# with portraits, minimap, health bars, waypoint lines, selection box, status and help.
+# Steel Accord - in-game HUD. One control bar along the bottom of the screen (same pattern as classic RTS command bars,
+# with our own art): radar on the left, a column of small buttons (menu, controls, find builder, mouse scheme), the
+# 2 x 7 command grid in the middle (EconPanel) and the selection panel on the right (UnitPanel). The cash tab and the
+# power gauge sit on the top edge of the bar. Above the world: health bars, rank chevrons and control-group numbers
+# over units, waypoint lines, the selection box, score / clock, messages and help. Support powers: right edge.
 class_name HUD
 extends Control
 
@@ -32,6 +35,17 @@ var layer: CanvasLayer
 var ui_scale := 1.0     # HUD scale: 1.0 up to 1080p, larger on 1440p / 4K (Options: UI scale)
 var prod_strip: VBoxContainer
 var _strip_sig := ""
+var unit_panel: UnitPanel
+var find_btn: Button
+var details_open := false        # Details panel (full inspector text) above the selection panel
+var bar_rect := Rect2()          # the control bar, in HUD units
+var grid_rect := Rect2()
+var panel_rect := Rect2()
+var cash_rect := Rect2()
+var power_rect := Rect2()
+const BAR_H := 184.0
+const BAR_MIN_W := 1404.0
+const BAR_MAX_W := 1620.0
 
 
 func _ready() -> void:
@@ -44,16 +58,21 @@ func _ready() -> void:
 	add_child(mini_ctl)
 	_build_card()
 	_build_powers()
-	scheme_btn = _button("Mouse: Classic", func(): _toggle_scheme(), Vector2(190, 30))
-	add_child(scheme_btn)
-	scheme_btn.tooltip_text = "Classic: left click selects AND commands, right click deselects, right drag scrolls.\nAlternate: left click selects, right click commands."
-	help_btn = _button("Controls (F1)", func(): show_help = not show_help, Vector2(130, 30))
-	add_child(help_btn)
-	menu_btn = _button("Menu (F10)", func(): battle.open_menu(), Vector2(120, 30))
+	menu_btn = icon_button("menu", "Menu (F10 / Esc) - pause, options, restart, exit", func(): battle.open_menu(), Vector2(38, 38))
 	add_child(menu_btn)
+	help_btn = _button("?", func(): show_help = not show_help, Vector2(38, 38))
+	help_btn.add_theme_font_size_override("font_size", 18)
+	help_btn.tooltip_text = "Controls and hotkeys (F1)"
+	add_child(help_btn)
+	find_btn = icon_button("find_builder", "Find builder (. key) - select the next builder and centre the camera on it", func(): commander.find_builder(), Vector2(38, 38))
+	add_child(find_btn)
+	scheme_btn = _button("Mouse: Classic", func(): _toggle_scheme(), Vector2(38, 38))
+	scheme_btn.add_theme_font_size_override("font_size", 10)
+	scheme_btn.tooltip_text = "Mouse scheme. Classic: left click selects AND commands, right click deselects, right drag scrolls.\nAlternate: left click selects, right click commands."
+	add_child(scheme_btn)
 	prod_strip = VBoxContainer.new()
 	prod_strip.add_theme_constant_override("separation", 3)
-	prod_strip.position = Vector2(14, 50)
+	prod_strip.position = Vector2(14, 14)
 	add_child(prod_strip)
 	econ = EconPanel.new()
 	econ.battle = battle; econ.commander = commander; econ.hud = self
@@ -61,6 +80,9 @@ func _ready() -> void:
 	inspector = Inspector.new()
 	inspector.battle = battle; inspector.commander = commander; inspector.hud = self
 	add_child(inspector)
+	unit_panel = UnitPanel.new()
+	unit_panel.battle = battle; unit_panel.commander = commander; unit_panel.hud = self
+	add_child(unit_panel)
 
 
 func _style(c: Color, border: Color) -> StyleBoxFlat:
@@ -88,27 +110,28 @@ func _button(text: String, cb: Callable, sz: Vector2) -> Button:
 	return b
 
 
+## Unit orders now live in the command grid (EconPanel fills card_buttons); this keeps an empty node for old callers.
 func _build_card() -> void:
 	card = Control.new()
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.visible = false
 	add_child(card)
-	var defs := [
-		["attack_move", "Attack-Move  A", "Move and engage anything met on the way", func(): commander.set_mode("attack_move")],
-		["guard", "Guard  G", "Guard an area or a friendly unit: engage intruders, then return", func(): commander.set_mode("guard")],
-		["force", "Force Fire  F", "Fire at the ground or any unit (also Ctrl+click)", func(): commander.set_mode("force")],
-		["waypoint", "Waypoints  W", "Click a chain of points; right click ends (also Alt+click)", func(): commander.set_mode("waypoint")],
-		["stop", "Stop  S", "Stop and hold position", func(): commander.cmd_stop()],
-		["scatter", "Scatter  X", "Spread out from each other", func(): commander.cmd_scatter()],
-		["return", "Return to Pad  R", "Aircraft: fly back and land on their own pad (jets rearm there)", func(): commander.cmd_return()],
-		["select_all", "Select All  Ctrl+A", "Select every unit you own", func(): commander.select_all()],
-	]
-	for i in defs.size():
-		var d: Array = defs[i]
-		var b := _button(d[1], d[3], Vector2(150, 30))
-		b.tooltip_text = d[2]
-		b.position = Vector2((i % 4) * 154, (i / 4) * 34)
-		card.add_child(b)
-		card_buttons[d[0]] = b
+
+
+## Square button with one of the UI pictograms (assets/ui/icons/<id>.png).
+func icon_button(id: String, tip: String, cb: Callable, sz: Vector2) -> Button:
+	var b := _button("", cb, sz)
+	b.tooltip_text = tip
+	var path := "res://assets/ui/icons/%s.png" % id
+	if ResourceLoader.exists(path):
+		var ic := TextureRect.new()
+		ic.texture = load(path)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.position = Vector2(4, 4); ic.size = sz - Vector2(8, 8)
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(ic)
+	return b
 
 
 func _build_powers() -> void:
@@ -120,6 +143,7 @@ func _build_powers() -> void:
 	for id in Nations.powers(nat):
 		var p: Dictionary = UnitDefs.POWERS[id]
 		var b := _button("", func(): commander.set_mode("power:" + id), Vector2(186, 62))
+		b.add_theme_stylebox_override("normal", _style(Color(0.07, 0.1, 0.11, 0.95), Color(0.86, 0.66, 0.22).darkened(0.25)))
 		b.tooltip_text = "%s - click the button, then click the target on the map.\nCooldown %d s (PROVISIONAL)" % [battle.lbl(commander.team, id, p.name), int(p.cooldown)]
 		var icon := TextureRect.new()
 		icon.texture = load(Nations.power_icon(nat, id))
@@ -144,14 +168,21 @@ func _build_powers() -> void:
 func _toggle_scheme() -> void:
 	commander.scheme = "alternate" if commander.scheme == "classic" else "classic"
 	scheme_btn.text = "Mouse: " + commander.scheme.capitalize()
+	_scheme_label()
 	flash_message("Mouse scheme: %s" % ("left click commands, right click deselects" if commander.scheme == "classic" else "right click commands"))
 
 
 ## Auto: 1.0 up to 1080 lines, then proportional (1440p -> 1.33, 2160p -> 2.0). A fixed value from Options wins.
 func _wanted_scale() -> float:
 	var fixed: float = float(Game.settings.get("ui_scale", 0.0))
-	if fixed > 0.0: return fixed
-	return maxf(1.0, get_viewport().get_visible_rect().size.y / 1080.0)
+	var vs := get_viewport().get_visible_rect().size
+	var k := fixed if fixed > 0.0 else maxf(1.0, vs.y / 1080.0)
+	return minf(k, vs.x / (BAR_MIN_W + 16.0))   # the control bar always fits the screen width
+
+
+func _scheme_label() -> void:
+	scheme_btn.text = "L" if commander.scheme == "classic" else "R"
+	scheme_btn.tooltip_text = "Mouse scheme: %s (click to switch)\nClassic: left click selects AND commands, right click deselects, right drag scrolls.\nAlternate: left click selects, right click commands." % commander.scheme.capitalize()
 
 
 func flash_message(t: String) -> void:
@@ -164,22 +195,9 @@ func _process(dt: float) -> void:
 	size = get_viewport_rect().size / ui_scale
 	position = Vector2.ZERO
 	msg_t = maxf(0.0, msg_t - dt)
-	mini_rect = Rect2(14, size.y - 224, 210, 210)
-	mini_ctl.position = mini_rect.position; mini_ctl.size = mini_rect.size
-	card.position = Vector2(maxf(632.0, size.x - 4 * 154 - 200), size.y - 82)
-	power_box.position = Vector2(size.x - 198, 56)
-	econ.position = Vector2(card.position.x, size.y - 12 - econ.height - (84.0 if card.visible else 0.0))
-	if inspector:
-		var ih: float = inspector.get_combined_minimum_size().y
-		inspector.position = Vector2(236, size.y - 12 - ih)
-	scheme_btn.position = Vector2(14, 10)
-	help_btn.position = Vector2(210, 10)
-	menu_btn.position = Vector2(346, 10)
+	_layout()
+	if scheme_btn.text.length() > 1: _scheme_label()
 	_update_prod_strip()
-	var live := commander.live_selection()
-	card.visible = not live.is_empty() and not live.all(func(u): return u.def.get("builder", false) or u.def.get("hauler", false))
-	var any_air := live.any(func(u): return u.is_air())
-	card_buttons["return"].disabled = not any_air
 	for id in power_buttons:
 		var b: Button = power_buttons[id]
 		var left: float = battle.power_cooldown_left(commander.team, id)
@@ -191,6 +209,31 @@ func _process(dt: float) -> void:
 		b.disabled = left > 0.0 or why != ""
 		if why != "": l.text = "%s\n%s" % [pname, why]
 	queue_redraw()
+
+
+## Control bar geometry (HUD units). Width grows with the screen up to BAR_MAX_W, centred.
+func _layout() -> void:
+	var w := clampf(size.x - 16.0, BAR_MIN_W, BAR_MAX_W)
+	bar_rect = Rect2((size.x - w) / 2.0, size.y - BAR_H, w, BAR_H)
+	var o := bar_rect.position
+	mini_rect = Rect2(o + Vector2(14, 18), Vector2(154, 154))
+	mini_ctl.position = mini_rect.position; mini_ctl.size = mini_rect.size
+	var bx := o.x + 178.0
+	for i in 4:
+		var bt: Button = [menu_btn, help_btn, find_btn, scheme_btn][i]
+		bt.position = Vector2(bx, o.y + 18 + i * 39)
+		bt.size = Vector2(36, 36)
+	grid_rect = Rect2(o + Vector2(230, 22), econ.size)
+	econ.position = grid_rect.position
+	panel_rect = Rect2(grid_rect.end.x + 18, o.y + 18, bar_rect.end.x - grid_rect.end.x - 32, BAR_H - 26)
+	unit_panel.position = panel_rect.position
+	unit_panel.size = panel_rect.size
+	cash_rect = Rect2(grid_rect.get_center().x - 120, o.y - 30, 240, 32)
+	power_rect = Rect2(grid_rect.position.x, o.y + 6, bar_rect.end.x - 14 - grid_rect.position.x, 8)
+	power_box.position = Vector2(size.x - 198, 56)
+	if inspector:
+		var ih: float = inspector.get_combined_minimum_size().y
+		inspector.position = Vector2(bar_rect.end.x - inspector.W - 12, bar_rect.position.y - 40 - ih)
 
 
 ## Persistent production strip: one row per producer with work queued (or a structure under construction).
@@ -295,11 +338,15 @@ func _draw() -> void:
 		if u.dead or not battle.is_visible_to(commander.team, u): continue
 		var show_bar: bool = u.selected or u.hp < u.def.hp or u == commander.hover
 		if not show_bar and u.vet_rank == 0: continue
-		var top: Vector3 = u.world_center() + Vector3.UP * (u.def.height + 1.5)
+		var top: Vector3 = u.bar_anchor()
 		if cam.is_position_behind(top): continue
 		var sp := cam.unproject_position(top) / ui_scale
-		var w := 46.0
-		if u.vet_rank > 0: _draw_chevrons(sp + Vector2(-w / 2 - 12, -2), u.vet_rank)
+		var w := 40.0 if u.def.get("visual") == "infantry" else (56.0 if not (u is Building) else 90.0)
+		if u.vet_rank > 0: _draw_chevrons(sp + Vector2(-w / 2 - 10, 1), u.vet_rank)
+		var g := group_of(u) if (u.selected or u == commander.hover) else -1
+		if g >= 0:
+			draw_rect(Rect2(sp + Vector2(w / 2 + 3, -6), Vector2(13, 13)), Color(0, 0, 0, 0.75))
+			draw_string(font, sp + Vector2(w / 2 + 3, 5), str(g), HORIZONTAL_ALIGNMENT_CENTER, 13, 11, Color(0.75, 1.0, 0.85))
 		if not show_bar: continue
 		var r := Rect2(sp - Vector2(w / 2, 0), Vector2(w, 5))
 		var f: float = u.hp / u.def.hp
@@ -313,8 +360,8 @@ func _draw() -> void:
 		var r := Rect2(commander.drag_from / ui_scale, Vector2.ZERO).expand(commander.drag_to / ui_scale)
 		draw_rect(r, Color(0.4, 1.0, 0.55, 0.12))
 		draw_rect(r, Color(0.4, 1.0, 0.55, 0.9), false, 1.5)
+	_draw_bar()
 	_draw_minimap()
-	if inspector == null or not inspector.visible: _draw_selection_panel()
 	_draw_status()
 	if show_help: _draw_help()
 	if commander.mode != "":
@@ -360,7 +407,7 @@ func _draw_waypoints() -> void:
 
 
 func _draw_minimap() -> void:
-	_panel(mini_rect.grow(4))
+	draw_rect(mini_rect.grow(3), Color(0.02, 0.03, 0.03, 0.95))
 	if battle.terrain:
 		if battle.minimap_tex == null: battle.minimap_tex = battle.make_minimap_texture()
 		draw_texture_rect(battle.minimap_tex, mini_rect, false)
@@ -409,39 +456,95 @@ func _draw_minimap() -> void:
 	draw_polyline(pts, Color(1, 1, 1, 0.8), 1.0)
 
 
-func _draw_selection_panel() -> void:
-	var r := Rect2(240, size.y - 104, 380, 90)
-	_panel(r)
-	var sel := commander.live_selection()
-	var sb: Building = commander.sel_building
-	if sel.is_empty() and sb and is_instance_valid(sb) and not sb.dead:
-		sel = [sb]
-	if sel.is_empty():
-		_text(r.position + Vector2(14, 30), "No units selected", 15, Color(0.6, 0.65, 0.62))
-		_text(r.position + Vector2(14, 54), "Drag a box or click a unit. Right drag scrolls.", 12, Color(0.5, 0.55, 0.52))
-		return
-	var counts := {}
-	var hp := 0.0
-	var mx := 0.0
-	for u in sel:
-		counts[u.def.name] = counts.get(u.def.name, 0) + 1
-		hp += u.hp; mx += u.def.hp
-	var tex := _portrait(sel[0])
-	var x0 := 14.0
-	if tex:
-		draw_texture_rect(tex, Rect2(r.position + Vector2(8, 8), Vector2(118, 74)), false)
-		x0 = 134.0
-	var y := 26.0
-	for k in counts:
-		_text(r.position + Vector2(x0, y), "%d x %s" % [counts[k], k], 14)
-		y += 17.0
-		if y > 60: break
-	var role: String = sel[0].bdef.desc if sel[0] is Building else str(sel[0].def.get("role", ""))
-	if role.length() > 58: role = role.substr(0, 56) + "..."
-	_text(r.position + Vector2(x0, 66), role, 11, Color(0.65, 0.72, 0.68))
-	var bar := Rect2(r.position + Vector2(x0, 74), Vector2(r.size.x - x0 - 12, 7))
-	draw_rect(bar, Color(0, 0, 0, 0.6))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * hp / mx, 7)), Color(0.3, 0.9, 0.4))
+## The control bar frame: a bevelled gunmetal plate with recessed wells for the radar, buttons, grid and panel,
+## the cash tab on its top edge and the power gauge along it.
+func _draw_bar() -> void:
+	var r := bar_rect
+	var cut := 18.0
+	var plate := PackedVector2Array([r.position + Vector2(cut, 0), Vector2(r.end.x - cut, r.position.y), Vector2(r.end.x, r.position.y + cut),
+		r.end, Vector2(r.position.x, r.end.y), r.position + Vector2(0, cut)])
+	draw_colored_polygon(plate, Color(0.085, 0.105, 0.115, 0.97))
+	var edge := plate.duplicate(); edge.append(plate[0])
+	draw_polyline(edge, Color(0.36, 0.46, 0.45), 1.5)
+	draw_line(r.position + Vector2(cut + 4, 3), Vector2(r.end.x - cut - 4, r.position.y + 3), Color(0.42, 0.95, 0.6, 0.35), 1.0)
+	for well in [Rect2(r.position.x + 8, r.position.y + 12, 166, 166), Rect2(r.position.x + 174, r.position.y + 12, 46, 166),
+			grid_rect.grow(6), panel_rect.grow(4)]:
+		draw_rect(well, Color(0.035, 0.05, 0.055, 0.96))
+		draw_rect(well, Color(0.2, 0.27, 0.27), false, 1.0)
+	# cash tab
+	var t: int = commander.team
+	if battle.scenario == "base":
+		var c := cash_rect
+		var tab := PackedVector2Array([c.position + Vector2(14, 0), Vector2(c.end.x - 14, c.position.y), Vector2(c.end.x, c.end.y), Vector2(c.position.x, c.end.y)])
+		draw_colored_polygon(tab, Color(0.085, 0.105, 0.115, 0.97))
+		var te := tab.duplicate(); te.append(tab[0])
+		draw_polyline(te, Color(0.36, 0.46, 0.45), 1.5)
+		var cs := "$ %s" % _thousands(battle.cash[t])
+		draw_string(font, Vector2(c.position.x, c.position.y + 23), cs, HORIZONTAL_ALIGNMENT_CENTER, c.size.x - 70, 19, Color(0.98, 0.86, 0.4))
+		var tr: Vector2 = battle.cash_trend(t)
+		draw_string(font, Vector2(c.end.x - 82, c.position.y + 14), "+%d/min" % int(tr.x), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.6, 0.95, 0.6))
+		draw_string(font, Vector2(c.end.x - 82, c.position.y + 26), "-%d/min" % int(tr.y), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 0.6, 0.5))
+		# power gauge: generated capacity vs use
+		var g: int = battle.power_gen(t); var u: int = battle.power_use(t)
+		var pr := power_rect
+		draw_rect(pr, Color(0.02, 0.03, 0.03))
+		var cap := float(maxi(maxi(g, u), 1))
+		var ok := g >= u
+		draw_rect(Rect2(pr.position, Vector2(pr.size.x * float(u) / cap, pr.size.y)), Color(0.35, 0.85, 0.45) if ok else Color(0.95, 0.35, 0.25))
+		if g > 0 and g < cap: draw_line(Vector2(pr.position.x + pr.size.x * g / cap, pr.position.y - 2), Vector2(pr.position.x + pr.size.x * g / cap, pr.end.y + 2), Color(1, 1, 1), 2.0)
+		var ptxt := "Power %d / %d%s" % [u, g, "" if ok else "  LOW POWER - half-speed production"]
+		var pw := font.get_string_size(ptxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		var pp := Vector2(c.end.x + 12, c.position.y + 6)
+		draw_rect(Rect2(pp, Vector2(pw + 14, 20)), Color(0.05, 0.07, 0.08, 0.92))
+		draw_string(font, pp + Vector2(7, 15), ptxt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.6, 0.95, 0.6) if ok else Color(1.0, 0.45, 0.35))
+		var pl: String = battle.plan[t]
+		if pl != "" or battle.plan_pending[t] != "":
+			var ptx: String = "Plan: " + (battle.lbl(t, pl, Upgrades.PLANS[pl].name) if pl != "" else "switching...")
+			var qw := font.get_string_size(ptx, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+			var qp := Vector2(c.position.x - qw - 26, c.position.y + 6)
+			draw_rect(Rect2(qp, Vector2(qw + 14, 20)), Color(0.05, 0.07, 0.08, 0.92))
+			draw_string(font, qp + Vector2(7, 15), ptx, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.95, 0.85, 0.55))
+	# one-line context from the command grid (builder hint, construction, transport load)
+	if econ.visible and econ.info != "":
+		var iw := minf(font.get_string_size(econ.info, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 16, grid_rect.size.x + 260)
+		var ip := Vector2(grid_rect.position.x - 6, r.position.y - (58.0 if battle.scenario == "base" else 24.0))
+		draw_rect(Rect2(ip, Vector2(iw, 20)), Color(0.05, 0.07, 0.08, 0.88))
+		draw_string(font, ip + Vector2(8, 15), econ.info, HORIZONTAL_ALIGNMENT_LEFT, iw - 12, 12, Color(0.85, 0.9, 0.87))
+
+
+func _thousands(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
+
+
+## Rank chevrons drawn on any canvas (portraits use this too).
+func draw_rank_badge(c: CanvasItem, p: Vector2, rank: int) -> void:
+	var gold := Color(1.0, 0.82, 0.3) if rank < 3 else Color(1.0, 0.55, 0.25)
+	c.draw_rect(Rect2(p - Vector2(11, 6 + rank * 5), Vector2(22, 10 + rank * 5)), Color(0, 0, 0, 0.6))
+	for i in rank:
+		var y := -i * 5.0
+		var pts := PackedVector2Array([p + Vector2(-7, y - 3), p + Vector2(0, y + 2), p + Vector2(7, y - 3)])
+		c.draw_polyline(pts, Color(0, 0, 0, 0.9), 4.0)
+		c.draw_polyline(pts, gold, 2.4)
+
+
+## Control group (Ctrl+number) that holds this unit, or -1.
+func group_of(u: Unit) -> int:
+	for g in commander.groups:
+		if u in commander.groups[g]: return g
+	return -1
+
+
+## The group whose living members are exactly these units, or -1.
+func group_of_all(objs: Array) -> int:
+	var g := group_of(objs[0]) if not objs.is_empty() else -1
+	if g < 0: return -1
+	var live: Array = commander.groups[g].filter(func(x): return is_instance_valid(x) and not x.dead)
+	return g if live.size() == objs.size() and objs.all(func(x): return x in live) else -1
 
 
 func _draw_status() -> void:
@@ -450,25 +553,11 @@ func _draw_status() -> void:
 	_text(r.position + Vector2(16, 23), "%s %d" % [UnitDefs.team_name(0).to_upper(), battle.alive_count(0)], 16, UnitDefs.team_color(0).lightened(0.45))
 	_text(r.position + Vector2(140, 23), "%02d:%02d" % [int(battle.sim_time) / 60, int(battle.sim_time) % 60], 16)
 	_text(r.position + Vector2(250, 23), "%s %d" % [UnitDefs.team_name(1).to_upper(), battle.alive_count(1)], 16, UnitDefs.team_color(1).lightened(0.45))
-	if battle.scenario == "base":
-		var t: int = commander.team
-		var r2 := Rect2(r.end.x + 8, 10, 360, 34)
-		_panel(r2)
-		_text(r2.position + Vector2(14, 23), "$ %d" % battle.cash[t], 17, Color(0.95, 0.85, 0.4))
-		var tr: Vector2 = battle.cash_trend(t)
-		_text(r2.position + Vector2(104, 15), "+%d/min" % int(tr.x), 11, Color(0.6, 0.95, 0.6))
-		_text(r2.position + Vector2(104, 29), "-%d/min" % int(tr.y), 11, Color(1.0, 0.6, 0.5))
-		var g: int = battle.power_gen(t); var c: int = battle.power_use(t)
-		_text(r2.position + Vector2(196, 23), "Power %d / %d" % [c, g], 15, Color(0.6, 0.95, 0.6) if g >= c else Color(1.0, 0.4, 0.3))
-		var pl: String = battle.plan[t]
-		if pl != "" or battle.plan_pending[t] != "":
-			var r3 := Rect2(r2.position.x, 48, 170, 26)
-			_panel(r3)
-			_text(r3.position + Vector2(10, 18), "Plan: " + (battle.lbl(t, pl, Upgrades.PLANS[pl].name) if pl != "" else "switching..."), 13, Color(0.95, 0.85, 0.55))
-		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: half-speed build", 12, Color(1.0, 0.45, 0.35))
 	if msg_t > 0.0:
 		var s := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)
-		_text(Vector2((size.x - s.x) / 2, 96), msg, 16, Color(1, 0.85, 0.5, minf(1.0, msg_t)))
+		var mp := Vector2((size.x - s.x) / 2, 72)
+		draw_rect(Rect2(mp - Vector2(10, 18), Vector2(s.x + 20, 26)), Color(0, 0, 0, 0.45 * minf(1.0, msg_t)))
+		_text(mp, msg, 16, Color(1, 0.85, 0.5, minf(1.0, msg_t)))
 
 
 func _draw_help() -> void:
@@ -477,11 +566,13 @@ func _draw_help() -> void:
 		"Left click unit: select   Left drag: box select   Double-click: all of type",
 		"Left click ground/enemy (Classic): move / attack    Right click: deselect",
 		"Right drag: scroll map   Wheel: zoom   Middle drag: rotate/tilt",
-		"Command card buttons or keys: A attack-move  G guard  F force fire",
+		"Command grid tiles or keys: A attack-move  G guard  F force fire",
 		"  W waypoints  S stop  X scatter  R aircraft return to pad",
 		"Ctrl+click: force fire   Alt+click: add waypoint   Shift: keep mode",
-		"Ctrl+A select all   Ctrl+1..9 set group   1..9 recall (twice: jump)",
-		"Support powers (right column): click, then click a target",
+		"Ctrl+A select all   Ctrl+0..9 set group (number shows over units)   0..9 recall (twice: jump)",
+		"Q all combat units on screen (twice: whole map)   E same type on screen (twice: map)   H Command Center",
+		". find builder   I details panel   Space: centre on selection",
+		"Support powers (right edge): click, then click a target",
 		"Minimap: left click/drag moves camera, right click moves units",
 		"Esc (nothing selected) or F10: pause menu - Resume, Restart, Options, Main Menu, Exit",
 	]

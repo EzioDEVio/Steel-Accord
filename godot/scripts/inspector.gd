@@ -56,8 +56,8 @@ func _ready() -> void:
 	pin_btn = hud._button("Pin", func(): _toggle_pin(), Vector2(46, 22))
 	pin_btn.tooltip_text = "Keep showing this object after the selection changes"
 	top.add_child(pin_btn)
-	close_btn = hud._button("x", func(): closed_sig = _sig; pinned = null, Vector2(26, 22))
-	close_btn.tooltip_text = "Hide the inspector until you select something else"
+	close_btn = hud._button("x", func(): hud.details_open = false; pinned = null, Vector2(26, 22))
+	close_btn.tooltip_text = "Close the Details panel (I or the i button opens it again)"
 	top.add_child(close_btn)
 	sub = Label.new()
 	sub.add_theme_font_size_override("font_size", 12)
@@ -112,7 +112,7 @@ func _process(dt: float) -> void:
 	if pinned: objs = [pinned]
 	var sig := ",".join(objs.map(func(u): return str(u.uid)))
 	if sig != closed_sig: closed_sig = ""
-	visible = not objs.is_empty() and closed_sig == ""
+	visible = not objs.is_empty() and closed_sig == "" and hud.details_open
 	if not visible:
 		_sig = sig
 		return

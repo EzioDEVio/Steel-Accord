@@ -533,6 +533,19 @@ func _ground_units(dt: float) -> void:
 			u.body.rotation.z = lerp_angle(u.body.rotation.z, atan(grad.dot(r)), minf(1.0, dt * 8.0))
 
 
+## Destinations for a group order: a square grid around dest (stable order), so units do not queue in one file.
+func spread(ids: Array, dest: Vector3, spacing := 6.0) -> Array:
+	var n := ids.size()
+	var cols := maxi(1, int(ceil(sqrt(float(n)))))
+	var rows := int(ceil(float(n) / cols))
+	var pts: Array = []
+	for i in n:
+		var col := i % cols
+		var row := i / cols
+		pts.append(dest + Vector3((col - (cols - 1) / 2.0) * spacing, 0, (row - (rows - 1) / 2.0) * spacing))
+	return pts
+
+
 func _separate() -> void:
 	var live := units.filter(func(u): return not u.dead and u.domain != "jet" and not (u is Building))
 	var blds := units.filter(func(u): return not u.dead and u is Building)
@@ -542,7 +555,7 @@ func _separate() -> void:
 			var b: Unit = live[j]
 			if (a.domain == "ground") != (b.domain == "ground"): continue
 			var d := Vector2(b.position.x - a.position.x, b.position.z - a.position.z)
-			var min_d: float = (a.def.radius + b.def.radius) * 0.95
+			var min_d: float = (a.sep_r() + b.sep_r()) * 0.95
 			var l := d.length()
 			if l < min_d and l > 0.001:
 				var push := (min_d - l) * 0.5 * d / l

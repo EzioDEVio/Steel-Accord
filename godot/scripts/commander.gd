@@ -94,6 +94,26 @@ func _key(k: InputEventKey) -> void:
 			if has_sel: cmd_return()
 		KEY_D:
 			if has_sel: cmd_unload()
+		KEY_Q:
+			_select_on_screen(func(u): return u.def.get("weapons", []).size() > 0 and not u.def.get("builder", false), "q")
+		KEY_E:
+			if has_sel:
+				var kinds := {}
+				for u in live_selection(): kinds[u.kind] = true
+				_select_on_screen(func(u): return kinds.has(u.kind), "e")
+		KEY_H:
+			var ccs: Array = battle.structures(team, "command_center")
+			if not ccs.is_empty(): camera.focus(ccs[0].position)
+		KEY_I:
+			if battle.hud: battle.hud.details_open = not battle.hud.details_open
+		KEY_PERIOD:
+			find_builder()
+		KEY_SPACE:
+			var ls := live_selection()
+			if not ls.is_empty():
+				var c := Vector3.ZERO
+				for u in ls: c += u.global_position
+				camera.focus(c / ls.size())
 		KEY_ESCAPE:
 			if mode != "": set_mode("")
 			elif not live_selection().is_empty(): _set_selection([])
@@ -101,9 +121,9 @@ func _key(k: InputEventKey) -> void:
 		KEY_F10:
 			battle.open_menu()
 		_:
-			if k.keycode >= KEY_1 and k.keycode <= KEY_9:
+			if k.keycode >= KEY_0 and k.keycode <= KEY_9:
 				var g := int(k.keycode - KEY_0)
-				if k.ctrl_pressed: groups[g] = selected.duplicate()
+				if k.ctrl_pressed: assign_group(g)
 				else: _recall(g)
 
 
@@ -114,6 +134,49 @@ func set_mode(m: String) -> void:
 	if m.begins_with("place:"):
 		_make_ghost(m.substr(6))
 	_update_cursor()
+
+
+## Ctrl+number: the selected units become group g (a unit belongs to one group at a time).
+func assign_group(g: int) -> void:
+	var arr: Array = live_selection()
+	if arr.is_empty(): return
+	for k in groups.keys():
+		groups[k] = groups[k].filter(func(u): return is_instance_valid(u) and not (u in arr))
+		if groups[k].is_empty(): groups.erase(k)
+	groups[g] = arr.duplicate()
+	if battle.hud: battle.hud.flash_message("Group %d: %d unit%s" % [g, arr.size(), "" if arr.size() == 1 else "s"])
+
+
+## Q / E: units of yours on screen matching pred; pressing the key twice quickly takes the whole map.
+var _last_sel_key := ""
+var _last_sel_t := 0.0
+
+
+func _select_on_screen(pred: Callable, key: String) -> void:
+	var t := Time.get_ticks_msec() / 1000.0
+	var whole := _last_sel_key == key and t - _last_sel_t < 0.45
+	_last_sel_key = key; _last_sel_t = t
+	var vp := camera.get_viewport().get_visible_rect()
+	var arr: Array = []
+	for u: Unit in battle.units:
+		if u.team != team or u.dead or u is Building or not pred.call(u): continue
+		if whole or vp.has_point(camera.cam.unproject_position(u.global_position)): arr.append(u)
+	if not arr.is_empty(): _set_selection(arr)
+
+
+## Select the next builder (cycles through them) and centre the camera on it.
+var _builder_i := 0
+
+
+func find_builder() -> void:
+	var dz: Array = battle.units.filter(func(u): return u.team == team and not u.dead and u.def.get("builder", false))
+	if dz.is_empty():
+		if battle.hud: battle.hud.flash_message("No builder - select the Command Center to build one")
+		return
+	_builder_i = (_builder_i + 1) % dz.size()
+	var u: Unit = dz[_builder_i]
+	_set_selection([u])
+	camera.focus(u.position)
 
 
 func dozers() -> Array:

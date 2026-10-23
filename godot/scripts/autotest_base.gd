@@ -413,6 +413,7 @@ func _press_button_if(b: Building, k: String) -> void:
 ## M7: universal inspector and veterancy.
 func _qa_m7(ccp: Vector3) -> void:
 	var insp: Inspector = battle.hud.inspector
+	battle.hud.details_open = true     # the Details panel (full inspector text) opens on request
 	var rm: Unit = battle._spawn("rifleman", 0, ccp + Vector3(20, 0, -40), 0.0)
 	await _sel([rm]); await _wait_sim(0.4)
 	var txt: String = insp.body.get_parsed_text()
@@ -472,8 +473,6 @@ func _qa_m8(ccp: Vector3) -> void:
 	var wf: Building = wfs[0] if not wfs.is_empty() else battle.add_structure("war_factory", 0, ccp + Vector3(0, 0, -70), true)
 	await _sel([]); battle.commander.sel_building = wf
 	await _wait_sim(0.4)
-	var tabb: Button = battle.hud.econ.buttons.get("tab:upgrades")
-	if tabb: _press_button(tabb)
 	await _wait_sim(0.3)
 	var btn: Button = battle.hud.econ.buttons.get("up:composite_armor")
 	var c0: int = battle.cash[0]

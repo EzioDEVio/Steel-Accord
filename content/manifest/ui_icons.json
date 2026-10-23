@@ -1,0 +1,162 @@
+{
+ "pack": "Command bar UI icons",
+ "generator": "tools/art/make_ui_icons.py",
+ "method": "procedural vector primitives drawn with Pillow at 512 px, outlined, LANCZOS-downsampled to 128 px RGBA",
+ "license": "original work, project-owned",
+ "status": "shippable",
+ "palette": {
+  "glyph": "#E8EEF0",
+  "outline": "#0E1418 a230",
+  "orders": "#8FB8D8",
+  "upgrades": "#E7B341",
+  "battle_plans": "#4FC7B0",
+  "repair": "#8ED081",
+  "sell_cancel": "#E06A5A"
+ },
+ "items": [
+  {
+   "id": "attack_move",
+   "path": "res://assets/ui/icons/attack_move.png",
+   "category": "orders",
+   "description": "Attack-move: forward arrow with a crosshair at the tip"
+  },
+  {
+   "id": "guard",
+   "path": "res://assets/ui/icons/guard.png",
+   "category": "orders",
+   "description": "Guard: shield with an eye at its centre"
+  },
+  {
+   "id": "force",
+   "path": "res://assets/ui/icons/force.png",
+   "category": "orders",
+   "description": "Force fire: crosshair over a ground X mark"
+  },
+  {
+   "id": "waypoint",
+   "path": "res://assets/ui/icons/waypoint.png",
+   "category": "orders",
+   "description": "Waypoint: dotted path linking nodes to a flag"
+  },
+  {
+   "id": "stop",
+   "path": "res://assets/ui/icons/stop.png",
+   "category": "orders",
+   "description": "Stop: octagon with a horizontal bar"
+  },
+  {
+   "id": "scatter",
+   "path": "res://assets/ui/icons/scatter.png",
+   "category": "orders",
+   "description": "Scatter: four arrows pointing outward from a centre dot"
+  },
+  {
+   "id": "return",
+   "path": "res://assets/ui/icons/return.png",
+   "category": "orders",
+   "description": "Return to base: top-down aircraft with a U-turn arrow"
+  },
+  {
+   "id": "select_all",
+   "path": "res://assets/ui/icons/select_all.png",
+   "category": "orders",
+   "description": "Select all: three soldier figures inside a dashed selection box"
+  },
+  {
+   "id": "unload",
+   "path": "res://assets/ui/icons/unload.png",
+   "category": "orders",
+   "description": "Unload: transport vehicle side view with a down arrow"
+  },
+  {
+   "id": "rally",
+   "path": "res://assets/ui/icons/rally.png",
+   "category": "orders",
+   "description": "Rally point: flag on a pole"
+  },
+  {
+   "id": "find_builder",
+   "path": "res://assets/ui/icons/find_builder.png",
+   "category": "orders",
+   "description": "Find builder: bulldozer silhouette with a magnifier"
+  },
+  {
+   "id": "menu",
+   "path": "res://assets/ui/icons/menu.png",
+   "category": "orders",
+   "description": "Menu: three horizontal bars"
+  },
+  {
+   "id": "details",
+   "path": "res://assets/ui/icons/details.png",
+   "category": "orders",
+   "description": "Details: circled info glyph (dot and bar)"
+  },
+  {
+   "id": "repair",
+   "path": "res://assets/ui/icons/repair.png",
+   "category": "building_actions",
+   "description": "Repair: wrench"
+  },
+  {
+   "id": "sell",
+   "path": "res://assets/ui/icons/sell.png",
+   "category": "building_actions",
+   "description": "Sell: coin stack with a downward arrow"
+  },
+  {
+   "id": "cancel",
+   "path": "res://assets/ui/icons/cancel.png",
+   "category": "building_actions",
+   "description": "Cancel: X in a circle"
+  },
+  {
+   "id": "adv_armor",
+   "path": "res://assets/ui/icons/adv_armor.png",
+   "category": "upgrades",
+   "description": "Advanced body armour: infantry vest with plate inserts"
+  },
+  {
+   "id": "composite_armor",
+   "path": "res://assets/ui/icons/composite_armor.png",
+   "category": "upgrades",
+   "description": "Composite armour: layered plate tiles on a tank hull side"
+  },
+  {
+   "id": "guided_munitions",
+   "path": "res://assets/ui/icons/guided_munitions.png",
+   "category": "upgrades",
+   "description": "Guided munitions: missile with a target reticle"
+  },
+  {
+   "id": "supply_efficiency",
+   "path": "res://assets/ui/icons/supply_efficiency.png",
+   "category": "upgrades",
+   "description": "Supply efficiency: supply crate with circular arrows"
+  },
+  {
+   "id": "adv_training",
+   "path": "res://assets/ui/icons/adv_training.png",
+   "category": "upgrades",
+   "description": "Advanced training: rank chevron stack over a target"
+  },
+  {
+   "id": "assault",
+   "path": "res://assets/ui/icons/assault.png",
+   "category": "battle_plans",
+   "description": "Assault plan: two forward chevrons"
+  },
+  {
+   "id": "fortify",
+   "path": "res://assets/ui/icons/fortify.png",
+   "category": "battle_plans",
+   "description": "Fortify plan: wall of blocks with a shield"
+  },
+  {
+   "id": "recon",
+   "path": "res://assets/ui/icons/recon.png",
+   "category": "battle_plans",
+   "description": "Recon plan: binoculars"
+  }
+ ]
+}

@@ -141,7 +141,7 @@ func _army() -> void:
 			for u in fighters:
 				if not (u.uid in attacking) or u.flat_dist(b.position) < 150.0: ids.append(u.uid)
 			if not ids.is_empty():
-				battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": ids.map(func(_i): return e.position)})
+				battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": battle.spread(ids, e.position)})
 			return
 	# attack when the idle army is big enough
 	attacking = attacking.filter(func(id): return battle.by_id.has(id) and not battle.by_id[id].dead)
@@ -163,7 +163,7 @@ func _army() -> void:
 		var tgt := _enemy_target(done[0].position)
 		if tgt != Vector3.INF:
 			var ids: Array = done.map(func(u): return u.uid)
-			battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": ids.map(func(_i): return tgt)})
+			battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": battle.spread(ids, tgt)})
 
 
 ## Research when the economy allows (keeps a reserve for units); picks the Assault plan once it can.

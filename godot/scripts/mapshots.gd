@@ -176,6 +176,8 @@ func _ui_iran() -> void:
 	battle.issue({"type": "research", "team": 0, "id": blds.war_factory.uid, "upgrade": "composite_armor"})
 	await _wait(2.0)
 	var cmd: Commander = battle.commander
+	cmd._set_selection([sol]); cmd.assign_group(1)
+	cmd._set_selection([tank, apc]); cmd.assign_group(2)
 	var shots := [["soldier", [sol], null], ["karrar", [tank], null], ["boragh", [apc], null], ["f14", battle.units.filter(func(u): return u.kind == "ir_f14").slice(0, 1), null],
 		["group", [sol, tank, apc], null], ["warfactory", [], blds.war_factory], ["airfield", [], af], ["barracks", [], blds.barracks],
 		["cc", [], battle.structures(0, "command_center")[0]]]
@@ -185,9 +187,10 @@ func _ui_iran() -> void:
 		_cam(focus, 70.0, 0.0, 52.0)
 		await _wait(0.5)
 		await _shot("ui_%s_%s" % [tag, sh[0]])
-	# upgrades tab of the War Factory
+	# the Details panel (full inspector text) opened over the War Factory
 	cmd._set_selection([]); cmd.sel_building = blds.war_factory
-	battle.hud.econ.tab = "upgrades"
+	battle.hud.details_open = true
 	await _wait(0.5)
-	await _shot("ui_%s_warfactory_upgrades" % tag)
+	await _shot("ui_%s_warfactory_details" % tag)
+	battle.hud.details_open = false
 	foe.take_damage(9999.0, null)

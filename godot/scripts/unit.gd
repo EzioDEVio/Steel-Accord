@@ -68,6 +68,8 @@ var engine_snd: AudioStreamPlayer3D
 var flyby_t := 0.0
 var takeoff_snd := false
 var ring: MeshInstance3D
+var team_marker: MeshInstance3D   # team-coloured ellipse under ground units; hidden while the selection ring shows
+var _vtop := -1.0                 # height of the model's top above the unit origin (for health bars), measured once
 var mats: Array = []
 var gun_rest := Vector3.ZERO
 
@@ -300,6 +302,7 @@ func _add_team_marker() -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.scale = Vector3(1.0, 1.0, 1.0 if def.get("visual") == "infantry" else 1.35)
 	body.add_child(mi)
+	team_marker = mi
 
 
 ## Presentation only (called every rendered frame): choose the view / pose and mirroring.
@@ -461,15 +464,16 @@ static func blade_texture(n: int) -> Texture2D:
 func _make_ring() -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var t := TorusMesh.new()
-	var r: float = def.radius * (1.35 if domain == "ground" else 1.1)
-	t.inner_radius = r; t.outer_radius = r + 0.35; t.rings = 40; t.ring_segments = 4
+	# same size as the team marker it replaces while selected (one ring per unit, never two)
+	var r: float = def.radius * ((1.2 if def.get("visual") == "infantry" else 1.05) if domain == "ground" else 1.1)
+	t.inner_radius = r * 0.86; t.outer_radius = r; t.rings = 48; t.ring_segments = 4
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.albedo_color = Color(0.35, 1.0, 0.45) if team == 0 else Color(1.0, 0.3, 0.25)
+	m.albedo_color = Color(0.45, 1.0, 0.55)
 	t.material = m
 	mi.mesh = t
-	mi.scale = Vector3(1, 0.04, 1)
-	mi.position.y = 0.12
+	mi.scale = Vector3(1, 0.04, 1.0 if def.get("visual") == "infantry" or domain != "ground" else 1.35)
+	mi.position.y = 0.14
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.visible = false
 	return mi
@@ -489,6 +493,27 @@ func _add_contact_shadow() -> void:
 func set_selected(v: bool) -> void:
 	selected = v
 	if ring: ring.visible = v and not dead
+	if team_marker: team_marker.visible = not (v and not dead)
+
+
+## Point just above the model for the health bar / rank / group number (measured from the meshes once).
+## Spacing radius used when units push apart: infantry models are drawn larger than their hit radius.
+func sep_r() -> float:
+	return float(def.radius) * (1.45 if def.get("visual") == "infantry" else 1.0)
+
+
+func bar_anchor() -> Vector3:
+	if is_air(): return world_center() + Vector3.UP * 2.5
+	if _vtop < 0.0:
+		_vtop = float(def.get("height", 2.0))
+		var inv := global_transform.affine_inverse()
+		var top := -INF
+		for n in find_children("*", "VisualInstance3D", true, false):
+			if n == ring or n == team_marker or n is Decal or not (n as Node3D).is_visible_in_tree(): continue
+			var bb: AABB = (inv * (n as VisualInstance3D).global_transform) * (n as VisualInstance3D).get_aabb()
+			top = maxf(top, bb.end.y)
+		if top > 0.2 and top < 60.0: _vtop = top
+	return global_position + Vector3.UP * (_vtop + 0.6)
 
 
 func is_air() -> bool:
