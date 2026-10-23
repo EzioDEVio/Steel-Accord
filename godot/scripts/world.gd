@@ -44,6 +44,8 @@ static func environment(parent: Node) -> DirectionalLight3D:
 	sun.directional_shadow_max_distance = 220.0
 	sun.directional_shadow_blend_splits = true
 	parent.add_child(sun)
+	Game.world_env = env; Game.world_sun = sun
+	Game.apply_display()
 	return sun
 
 

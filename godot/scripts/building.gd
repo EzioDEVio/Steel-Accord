@@ -97,6 +97,24 @@ static func pad_positions(pos: Vector3, d: Dictionary) -> Array:
 	return out
 
 
+## Airfield taxi route for pad i (world points, y = 0). Out: pad -> taxiway lane -> onto the runway -> along the
+## centreline to the take-off end. In: from the runway at the lane -> down the lane -> pad. The lane runs between the
+## pad columns, so jets never cross the hangar or the tower.
+func taxi_route(i: int, out: bool) -> Array:
+	if runway.size() != 2 or i < 0 or i >= pads.size(): return []
+	var ls: Vector3 = to_local(runway[0])
+	var lane_x := 0.0
+	for p in pads: lane_x += to_local(p.pos).x
+	lane_x /= pads.size()
+	var lp: Vector3 = to_local(pads[i].pos)
+	var pts: Array = []
+	var a := Vector3(lane_x, 0, lp.z)        # lane abeam the pad
+	var b := Vector3(lane_x, 0, ls.z)        # lane meets the runway centreline
+	if out: pts = [a, b, Vector3(ls.x, 0, ls.z)]
+	else: pts = [b, a, Vector3(lp.x, 0, lp.z)]
+	return pts.map(func(q): var g: Vector3 = to_global(q); return Vector3(g.x, 0, g.z))
+
+
 ## Rectangle (centre, half size) covered by the apron, for placement checks.
 static func apron_rect(pos: Vector3, d: Dictionary) -> Array:
 	if ResourceLoader.exists(str(d.get("model3d", "_"))): return []   # 3D airfield: pads are inside its footprint

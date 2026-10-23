@@ -127,12 +127,14 @@ func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
 	var raw: Array[Vector3] = [from]
 	for i in range(1, ids.size() - 1): raw.append(center_of(ids[i]))
 	raw.append(goal)
-	# string pulling: from each anchor jump to the furthest visible point
+	# string pulling, forward and greedy: from each anchor walk ahead while the straight line stays clear.
+	# (The old backward scan from the end of the path was quadratic and stalled the game on long routes.)
 	var out := PackedVector3Array([from])
 	var i := 0
-	while i < raw.size() - 1:
-		var j := raw.size() - 1
-		while j > i + 1 and not line_clear(raw[i], raw[j]): j -= 1
+	var n := raw.size()
+	while i < n - 1:
+		var j := i + 1
+		while j + 1 < n and j - i < 48 and line_clear(raw[i], raw[j + 1]): j += 1
 		out.append(raw[j]); i = j
 	return out
 

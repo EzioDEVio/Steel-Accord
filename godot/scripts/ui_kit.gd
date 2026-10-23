@@ -131,4 +131,15 @@ static func options_box(on_change: Callable = Callable()) -> VBoxContainer:
 	row3.add_child(label("Interface size  ", 15))
 	row3.add_child(option(scales.keys(), cur, set_scale))
 	v.add_child(row3)
+	var row5 := HBoxContainer.new()
+	row5.add_child(label("Graphics quality  ", 15))
+	row5.add_child(option(["Low", "Medium", "High"], str(Game.settings.get("graphics", "Medium")), func(x):
+		Game.settings["graphics"] = x
+		Game.apply_graphics()
+		notify.call()))
+	v.add_child(row5)
+	v.add_child(label("Low: smaller shadows, no ambient occlusion or glow, 3D drawn at 77% and upscaled (FSR).\nHigh: largest soft shadows and 2x anti-aliasing (needs a strong graphics card).", 12, Color(0.6, 0.66, 0.63)))
+	v.add_child(check("Show frame rate (FPS)", bool(Game.settings.get("show_fps", false)), func(on):
+		Game.settings["show_fps"] = on
+		notify.call()))
 	return v

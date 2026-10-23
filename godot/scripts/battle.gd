@@ -486,31 +486,61 @@ func _physics_process(dt: float) -> void:
 	if "proftick" in args and tick_n % 30 == 0: printerr("TICK %d sim=%.1f %.1f ms" % [tick_n, sim_time, (Time.get_ticks_usec() - _tt) / 1000.0])
 
 
+## Optional profiler ("prof" arg): microseconds per simulation stage, averaged and printed every 10 s of game time.
+var prof := {}
+var _pt := 0
+
+
+func _pmark(k: String) -> void:
+	var t := Time.get_ticks_usec()
+	prof[k] = prof.get(k, 0) + (t - _pt)
+	_pt = t
+
+
 func sim_tick(dt: float) -> void:
+	var p := "prof" in args
+	if p: _pt = Time.get_ticks_usec()
 	for c in pending: _execute(c)
 	pending.clear()
 	if ai and not game_over: ai.tick(dt)
 	if base_ai and not game_over: base_ai.tick(dt)
+	if p: _pmark("ai+cmds")
 	for u in units:
 		u.sim_tick(dt)
+	if p: _pmark("units")
 	_update_boarding()
 	_separate()
+	if p: _pmark("separate")
 	_update_shots(dt)
 	_update_flights(dt)
 	_update_bombs(dt)
 	_update_drones(dt)
 	_update_supply_drops(dt)
+	if p: _pmark("shots/air")
 	_ground_units(dt)
+	if p: _pmark("ground")
 	_update_derricks(dt)
 	_update_plans()
 	if tick_n % 150 == 0:
 		trend_samples.append([sim_time, income[0], spent[0], income[1], spent[1]])
 		while trend_samples.size() > 13: trend_samples.pop_front()
 	_update_debris(dt)
+	if p: _pmark("misc")
 	_update_visibility()
+	if p: _pmark("fog")
 	sim_time += dt
 	tick_n += 1
 	_check_end()
+	if p and tick_n % 300 == 0:
+		var parts: Array = []
+		var tot := 0
+		for k in prof: tot += prof[k]
+		for k in prof: parts.append("%s %.2f" % [k, prof[k] / 300000.0])
+		printerr("PROF t=%d units=%d sim %.2f ms/tick: %s | frame process %.2f ms, physics %.2f ms, nodes %d, draw calls %d" % [int(sim_time),
+			units.filter(func(u): return not u.dead).size(), tot / 300000.0, ", ".join(parts),
+			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+			int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))])
+		prof.clear()
 
 
 ## Heightfield maps: every unit node stands on the terrain (aircraft altitude is above the local ground, smoothed so
@@ -523,7 +553,20 @@ func _ground_units(dt: float) -> void:
 		if u.domain == "ground" or u.altitude < 3.0 or u.state == Unit.S.LANDED:
 			u.position.y = h
 		else:
-			u.position.y = move_toward(u.position.y, h, dt * (12.0 if u.domain == "heli" else 30.0))
+			# aircraft: the base height is the highest ground under the next few seconds of flight (climb early and
+			# fast, descend slowly), and never below the ground right here - no flying through ridges
+			var hv := Vector2(u.vel.x, u.vel.z)
+			var spd := maxf(hv.length(), 8.0)
+			var dir := hv.normalized() if hv.length() > 0.5 else Vector2(-sin(u.heading), -cos(u.heading))
+			var look := clampf(spd * 3.0, 30.0, 260.0)
+			var want := h
+			for i in range(1, 7):
+				var q := Vector2(u.position.x, u.position.z) + dir * look * float(i) / 6.0
+				want = maxf(want, terrain.height_at(q.x, q.y))
+			var up := 45.0 if u.domain == "jet" else 22.0
+			var down := 10.0 if u.domain == "jet" else 6.0
+			u.position.y = move_toward(u.position.y, want, dt * (up if want > u.position.y else down))
+			u.position.y = maxf(u.position.y, h)
 		if u.domain == "ground" and u.def.get("visual") != "infantry" and not u.dead:
 			var nrm := terrain.normal_at(u.position.x, u.position.z)
 			var grad := Vector2(-nrm.x / nrm.y, -nrm.z / nrm.y)
@@ -546,22 +589,60 @@ func spread(ids: Array, dest: Vector3, spacing := 6.0) -> Array:
 	return pts
 
 
+## Units push apart, out of structures and around map obstacles. Spatial hashing keeps this close to linear in the
+## number of units (the old all-pairs loop cost grew with the square of the army size).
+const SEP_CELL := 8.0
+var _obs_grid := {}
+var _obs_n := -1
+
+
+func _obstacle_grid() -> Dictionary:
+	if _obs_n != obstacles_2d.size():
+		_obs_n = obstacles_2d.size()
+		_obs_grid.clear()
+		for o in obstacles_2d:
+			var r: float = o.z + 2.0
+			for cx in range(int(floor((o.x - r) / 16.0)), int(floor((o.x + r) / 16.0)) + 1):
+				for cz in range(int(floor((o.y - r) / 16.0)), int(floor((o.y + r) / 16.0)) + 1):
+					var k := Vector2i(cx, cz)
+					if not _obs_grid.has(k): _obs_grid[k] = []
+					_obs_grid[k].append(o)
+	return _obs_grid
+
+
 func _separate() -> void:
-	var live := units.filter(func(u): return not u.dead and u.domain != "jet" and not (u is Building))
-	var blds := units.filter(func(u): return not u.dead and u is Building)
-	for i in live.size():
-		var a: Unit = live[i]
-		for j in range(i + 1, live.size()):
-			var b: Unit = live[j]
-			if (a.domain == "ground") != (b.domain == "ground"): continue
-			var d := Vector2(b.position.x - a.position.x, b.position.z - a.position.z)
-			var min_d: float = (a.sep_r() + b.sep_r()) * 0.95
-			var l := d.length()
-			if l < min_d and l > 0.001:
-				var push := (min_d - l) * 0.5 * d / l
-				a.position -= Vector3(push.x, 0, push.y)
-				b.position += Vector3(push.x, 0, push.y)
-		if a.domain == "ground":
+	var grid := {}
+	var blds: Array = []
+	var live: Array = []
+	for u in units:
+		if u.dead: continue
+		if u is Building:
+			blds.append(u)
+			continue
+		if u.domain == "jet": continue
+		live.append(u)
+		var k := Vector2i(int(floor(u.position.x / SEP_CELL)), int(floor(u.position.z / SEP_CELL)))
+		if not grid.has(k): grid[k] = []
+		grid[k].append(u)
+	var og := _obstacle_grid()
+	for a: Unit in live:
+		var ka := Vector2i(int(floor(a.position.x / SEP_CELL)), int(floor(a.position.z / SEP_CELL)))
+		var ra: float = a.sep_r()
+		var ga: bool = a.domain == "ground"
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				var cell: Variant = grid.get(ka + Vector2i(dx, dz))
+				if cell == null: continue
+				for b: Unit in cell:
+					if b.uid <= a.uid or (b.domain == "ground") != ga: continue
+					var d := Vector2(b.position.x - a.position.x, b.position.z - a.position.z)
+					var min_d: float = (ra + b.sep_r()) * 0.95
+					var l := d.length()
+					if l < min_d and l > 0.001:
+						var push := (min_d - l) * 0.5 * d / l
+						a.position -= Vector3(push.x, 0, push.y)
+						b.position += Vector3(push.x, 0, push.y)
+		if ga:
 			for bb in blds:
 				var b: Building = bb
 				var dx := a.position.x - b.position.x
@@ -571,12 +652,14 @@ func _separate() -> void:
 				if ex > 0.0 and ez > 0.0:
 					if ex < ez: a.position.x += signf(dx if dx != 0.0 else 1.0) * ex
 					else: a.position.z += signf(dz if dz != 0.0 else 1.0) * ez
-			for o in obstacles_2d:
-				var d2 := Vector2(a.position.x - o.x, a.position.z - o.y)
-				var r: float = o.z + a.def.radius * 0.6
-				if d2.length() < r and d2.length() > 0.001:
-					var n := d2.normalized() * r
-					a.position = Vector3(o.x + n.x, 0, o.y + n.y)
+			var oc: Variant = og.get(Vector2i(int(floor(a.position.x / 16.0)), int(floor(a.position.z / 16.0))))
+			if oc != null:
+				for o in oc:
+					var d2 := Vector2(a.position.x - o.x, a.position.z - o.y)
+					var r: float = o.z + a.def.radius * 0.6
+					if d2.length() < r and d2.length() > 0.001:
+						var nn := d2.normalized() * r
+						a.position = Vector3(o.x + nn.x, 0, o.y + nn.y)
 	for u in units:
 		if u.dead: continue
 		var m := 0.0 if u.domain == "ground" else 30.0   # aircraft may overfly the edge by 30 m while turning
@@ -591,10 +674,13 @@ func find_enemy_near(u: Unit, r: float) -> Unit:
 func find_enemy_near_point(u: Unit, p: Vector3, r: float) -> Unit:
 	var best: Unit = null
 	var bd := r
+	var bd2 := r * r
 	for o in units:
-		if o.dead or o.team == u.team or not u.can_target(o): continue
-		var d := Vector2(o.position.x - p.x, o.position.z - p.z).length()
-		if d < bd: bd = d; best = o
+		if o.dead or o.team == u.team: continue
+		var dx := o.position.x - p.x
+		var dz := o.position.z - p.z
+		var d2 := dx * dx + dz * dz
+		if d2 < bd2 and u.can_target(o): bd2 = d2; best = o
 	return best
 
 
@@ -809,6 +895,12 @@ func _update_flights(dt: float) -> void:
 		var p: Dictionary = f.def
 		for pr in f.node.find_children("Prop*", "Node3D", true, false): (pr as Node3D).rotate_object_local(Vector3.BACK, dt * 30.0)
 		f.pos += f.dir * float(p.speed) * dt
+		if terrain:   # stay above the ridges on the way in and out (same look-ahead as aircraft units)
+			var want := terrain.height_at(f.pos.x, f.pos.z)
+			for i in range(1, 7):
+				var q: Vector3 = f.pos + f.dir * float(p.speed) * 3.0 * float(i) / 6.0
+				want = maxf(want, terrain.height_at(q.x, q.z))
+			f.pos.y = maxf(move_toward(f.pos.y, want, dt * (45.0 if want > f.pos.y else 10.0)), terrain.height_at(f.pos.x, f.pos.z))
 		f.node.position = f.pos
 		var along: float = (f.pos - f.target).dot(f.dir)   # <0 before the target, >0 after
 		if p.has("troops"):
@@ -1294,6 +1386,7 @@ func spawn_produced(b: Building, k: String) -> void:
 		u.heading = 0.0 if team == 0 else PI
 		if b.runway.size() == 2 and u.domain == "jet":
 			u.has_runway = true; u.rw_start = b.runway[0]; u.rw_end = b.runway[1]
+			u.taxi_out = b.taxi_route(i, true); u.taxi_in = b.taxi_route(i, false)
 			u.park_heading = u._runway_heading(); u.heading = u.park_heading
 		u.state = Unit.S.LANDED; u.altitude = u.ground_alt(); u.speed_cur = 0.0; u.body.position.y = u.altitude; u.airborne = false
 		u.reset_physics_interpolation()

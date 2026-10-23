@@ -363,6 +363,7 @@ func _draw() -> void:
 	_draw_bar()
 	_draw_minimap()
 	_draw_status()
+	_draw_fps()
 	if show_help: _draw_help()
 	if commander.mode != "":
 		var label: String = {"attack_move": "ATTACK-MOVE", "guard": "GUARD - click ground or a friendly unit", "force": "FORCE FIRE",
@@ -551,6 +552,13 @@ func group_of_all(objs: Array) -> int:
 	if g < 0: return -1
 	var live: Array = commander.groups[g].filter(func(x): return is_instance_valid(x) and not x.dead)
 	return g if live.size() == objs.size() and objs.all(func(x): return x in live) else -1
+
+
+func _draw_fps() -> void:
+	if not bool(Game.settings.get("show_fps", false)): return
+	var t := "%d FPS  %.1f ms" % [Engine.get_frames_per_second(), 1000.0 / maxf(1.0, Engine.get_frames_per_second())]
+	draw_rect(Rect2(size.x - 130, 8, 120, 22), Color(0, 0, 0, 0.55))
+	_text(Vector2(size.x - 124, 24), t, 13, Color(0.75, 1.0, 0.8))
 
 
 func _draw_status() -> void:

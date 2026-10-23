@@ -23,6 +23,8 @@ var settings := {
 	"color1": 1,
 	"start_cash": 10000,
 	"game_speed": 1.0,
+	"graphics": "Medium",     # Low / Medium / High: shadows, ambient occlusion, anti-aliasing, 3D render scale
+	"show_fps": false,
 }
 
 ## Skirmish maps offered in the menu (id -> label). Heightfield maps live in res://maps/<id>/.
@@ -40,6 +42,33 @@ func apply_display() -> void:
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 	if DisplayServer.window_get_mode() != mode:
 		DisplayServer.window_set_mode(mode)
+	apply_graphics()
+
+
+## Graphics quality presets. High is the previous fixed setup (8192 px soft shadows, SSAO, glow, 2x MSAA).
+const GRAPHICS := {
+	"Low": {"shadow": 2048, "soft": 1, "ssao": false, "glow": false, "msaa": 0, "fxaa": true, "scale": 0.77, "shadow_dist": 160.0},
+	"Medium": {"shadow": 4096, "soft": 2, "ssao": true, "glow": true, "msaa": 0, "fxaa": true, "scale": 1.0, "shadow_dist": 200.0},
+	"High": {"shadow": 8192, "soft": 3, "ssao": true, "glow": true, "msaa": 1, "fxaa": true, "scale": 1.0, "shadow_dist": 220.0},
+}
+var world_env: Environment = null     # set by World.environment()
+var world_sun: DirectionalLight3D = null
+
+
+func apply_graphics() -> void:
+	var g: Dictionary = GRAPHICS.get(str(settings.get("graphics", "Medium")), GRAPHICS.Medium)
+	RenderingServer.directional_shadow_atlas_set_size(int(g.shadow), true)
+	RenderingServer.directional_soft_shadow_filter_set_quality(int(g.soft))
+	var vp := get_viewport()
+	vp.msaa_3d = Viewport.MSAA_2X if int(g.msaa) == 1 else Viewport.MSAA_DISABLED
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if g.fxaa else Viewport.SCREEN_SPACE_AA_DISABLED
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if float(g.scale) < 1.0 else Viewport.SCALING_3D_MODE_BILINEAR
+	vp.scaling_3d_scale = float(g.scale)
+	if world_env and is_instance_valid(world_env):
+		world_env.ssao_enabled = g.ssao
+		world_env.glow_enabled = g.glow
+	if world_sun and is_instance_valid(world_sun):
+		world_sun.directional_shadow_max_distance = float(g.shadow_dist)
 
 
 func save() -> void:

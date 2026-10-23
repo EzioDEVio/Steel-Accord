@@ -122,16 +122,17 @@ func slope_deg_at(x: float, z: float) -> float:
 
 ## Height range and steepest slope over a footprint (for building placement).
 func footprint_stats(center: Vector3, half: Vector2) -> Vector3:
+	# reads the height and slope grids directly (no interpolation): placement checks run every frame for the ghost
+	# and many times per AI decision, so this must stay cheap
+	var x0 := clampi(int(floor((center.x - half.x - origin.x) / step)), 0, n - 1); var x1 := clampi(int(ceil((center.x + half.x - origin.x) / step)), 0, n - 1)
+	var z0 := clampi(int(floor((center.z - half.y - origin.y) / step)), 0, n - 1); var z1 := clampi(int(ceil((center.z + half.y - origin.y) / step)), 0, n - 1)
 	var lo := INF; var hi := -INF; var smax := 0.0; var sum := 0.0; var cnt := 0
-	var x := center.x - half.x
-	while x <= center.x + half.x + 0.01:
-		var z := center.z - half.y
-		while z <= center.z + half.y + 0.01:
-			var h := height_at(x, z)
+	for iz in range(z0, z1 + 1):
+		var row := iz * n
+		for ix in range(x0, x1 + 1):
+			var h: float = heights[row + ix]
 			lo = minf(lo, h); hi = maxf(hi, h); sum += h; cnt += 1
-			smax = maxf(smax, slope_deg_at(x, z))
-			z += step
-		x += step
+			smax = maxf(smax, slope_grid[row + ix])
 	return Vector3(hi - lo, smax, sum / maxf(cnt, 1))
 
 
@@ -192,8 +193,13 @@ func flatten(center: Vector3, half: Vector2, h: float, skirt := 6.0) -> void:
 func build_visual() -> void:
 	mat = ShaderMaterial.new()
 	mat.shader = SHADER
-	mat.set_shader_parameter("n_detail", await World.noise_tex(0.03, 11))
+	var t0 := Time.get_ticks_msec()
+	# unique macro layer over the whole map (512 px over 1200 m = 2.3 m/px): R ~350 m, G ~100 m, B ~30 m, A ~60 m
+	mat.set_shader_parameter("n_macro", _noise_rgba(512, false, [[101, 0.0067, 3], [102, 0.023, 3], [103, 0.075, 2], [104, 0.04, 2]], false))
+	# seamless detail tile (19 m per tile = 3.7 cm/px): R ~6 m, G ~2 m, B ~0.7 m, A cellular clusters ~3 m
+	mat.set_shader_parameter("n_detail", _noise_rgba(512, true, [[111, 0.006, 4], [112, 0.018, 4], [113, 0.05, 3], [114, 0.012, 1, FastNoiseLite.TYPE_CELLULAR]], true))
 	mat.set_shader_parameter("n_normal", await World.noise_tex(0.05, 19, 512, true, 4))
+	print("TERRAIN noise textures %d ms" % (Time.get_ticks_msec() - t0))
 	if splat: mat.set_shader_parameter("splat", ImageTexture.create_from_image(splat))
 	if road_mask: mat.set_shader_parameter("roads", ImageTexture.create_from_image(road_mask))
 	mat.set_shader_parameter("map_rect", Vector4(origin.x, origin.y, step * (n - 1), step * (n - 1)))
@@ -209,6 +215,32 @@ func build_visual() -> void:
 	skirt.mesh = pm
 	skirt.position.y = -1.5
 	add_child(skirt)
+
+
+## Packs up to four FastNoiseLite layers ([seed, frequency per pixel, octaves, optional noise type]) into one RGBA8
+## texture, so the terrain shader reads four independent noises with one tap. Generated at load: no shipped images.
+static func _noise_rgba(size: int, seamless: bool, layers: Array, mipmaps: bool) -> ImageTexture:
+	var ch: Array[PackedByteArray] = []
+	for L in layers:
+		var fn := FastNoiseLite.new()
+		fn.seed = L[0]; fn.frequency = L[1]; fn.fractal_octaves = L[2]
+		if L.size() > 3:
+			fn.noise_type = L[3]
+			if fn.noise_type == FastNoiseLite.TYPE_CELLULAR:
+				fn.cellular_return_type = FastNoiseLite.RETURN_DISTANCE2_DIV
+				fn.fractal_type = FastNoiseLite.FRACTAL_NONE
+		var im: Image = fn.get_seamless_image(size, size, false, false, 0.15) if seamless else fn.get_image(size, size)
+		if im.get_format() != Image.FORMAT_L8: im.convert(Image.FORMAT_L8)
+		ch.append(im.get_data())
+	while ch.size() < 4: ch.append(ch[0])
+	var c0 := ch[0]; var c1 := ch[1]; var c2 := ch[2]; var c3 := ch[3]
+	var buf := PackedByteArray(); buf.resize(size * size * 4)
+	for i in size * size:
+		var j := i * 4
+		buf[j] = c0[i]; buf[j + 1] = c1[i]; buf[j + 2] = c2[i]; buf[j + 3] = c3[i]
+	var img := Image.create_from_data(size, size, false, Image.FORMAT_RGBA8, buf)
+	if mipmaps: img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
 
 
 func _build_chunk(c: Vector2i) -> void:

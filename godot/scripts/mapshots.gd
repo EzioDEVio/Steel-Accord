@@ -105,6 +105,15 @@ func _run() -> void:
 			_cam(battle.drones[0].pos, 40.0, 30.0, 35.0); await _shot("zb_shahed_inbound")
 		get_tree().quit()
 		return
+	if "terrainonly" in battle.args:
+		# fixed terrain-texturing review views (tiling / repetition check); same cameras every run
+		_cam(battle.grounded(Vector3(60, 0, -150)), 120.0, 160.0, 45.0); await _shot("tr_1_basin_mid")
+		_cam(Vector3(0, 0, 0), 230.0, 0.0, 55.0); await _shot("tr_2_centre_far")
+		_cam(Vector3(0, 0, 150), 230.0, 35.0, 40.0); await _shot("tr_3_ridges_low")
+		_cam(battle.grounded(Vector3(-218, 0, -45)), 65.0, 300.0, 38.0); await _shot("tr_4_basin_close")
+		_cam(battle.grounded(Vector3(-300, 0, 120)), 180.0, 120.0, 70.0); await _shot("tr_5_steep_top")
+		get_tree().quit()
+		return
 	if "infonly" in battle.args:
 		# a squad on open ground in the basin, facing the camera
 		var cc: Vector3 = battle.grounded(Vector3(60, 0, -150))

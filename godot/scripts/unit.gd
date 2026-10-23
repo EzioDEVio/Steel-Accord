@@ -46,6 +46,9 @@ var run_out_t := 0.0
 var ret_phase := 0
 var site: Node = null          # dozer: structure under construction
 var has_runway := false        # jets: airfield with a runway (taxi out, roll along it, land on it, taxi back)
+var taxi_out: Array = []       # jets: waypoints pad -> taxiway -> runway take-off end (from the airfield)
+var taxi_in: Array = []        # jets: runway -> taxiway -> pad
+var taxi_i := 0
 var rw_start := Vector3.ZERO
 var rw_end := Vector3.ZERO
 var park_heading := 0.0
@@ -704,7 +707,8 @@ func _engine_audio(dt: float) -> void:
 
 
 func _acquire(r: float) -> void:
-	if target == null and def.weapons.size() > 0:
+	# idle scans are staggered: each unit looks for targets every 6th tick (0.2 s), not every tick
+	if target == null and def.weapons.size() > 0 and (battle.tick_n + uid) % 6 == 0:
 		target = battle.find_enemy_near(self, r)
 
 
@@ -1027,6 +1031,7 @@ func _jet_tick(dt: float) -> void:
 		airborne = false
 		speed_cur = 0.0
 		taxi_phase = 0
+		taxi_i = 0
 		altitude = move_toward(altitude, ground_alt(), dt * 8.0)
 		position = position.move_toward(home, dt * 6.0)
 		heading = lerp_angle(heading, park_heading, minf(1.0, dt * 3.0))
@@ -1046,13 +1051,16 @@ func _jet_tick(dt: float) -> void:
 		# taxi from the parking spot to the runway threshold, then line up on the runway heading
 		bank = 0.0
 		altitude = ground_alt()
-		if flat_dist(rw_start) > 2.0:
-			_taxi_to(rw_start, dt)
+		while taxi_i < taxi_out.size() - 1 and flat_dist(taxi_out[taxi_i]) < 3.0: taxi_i += 1
+		var tgt: Vector3 = taxi_out[taxi_i] if taxi_i < taxi_out.size() else rw_start
+		if taxi_i < taxi_out.size() - 1 or flat_dist(rw_start) > 2.0:
+			_taxi_to(tgt, dt)
 		else:
 			position = Vector3(rw_start.x, 0, rw_start.z)
 			heading = _runway_heading()
 			speed_cur = 0.0
 			taxi_phase = 1
+			taxi_i = 0
 		vel = forward() * speed_cur
 		return
 	if not airborne:
@@ -1170,6 +1178,7 @@ func _runway_landing_ground(dt: float) -> void:
 	bank = 0.0
 	if state != S.RETURN and taxi_phase == 3:
 		taxi_phase = 0          # new orders while taxiing in: turn round and take off again
+		taxi_i = 0
 		return
 	altitude = ground_alt()
 	if taxi_phase == 2:
@@ -1178,8 +1187,12 @@ func _runway_landing_ground(dt: float) -> void:
 		var along := (position - rw_start).dot((rw_end - rw_start).normalized())
 		if speed_cur <= 7.5 or along > (rw_end - rw_start).length() * 0.8:
 			taxi_phase = 3
+			taxi_i = 0
 	else:
-		if flat_dist(home) > 1.5:
+		while taxi_i < taxi_in.size() - 1 and flat_dist(taxi_in[taxi_i]) < 3.0: taxi_i += 1
+		if taxi_i < taxi_in.size() - 1:
+			_taxi_to(taxi_in[taxi_i], dt)
+		elif flat_dist(home) > 1.5:
 			_taxi_to(home, dt)
 		else:
 			position = Vector3(home.x, 0, home.z)

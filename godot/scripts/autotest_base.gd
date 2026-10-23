@@ -238,10 +238,22 @@ func _qa_checks(ccp: Vector3, bk: Building, wf: Building) -> void:
 		# fly out, then R (return) - every type must land inside its pad
 		await _sel(air)
 		battle.issue({"type": "move", "ids": air.map(func(u): return u.uid), "points": air.map(func(u): return u.position + Vector3(0, 0, -120))})
-		await _wait_sim(12.0)
+		# jets on the ground must stay on paved surfaces: never inside the hangar / tower block at the runway's take-off end
+		var jets: Array = air.filter(func(u): return u.domain == "jet")
+		var bad := []
+		var probe := func():
+			for j in jets:
+				if j.dead or j.airborne: continue
+				var lp: Vector3 = af.to_local(j.position)
+				if lp.x > -30.0 and lp.x < -4.5 and lp.z > -9.0 and lp.z < 10.0: bad.append("%s@(%.0f,%.0f)" % [j.kind, lp.x, lp.z])
+		for i in 60:
+			await _wait_sim(0.2); probe.call()
 		await _sel(air); await _frames(2)
 		_key(KEY_R); await _frames(2)
-		await _until(func(): return air.all(func(u): return u.dead or u.state == Unit.S.LANDED), 90.0)
+		var t0: float = battle.sim_time
+		while battle.sim_time - t0 < 90.0 and not air.all(func(u): return u.dead or u.state == Unit.S.LANDED):
+			await _wait_sim(0.2); probe.call()
+		_log("jet_taxi_avoids_hangar", bad.is_empty() and af.model3d != null, "ground positions inside the hangar block: %d %s" % [bad.size(), str(bad.slice(0, 4))])
 		var landed := air.filter(func(u): return not u.dead and u.state == Unit.S.LANDED and u.flat_dist(u.home) < PAD_TOL(u))
 		_log("aircraft_return_land_on_pad", landed.size() == air.filter(func(u): return not u.dead).size(),
 			", ".join(air.map(func(u): return "%s %.2fm %s" % [u.kind, u.flat_dist(u.home), "LANDED" if u.state == Unit.S.LANDED else "state%d" % u.state])))
