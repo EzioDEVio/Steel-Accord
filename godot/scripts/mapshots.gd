@@ -146,7 +146,13 @@ func _run() -> void:
 ## main structures (run with nation0=iran; resolution from --resolution).
 func _ui_iran() -> void:
 	var tag := str(battle.args.get("tag", "1080"))
-	get_tree().root.size = DisplayServer.window_get_size()
+	# exact capture size from res=WxH (the shot scripts otherwise force 1280x720)
+	var rs: PackedStringArray = str(battle.args.get("res", "1920x1080")).split("x")
+	var want := Vector2i(int(rs[0]), int(rs[1]))
+	DisplayServer.window_set_size(want)
+	get_tree().root.size = want
+	await _wait(0.3)
+	printerr("UI capture size ", get_viewport().get_visible_rect().size, " hud scale ", battle.hud.ui_scale)
 	var c: Vector3 = battle.start_pos[0]
 	var f := -1.0
 	battle.cash[0] = 60000
