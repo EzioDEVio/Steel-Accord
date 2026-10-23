@@ -196,8 +196,8 @@ func build_visual() -> void:
 	var t0 := Time.get_ticks_msec()
 	# unique macro layer over the whole map (512 px over 1200 m = 2.3 m/px): R ~350 m, G ~100 m, B ~30 m, A ~60 m
 	mat.set_shader_parameter("n_macro", _noise_rgba(512, false, [[101, 0.0067, 3], [102, 0.023, 3], [103, 0.075, 2], [104, 0.04, 2]], false))
-	# seamless detail tile (19 m per tile = 3.7 cm/px): R ~6 m, G ~2 m, B ~0.7 m, A cellular clusters ~3 m
-	mat.set_shader_parameter("n_detail", _noise_rgba(512, true, [[111, 0.006, 4], [112, 0.018, 4], [113, 0.05, 3], [114, 0.012, 1, FastNoiseLite.TYPE_CELLULAR]], true))
+	# seamless detail tile (19 m per tile = 3.7 cm/px): R ~6 m, G ~2 m, B ~0.7 m, A ~3 m (independent seed: clusters)
+	mat.set_shader_parameter("n_detail", _noise_rgba(512, true, [[111, 0.006, 3], [112, 0.018, 3], [113, 0.05, 2], [114, 0.012, 2]], true))
 	mat.set_shader_parameter("n_normal", await World.noise_tex(0.05, 19, 512, true, 4))
 	print("TERRAIN noise textures %d ms" % (Time.get_ticks_msec() - t0))
 	if splat: mat.set_shader_parameter("splat", ImageTexture.create_from_image(splat))
@@ -224,11 +224,7 @@ static func _noise_rgba(size: int, seamless: bool, layers: Array, mipmaps: bool)
 	for L in layers:
 		var fn := FastNoiseLite.new()
 		fn.seed = L[0]; fn.frequency = L[1]; fn.fractal_octaves = L[2]
-		if L.size() > 3:
-			fn.noise_type = L[3]
-			if fn.noise_type == FastNoiseLite.TYPE_CELLULAR:
-				fn.cellular_return_type = FastNoiseLite.RETURN_DISTANCE2_DIV
-				fn.fractal_type = FastNoiseLite.FRACTAL_NONE
+		if L.size() > 3: fn.noise_type = L[3]
 		var im: Image = fn.get_seamless_image(size, size, false, false, 0.15) if seamless else fn.get_image(size, size)
 		if im.get_format() != Image.FORMAT_L8: im.convert(Image.FORMAT_L8)
 		ch.append(im.get_data())

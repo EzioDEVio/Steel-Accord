@@ -19,7 +19,7 @@ render_mode diffuse_burley;
 uniform sampler2D splat : filter_linear, repeat_disable;
 uniform sampler2D roads : filter_linear, repeat_disable;
 uniform sampler2D n_macro : filter_linear, repeat_disable;          // R ~350 m, G ~100 m, B ~30 m, A ~60 m (warp)
-uniform sampler2D n_detail : filter_linear_mipmap, repeat_enable;   // R ~6 m, G ~2 m, B ~0.7 m, A cells ~3 m  (at 19 m/tile)
+uniform sampler2D n_detail : filter_linear_mipmap, repeat_enable;   // R ~6 m, G ~2 m, B ~0.7 m, A ~3 m  (at 19 m/tile)
 uniform sampler2D n_normal : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform vec4 map_rect = vec4(-600.0, -600.0, 1200.0, 1200.0);
 uniform float detail_tile_m = 19.0;
@@ -123,8 +123,8 @@ void fragment() {
 	// low, flat basin floors: thin pale dust film in broad irregular fields
 	float flat_low = (1.0 - smoothstep(0.04, 0.16, slope)) * (1.0 - smoothstep(4.0, 12.0, wpos.y));
 	c = mix(c, vec3(0.74, 0.66, 0.54), flat_low * smoothstep(0.42, 0.75, M.g * 0.7 + H.r * 0.3) * 0.32 * (1.0 - rock_w));
-	// map-scale brightness / hue drift (+-8 %), so no two hillsides read identical
-	c *= 0.92 + 0.16 * M.r;
+	// map-scale brightness / hue drift (+-11 %), so no two hillsides read identical
+	c *= 0.89 + 0.22 * M.r;
 	c = mix(c, c * vec3(1.04, 0.99, 0.93), smoothstep(0.35, 0.75, M.a) * 0.6);
 	c *= mix(1.0, 0.9, smoothstep(0.35, 0.85, slope));        // shade steep ground slightly (rough AO)
 

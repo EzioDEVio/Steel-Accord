@@ -51,6 +51,10 @@ func _run() -> void:
 		await _terrain_views()
 		get_tree().quit()
 		return
+	if "b2shots" in battle.args:
+		await _b2_shots()
+		get_tree().quit()
+		return
 	for t in 2:
 		battle.cash[t] = 90000
 		var c: Vector3 = battle.start_pos[t]
@@ -215,3 +219,72 @@ func _ui_iran() -> void:
 	await _shot("ui_%s_warfactory_details" % tag)
 	battle.hud.details_open = false
 	foe.take_damage(9999.0, null)
+
+
+## B2 evidence (run with res=WxH): the village with civilian buildings, an occupied house (badge + command grid),
+## occupants firing at an enemy, the hospital healing, a jet taxiing on the taxiway, a helicopter over a ridge.
+func _b2_shots() -> void:
+	var rs: PackedStringArray = str(battle.args.get("res", "1920x1080")).split("x")
+	var want := Vector2i(int(rs[0]), int(rs[1]))
+	DisplayServer.window_set_size(want)
+	get_tree().root.size = want
+	battle.cash[0] = 90000
+	var cmd: Commander = battle.commander
+	var civ: Array = battle.units.filter(func(u): return u is Building and (u as Building).is_civic() and not u.dead)
+	var vil := Vector3(-237, 0, 297)
+	_cam(vil, 120.0, 0.0, 52.0)
+	await _wait(0.6)
+	await _shot("b2_village")
+	var houses: Array = civ.filter(func(u): return u.bkind.begins_with("civ_house"))
+	houses.sort_custom(func(a, b): return a.position.distance_to(vil) < b.position.distance_to(vil))
+	var house: Building = houses[0]
+	var sq: Array = []
+	for i in 4:
+		sq.append(battle._spawn("rifleman", 0, house.door_pos + Vector3(-5 + i * 3.5, 0, 8), 0.0))
+	await _wait(0.2)
+	battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
+	var t_end: float = battle.sim_time + 40.0
+	while battle.sim_time < t_end and house.passengers.size() < 4: await _wait(0.5)
+	cmd._set_selection([]); cmd.sel_building = house
+	_cam(house.position, 70.0, 0.0, 50.0)
+	await _wait(0.6)
+	await _shot("b2_garrison_selected")
+	for i in 3:
+		var e: Unit = battle._spawn("rifleman", 1, house.position + Vector3(30 + i * 4, 0, -30), PI)
+		battle.issue({"type": "attack_move", "team": 1, "ids": [e.uid], "points": [house.position]})
+	await _wait(3.0)
+	_cam(house.position + Vector3(15, 0, -12), 75.0, 0.0, 48.0)
+	await _shot("b2_garrison_firing")
+	await _wait(6.0)
+	await _shot("b2_garrison_after")
+	var hosp: Array = civ.filter(func(u): return u.bkind == "civ_hospital")
+	if not hosp.is_empty():
+		var hs: Building = hosp[0]
+		var pats: Array = []
+		for i in 3:
+			var pu: Unit = battle._spawn("rifleman", 0, hs.door_pos + Vector3(-4 + i * 4, 0, 6), 0.0)
+			pu.hp = pu.def.hp * 0.3; pats.append(pu)
+		battle.issue({"type": "board", "team": 0, "ids": pats.map(func(u): return u.uid), "target": hs.uid})
+		t_end = battle.sim_time + 40.0
+		while battle.sim_time < t_end and hs.passengers.size() < 3: await _wait(0.5)
+		cmd._set_selection([]); cmd.sel_building = hs
+		_cam(hs.position, 85.0, 0.0, 52.0)
+		await _wait(1.0)
+		await _shot("b2_hospital")
+	# airfield taxi: a jet leaves its pad along the taxiway (never through the hangar)
+	var c0: Vector3 = battle.start_pos[0]
+	var af: Building = battle.add_structure("airfield", 0, _flat(0, "airfield", c0 + Vector3(-140, 0, -60)), true)
+	await _wait(0.3)
+	battle.spawn_produced(af, "f16")
+	await _wait(0.3)
+	var jet: Array = battle.units.filter(func(u): return u.kind == "f16" and not u.dead)
+	if not jet.is_empty():
+		battle.issue({"type": "move", "team": 0, "ids": [jet[0].uid], "points": [c0 + Vector3(0, 0, -400)]})
+		cmd._set_selection([jet[0]])
+		_cam(af.position, 80.0, 0.0, 55.0)
+		await _wait(3.0)
+		await _shot("b2_taxi_1")
+		await _wait(3.5)
+		await _shot("b2_taxi_2")
+		await _wait(3.5)
+		await _shot("b2_taxi_3")
