@@ -27,6 +27,8 @@ var repair_debt := 0.0        # cash owed for repairs, charged in whole dollars
 var repair_blocked := ""      # why repair is paused ("" = running)
 var sold := false
 var drop_t := 25.0          # first supply drop 25 s after completion
+var research_id := ""        # upgrade being researched here (Upgrades.DEFS)
+var research_left := 0.0
 var _depth_px := 0.0
 
 const STRUCTURE_SHADER := preload("res://shaders/structure.gdshader")
@@ -426,6 +428,13 @@ func sim_tick(dt: float) -> void:
 		if drop_t <= 0.0:
 			drop_t = float(bdef.drop.every)
 			battle.launch_supply_drop(self)
+	# research (one at a time per structure; half speed under low power)
+	if research_id != "":
+		research_left -= dt * (1.0 if powered else BuildingDefs.LOW_POWER_RATE)
+		if research_left <= 0.0:
+			var id := research_id
+			research_id = ""; research_left = 0.0
+			battle.complete_upgrade(team, id)
 	# production
 	if not prod_queue.is_empty():
 		prod_left -= dt * (1.0 if powered else BuildingDefs.LOW_POWER_RATE)

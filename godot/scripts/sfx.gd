@@ -16,9 +16,10 @@ const CLIPS := {
 	"tank_loop": "res://assets/audio/tank_loop.ogg",
 	"construction_loop": "res://assets/audio/construction_loop.ogg",
 	"radar_ping": "res://assets/audio/radar_ping.ogg",
+	"iran_shout": "res://assets/audio/iran_shout.ogg",
 }
 const MAX_VOICES := {"explosion_big": 6, "mg_burst": 4, "rifle_burst": 4, "rocket_launch": 5, "a10_cannon": 3,
-	"bomb_fall": 4, "jet_flyby": 3, "jet_takeoff": 2, "sam_launch": 3, "radar_ping": 2}
+	"bomb_fall": 4, "jet_flyby": 3, "jet_takeoff": 2, "sam_launch": 3, "radar_ping": 2, "iran_shout": 2}
 
 static var _cache := {}
 static var _voices := {}      # clip id -> Array of live players

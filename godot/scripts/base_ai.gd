@@ -65,6 +65,7 @@ func tick(dt: float) -> void:
 	_construct(anchor)
 	_produce(cc)
 	_capture_derricks()
+	_research()
 	_army()
 
 
@@ -163,6 +164,23 @@ func _army() -> void:
 		if tgt != Vector3.INF:
 			var ids: Array = done.map(func(u): return u.uid)
 			battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": ids.map(func(_i): return tgt)})
+
+
+## Research when the economy allows (keeps a reserve for units); picks the Assault plan once it can.
+const RESEARCH_ORDER := ["supply_efficiency", "composite_armor", "adv_armor", "adv_training", "guided_munitions"]
+
+
+func _research() -> void:
+	for id in RESEARCH_ORDER:
+		if battle.has_upgrade(team, id) or battle.researching_at(team, id): continue
+		var d: Dictionary = Upgrades.DEFS[id]
+		if battle.cash[team] < int(d.cost) + 2500: return
+		for b in battle.structures(team, d.at):
+			if battle.research_problem(b, id) == "":
+				battle.issue({"type": "research", "team": team, "id": b.uid, "upgrade": id})
+				return
+	if battle.plan[team] == "" and battle.plan_pending[team] == "" and battle.plan_problem(team, "assault") == "":
+		battle.issue({"type": "plan", "team": team, "plan": "assault"})
 
 
 ## Oil derricks: send a pair of idle infantry to the nearest derrick we do not own (one team at a time).

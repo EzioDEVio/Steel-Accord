@@ -195,6 +195,21 @@
    "provenance": "Pixabay sound effects (client confirmed 2026-10-22, downloaded from pixabay.com/sound-effects); Pixabay Content License. Record each item page URL + uploader before release",
    "status": "dev_ok; release needs per-item page URL",
    "edits": "mono downmix 44.1 kHz, trim, DC removal, peak normalise, fades/loop crossfade, OGG q5"
+  },
+  "iran_shout": {
+   "file": "res://assets/audio/iran_shout.ogg",
+   "loop": false,
+   "use": "Iranian infantry battle shout (Farsi) when they open fire on the enemy",
+   "source_file": "Iranian_soldiers_shouting.mp3",
+   "source_sha256": "1f07ac178d973ee6b7e872a3c9834e9ebc441c7e8e0457bbad15bc17f08b2cad",
+   "window_s": [
+    0.0,
+    null
+   ],
+   "duration_s": 4.62,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-22; original source and licence not stated. Spoken content not verified by the developer.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, loudness normalise (-16 LUFS), 0.3 s fade-out, OGG q5"
   }
  }
 }

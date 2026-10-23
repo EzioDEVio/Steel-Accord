@@ -35,6 +35,8 @@ var vel := Vector3.ZERO
 var turret_yaw := 0.0
 var recoil := 0.0
 var altitude := 0.0
+var vet_xp := 0.0            # veterancy (see Veterancy)
+var vet_rank := 0
 var bank := 0.0
 var w_reload: Array = []
 var w_ammo: Array = []
@@ -516,6 +518,11 @@ func move_class() -> String:
 	return "tracked" if def.has("track_m_per_v") or kind in UnitDefs.TRACKED else "wheeled"
 
 
+## Sight radius including the team's battle plan (Recon).
+func sight_r() -> float:
+	return float(def.sight) * (battle.sight_mult(team) if team >= 0 and team < 2 else 1.0)
+
+
 func flat_dist(p: Vector3) -> float:
 	return Vector2(p.x - position.x, p.z - position.z).length()
 
@@ -620,7 +627,7 @@ func sim_tick(dt: float) -> void:
 	if target and (target.dead or not is_instance_valid(target)):
 		target = null; forced_target = false
 		if state == S.ATTACK: state = S.IDLE
-	if target and not forced_target and flat_dist(target.position) > def.sight * 1.2:
+	if target and not forced_target and flat_dist(target.position) > sight_r() * 1.2:
 		target = null
 	if domain == "jet":
 		_jet_tick(dt)
@@ -630,6 +637,7 @@ func sim_tick(dt: float) -> void:
 	_fire_weapons()
 	if def.has("heal"): _heal_aura(dt)
 	if state == S.LANDED and hp < def.hp: hp = minf(def.hp, hp + def.hp * 0.03 * dt)   # serviced on its pad
+	if vet_rank == 3 and hp < def.hp: hp = minf(def.hp, hp + def.hp * Veterancy.HEROIC_REPAIR * dt)
 	if gun:
 		recoil = move_toward(recoil, 0.0, dt * 1.6)
 		gun.position = gun_rest + Vector3(0, 0, recoil)
@@ -696,14 +704,14 @@ func _surface_tick(dt: float) -> void:
 			start_haul(null)
 	match state:
 		S.IDLE:
-			_acquire(def.sight * 0.8 if domain == "heli" else max_range_any() * 1.05)
+			_acquire(sight_r() * 0.8 if domain == "heli" else max_range_any() * 1.05)
 		S.MOVE:
 			moving = true
 			if _follow(dt):
 				if queue.is_empty(): state = S.IDLE; speed_cur = 0.0
 				else: goal = queue.pop_front(); _plan(goal)
 		S.ATTACK_MOVE:
-			_acquire(def.sight)
+			_acquire(sight_r())
 			if target and flat_dist(target.position) > max_range_vs(target) * 0.92:
 				moving = true; _chase(dt)
 			elif target == null:
@@ -721,11 +729,11 @@ func _surface_tick(dt: float) -> void:
 				_face(force_pos, dt)
 		S.GUARD:
 			if guard_unit and not guard_unit.dead: guard_pos = guard_unit.position
-			var leash: float = def.sight * 1.3
+			var leash: float = sight_r() * 1.3
 			if target and flat_dist(guard_pos) > leash:
 				target = null   # do not chase beyond the leash
 			if target == null:
-				var t: Unit = battle.find_enemy_near_point(self, guard_pos, def.sight)
+				var t: Unit = battle.find_enemy_near_point(self, guard_pos, sight_r())
 				if t: target = t
 			if target and flat_dist(target.position) > max_range_vs(target) * 0.92:
 				moving = true; _chase(dt)
@@ -827,7 +835,7 @@ func _haul_tick(dt: float) -> void:
 			altitude = move_toward(altitude, 6.0, dt * 4.0)
 			haul_t -= dt
 			if haul_t <= 0.0:
-				battle.deliver(team, cargo)
+				battle.deliver(team, int(round(cargo * battle.income_mult(team))))
 				cargo = 0
 				haul_phase = 0
 	vel = forward() * speed_cur
@@ -920,7 +928,9 @@ func _heal_aura(dt: float) -> void:
 			if t == "infantry" and u.def.get("visual", "") == "infantry": kind_ok = true
 			if t == "vehicle" and u.domain == "ground" and u.def.get("visual", "") != "infantry": kind_ok = true
 		if kind_ok and flat_dist(u.position) <= float(h.radius):
+			var before: float = u.hp
 			u.hp = minf(u.def.hp, u.hp + u.def.hp * float(h.per_s))
+			add_xp((u.hp - before) / 20.0)      # support units are promoted for healing / repairing
 
 
 func weapons_ready() -> bool:
@@ -962,7 +972,7 @@ func _steer_to(p: Vector3, dt: float) -> void:
 	heading = wrapf(heading + clampf(diff, -step, step), -PI, PI)
 	var align := clampf(cos(diff), 0.0, 1.0)
 	var ts: float = def.speed * align * align
-	if domain == "ground": ts *= battle.terrain_speed_mult(self)
+	if domain == "ground": ts *= battle.terrain_speed_mult(self) * battle.speed_mult(self)
 	ts = minf(ts, maxf(2.0, to.length() * 1.2))
 	speed_cur = move_toward(speed_cur, ts, def.accel * dt)
 	position += forward() * speed_cur * dt
@@ -1041,10 +1051,10 @@ func _jet_tick(dt: float) -> void:
 				if queue.is_empty(): state = S.IDLE
 				else: goal = queue.pop_front()
 			steer = _orbit_point(goal, 60.0) if state == S.IDLE else goal
-			if state == S.IDLE: _acquire(def.sight * 0.7)
+			if state == S.IDLE: _acquire(sight_r() * 0.7)
 			if state == S.IDLE and target: state = S.ATTACK
 		S.ATTACK_MOVE:
-			_acquire(def.sight)
+			_acquire(sight_r())
 			steer = _run_steer(target.position, dt) if target else goal
 			if target == null and flat_dist(goal) < 25.0: state = S.IDLE
 		S.ATTACK:
@@ -1054,7 +1064,7 @@ func _jet_tick(dt: float) -> void:
 			steer = _run_steer(force_pos, dt)
 		S.GUARD:
 			if guard_unit and not guard_unit.dead: guard_pos = guard_unit.position
-			if target == null: target = battle.find_enemy_near_point(self, guard_pos, def.sight)
+			if target == null: target = battle.find_enemy_near_point(self, guard_pos, sight_r())
 			steer = _run_steer(target.position, dt) if target else _orbit_point(guard_pos, 60.0)
 		S.RETURN when has_runway:
 			# land on the runway: long final aligned with it, touch down at the threshold, roll out, taxi back
@@ -1178,7 +1188,7 @@ func _aim_turret(dt: float) -> void:
 	if turret == null: return
 	var want_local := 0.0
 	var aim_at: Variant = null
-	if target and flat_dist(target.position) <= def.sight: aim_at = target.position
+	if target and flat_dist(target.position) <= sight_r(): aim_at = target.position
 	elif state == S.FORCE_GROUND: aim_at = force_pos
 	if aim_at != null:
 		var to: Vector3 = aim_at - position
@@ -1214,7 +1224,7 @@ func _fire_weapons() -> void:
 		else:
 			facing_err = absf(wrapf(bearing - heading, -PI, PI))
 			if facing_err > deg_to_rad(w.get("facing_deg", 15.0)): continue
-		w_reload[i] = w.reload
+		w_reload[i] = w.reload * Veterancy.mult(self, "reload")
 		if w_ammo[i] > 0: w_ammo[i] -= 1
 		if w.proj in ["shell", "arty"]: recoil = 0.55
 		last_fire_t = battle.sim_time
@@ -1228,12 +1238,22 @@ func muzzle_pos() -> Vector3:
 
 func take_damage(amount: float, from: Unit) -> void:
 	if dead: return
+	amount *= Veterancy.mult(self, "taken") * battle.taken_mult(self)
 	hp -= amount
 	if hp <= 0.0:
 		hp = 0.0
 		die()
+		if from and not from.dead and from.team != team and from.team >= 0: from.add_xp(Veterancy.kill_xp(self))
 	elif target == null and from and not from.dead and can_target(from) and state in [S.IDLE, S.GUARD]:
 		target = from   # return fire
+
+
+func add_xp(x: float) -> void:
+	if x <= 0.0 or dead or not Veterancy.eligible(self): return
+	vet_xp += x * battle.xp_mult(team)
+	while vet_rank < Veterancy.RANKS.size() - 1 and vet_xp >= Veterancy.XP_TO_RANK[vet_rank + 1]:
+		vet_rank += 1
+		battle.on_promoted(self)
 
 
 func die() -> void:

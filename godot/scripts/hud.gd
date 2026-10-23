@@ -27,6 +27,9 @@ var help_btn: Button
 var menu_btn: Button
 var portraits := {}
 var econ: EconPanel
+var inspector: Inspector
+var layer: CanvasLayer
+var ui_scale := 1.0     # HUD scale: 1.0 up to 1080p, larger on 1440p / 4K (Options: UI scale)
 var prod_strip: VBoxContainer
 var _strip_sig := ""
 
@@ -55,6 +58,9 @@ func _ready() -> void:
 	econ = EconPanel.new()
 	econ.battle = battle; econ.commander = commander; econ.hud = self
 	add_child(econ)
+	inspector = Inspector.new()
+	inspector.battle = battle; inspector.commander = commander; inspector.hud = self
+	add_child(inspector)
 
 
 func _style(c: Color, border: Color) -> StyleBoxFlat:
@@ -140,12 +146,21 @@ func _toggle_scheme() -> void:
 	flash_message("Mouse scheme: %s" % ("left click commands, right click deselects" if commander.scheme == "classic" else "right click commands"))
 
 
+## Auto: 1.0 up to 1080 lines, then proportional (1440p -> 1.33, 2160p -> 2.0). A fixed value from Options wins.
+func _wanted_scale() -> float:
+	var fixed: float = float(Game.settings.get("ui_scale", 0.0))
+	if fixed > 0.0: return fixed
+	return maxf(1.0, get_viewport().get_visible_rect().size.y / 1080.0)
+
+
 func flash_message(t: String) -> void:
 	msg = t; msg_t = 4.0
 
 
 func _process(dt: float) -> void:
-	size = get_viewport_rect().size
+	ui_scale = _wanted_scale()
+	if layer: layer.scale = Vector2(ui_scale, ui_scale)
+	size = get_viewport_rect().size / ui_scale
 	position = Vector2.ZERO
 	msg_t = maxf(0.0, msg_t - dt)
 	mini_rect = Rect2(14, size.y - 224, 210, 210)
@@ -153,6 +168,9 @@ func _process(dt: float) -> void:
 	card.position = Vector2(maxf(632.0, size.x - 4 * 154 - 200), size.y - 82)
 	power_box.position = Vector2(size.x - 198, 56)
 	econ.position = Vector2(card.position.x, size.y - 12 - econ.height - (84.0 if card.visible else 0.0))
+	if inspector:
+		var ih: float = inspector.get_combined_minimum_size().y
+		inspector.position = Vector2(236, size.y - 12 - ih)
 	scheme_btn.position = Vector2(14, 10)
 	help_btn.position = Vector2(210, 10)
 	menu_btn.position = Vector2(346, 10)
@@ -256,6 +274,16 @@ func _portrait(u: Unit) -> Texture2D:
 	return portraits[u.kind]
 
 
+## Rank badge: one to three gold chevrons (Veteran / Elite / Heroic).
+func _draw_chevrons(p: Vector2, rank: int) -> void:
+	var gold := Color(1.0, 0.82, 0.3) if rank < 3 else Color(1.0, 0.55, 0.25)
+	for i in rank:
+		var y := p.y - i * 4.0
+		var pts := PackedVector2Array([p + Vector2(-5, y - p.y), p + Vector2(0, y - p.y + 4), p + Vector2(5, y - p.y)])
+		draw_polyline(pts, Color(0, 0, 0, 0.8), 3.5)
+		draw_polyline(pts, gold, 2.0)
+
+
 func _draw() -> void:
 	if battle == null: return
 	var cam := camera.cam
@@ -263,11 +291,14 @@ func _draw() -> void:
 	# health bars (selected, damaged or hovered)
 	for u: Unit in battle.units:
 		if u.dead or not battle.is_visible_to(commander.team, u): continue
-		if not (u.selected or u.hp < u.def.hp or u == commander.hover): continue
+		var show_bar: bool = u.selected or u.hp < u.def.hp or u == commander.hover
+		if not show_bar and u.vet_rank == 0: continue
 		var top: Vector3 = u.world_center() + Vector3.UP * (u.def.height + 1.5)
 		if cam.is_position_behind(top): continue
-		var sp := cam.unproject_position(top)
+		var sp := cam.unproject_position(top) / ui_scale
 		var w := 46.0
+		if u.vet_rank > 0: _draw_chevrons(sp + Vector2(-w / 2 - 12, -2), u.vet_rank)
+		if not show_bar: continue
 		var r := Rect2(sp - Vector2(w / 2, 0), Vector2(w, 5))
 		var f: float = u.hp / u.def.hp
 		draw_rect(r.grow(1), Color(0, 0, 0, 0.75))
@@ -277,11 +308,11 @@ func _draw() -> void:
 		if u.selected and u.domain == "jet":
 			_text(sp + Vector2(-w / 2, 18), _ammo_text(u), 11, Color(1, 0.85, 0.5))
 	if commander.dragging and commander.drag_from.distance_to(commander.drag_to) > 6.0 and commander.mode == "":
-		var r := Rect2(commander.drag_from, Vector2.ZERO).expand(commander.drag_to)
+		var r := Rect2(commander.drag_from / ui_scale, Vector2.ZERO).expand(commander.drag_to / ui_scale)
 		draw_rect(r, Color(0.4, 1.0, 0.55, 0.12))
 		draw_rect(r, Color(0.4, 1.0, 0.55, 0.9), false, 1.5)
 	_draw_minimap()
-	_draw_selection_panel()
+	if inspector == null or not inspector.visible: _draw_selection_panel()
 	_draw_status()
 	if show_help: _draw_help()
 	if commander.mode != "":
@@ -322,8 +353,8 @@ func _draw_waypoints() -> void:
 			var a: Vector3 = pts[i]
 			var b: Vector3 = pts[i + 1]
 			if cam.is_position_behind(a) or cam.is_position_behind(b): continue
-			draw_line(cam.unproject_position(a + Vector3.UP * 0.3), cam.unproject_position(b + Vector3.UP * 0.3), Color(0.5, 1, 0.7, 0.7), 1.5)
-			draw_circle(cam.unproject_position(b + Vector3.UP * 0.3), 4.0, Color(0.5, 1, 0.7, 0.9))
+			draw_line(cam.unproject_position(a + Vector3.UP * 0.3) / ui_scale, cam.unproject_position(b + Vector3.UP * 0.3) / ui_scale, Color(0.5, 1, 0.7, 0.7), 1.5)
+			draw_circle(cam.unproject_position(b + Vector3.UP * 0.3) / ui_scale, 4.0, Color(0.5, 1, 0.7, 0.9))
 
 
 func _draw_minimap() -> void:
@@ -427,6 +458,11 @@ func _draw_status() -> void:
 		_text(r2.position + Vector2(104, 29), "-%d/min" % int(tr.y), 11, Color(1.0, 0.6, 0.5))
 		var g: int = battle.power_gen(t); var c: int = battle.power_use(t)
 		_text(r2.position + Vector2(196, 23), "Power %d / %d" % [c, g], 15, Color(0.6, 0.95, 0.6) if g >= c else Color(1.0, 0.4, 0.3))
+		var pl: String = battle.plan[t]
+		if pl != "" or battle.plan_pending[t] != "":
+			var r3 := Rect2(r2.position.x, 48, 170, 26)
+			_panel(r3)
+			_text(r3.position + Vector2(10, 18), "Plan: " + (Upgrades.PLANS[pl].name if pl != "" else "switching..."), 13, Color(0.95, 0.85, 0.55))
 		if g < c: _text(r2.position + Vector2(14, 52), "LOW POWER: half-speed build", 12, Color(1.0, 0.45, 0.35))
 	if msg_t > 0.0:
 		var s := font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, 16)

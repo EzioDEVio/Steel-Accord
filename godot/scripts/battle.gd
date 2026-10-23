@@ -116,6 +116,7 @@ func _ready() -> void:
 	add_child(layer)
 	hud = HUD.new()
 	hud.battle = self; hud.commander = commander; hud.camera = camera
+	hud.layer = layer
 	layer.add_child(hud)
 	var diff: Dictionary = Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"])
 	if scenario == "army":
@@ -418,6 +419,23 @@ func _execute(cmd: Dictionary) -> void:
 		var pu: Unit = by_id.get(cmd.passenger)
 		if tr and pu and not tr.dead and tr.team == cmd.team and tr.can_exchange(): unload_one(tr, pu)
 		return
+	if cmd.type in ["research", "cancel_research"]:
+		var rb: Building = by_id.get(cmd.id)
+		if rb == null or rb.dead or rb.team != cmd.team: return
+		if cmd.type == "research":
+			if research_problem(rb, cmd.upgrade) != "": return
+			spend(cmd.team, int(Upgrades.DEFS[cmd.upgrade].cost))
+			rb.research_id = cmd.upgrade; rb.research_left = float(Upgrades.DEFS[cmd.upgrade].time)
+		elif rb.research_id != "":
+			cash[cmd.team] += int(Upgrades.DEFS[rb.research_id].cost)
+			rb.research_id = ""; rb.research_left = 0.0
+		return
+	if cmd.type == "plan":
+		if plan_problem(cmd.team, cmd.plan) != "": return
+		plan_pending[cmd.team] = cmd.plan
+		plan_switch_t[cmd.team] = sim_time + (Upgrades.PLAN_SWITCH_S if plan[cmd.team] != "" else 5.0)
+		plan[cmd.team] = ""      # the old plan stops while the new one is being prepared
+		return
 	if cmd.type in ["place", "produce", "cancel_unit", "rally", "sell", "cancel_build", "repair"]:
 		_execute_econ(cmd)
 		return
@@ -482,6 +500,7 @@ func sim_tick(dt: float) -> void:
 	_update_supply_drops(dt)
 	_ground_units(dt)
 	_update_derricks(dt)
+	_update_plans()
 	if tick_n % 150 == 0:
 		trend_samples.append([sim_time, income[0], spent[0], income[1], spent[1]])
 		while trend_samples.size() > 13: trend_samples.pop_front()
@@ -576,6 +595,7 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 	aim += Vector3(rng.randf_range(-sc, sc), rng.randf_range(-sc, sc) * 0.3, rng.randf_range(-sc, sc))
 	var dir: Vector3 = (aim - from).normalized()
 	_fire_sound(shooter, w, from)
+	_battle_cry(shooter)
 	var node: Node3D
 	match w.proj:
 		"missile", "rocket":
@@ -599,6 +619,22 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 		"shooter": shooter, "target": tunit, "dmg": float(w.damage), "splash": float(w.splash),
 		"homing": w.proj == "missile", "kind": w.proj, "targets": w.targets, "vs": w.get("vs", {}),
 		"arc": w.proj == "arty", "dist0": maxf(dist, 1.0)})
+
+
+## Nation battle cries: Iranian infantry shout (Farsi, client-supplied clip) when they open fire on the enemy.
+## At most one cry per team every 14 s so a firefight does not turn into a loop. Presentation only.
+const BATTLE_CRY := {"iran": "iran_shout"}
+var cry_t := [-99.0, -99.0]
+var cries := 0
+
+
+func _battle_cry(shooter: Unit) -> void:
+	if shooter.def.get("visual") != "infantry" or shooter.team < 0 or shooter.team > 1: return
+	var clip: String = BATTLE_CRY.get(nation_of(shooter.team), "")
+	if clip == "" or sim_time - cry_t[shooter.team] < 14.0: return
+	cry_t[shooter.team] = sim_time
+	cries += 1
+	SFX.play(shooter.body, clip, shooter.global_position, 2.0, 1.0, true)
 
 
 var _snd_t := {}   # "uid:clip" -> sim time of the last report, so automatic weapons play one burst sound per burst
@@ -655,7 +691,7 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 	if t and is_instance_valid(t) and not t.dead:
 		var c := t.world_center()
 		direct = c.distance_to(p) < t.def.radius * 1.4 + 1.0
-		if direct: t.take_damage(s.dmg * rng.randf_range(0.85, 1.15) * _dmg_mult(s.shooter) * _armor_mult(s, t), s.shooter)
+		if direct: t.take_damage(s.dmg * rng.randf_range(0.85, 1.15) * _dmg_mult(s.shooter) * dealt_mult(s.shooter, t) * _armor_mult(s, t), s.shooter)
 	if diag and s.shooter and s.shooter.team == 0: diag.on_shot(s.shooter, t, p, direct)
 	if s.splash > 0.0:
 		for o in units:
@@ -663,7 +699,7 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 			if o.domain == "heli" and not ("heli" in s.targets): continue
 			var d := o.world_center().distance_to(p)
 			if d < s.splash:
-				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash) * _armor_mult(s, o), s.shooter)
+				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash) * dealt_mult(s.shooter, o) * _armor_mult(s, o), s.shooter)
 	var gy := ground_h(p.x, p.z)
 	var ground := p.y < gy + 1.5
 	if s.kind == "arty":
@@ -685,8 +721,17 @@ func _armor_mult(s: Dictionary, o: Unit) -> float:
 
 # ------------------------------------------------------------------ support powers
 func _dmg_mult(shooter: Unit) -> float:
-	if shooter == null or shooter.team != 1 or _automated(): return 1.0
-	return float(Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"]).damage_mult)
+	var vet: float = Veterancy.mult(shooter, "dmg") if is_instance_valid(shooter) else 1.0
+	if shooter == null or shooter.team != 1 or _automated(): return vet
+	return vet * float(Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"]).damage_mult)
+
+
+var promotions := 0
+
+
+func on_promoted(u: Unit) -> void:
+	promotions += 1
+	if u.team == 0 and hud: hud.flash_message("%s promoted to %s" % [u.def.name, Veterancy.RANKS[u.vet_rank]])
 
 
 func power_cooldown_left(team: int, id: String) -> float:
@@ -888,7 +933,7 @@ func _update_fog() -> void:
 	var cell := FOG_RECT.size.x / FOG_N
 	var eyes: Array = []
 	for u in units:
-		if u.team == 0 and not u.dead: eyes.append([u.position, float(u.def.sight)])
+		if u.team == 0 and not u.dead: eyes.append([u.position, u.sight_r()])
 	for z in reveal_zones:
 		if z.team != 0: continue
 		var steps := int(z.a.distance_to(z.b) / (z.w * 0.4)) + 1
@@ -1385,8 +1430,9 @@ func _update_supply_drops(dt: float) -> void:
 			c.pos.y = cgy
 			c.node.position = c.pos
 			if c.canopy: c.canopy.visible = false
-			deliver(c.team, c.value)
-			drop_income[c.team] += c.value
+			var cv := int(round(c.value * income_mult(c.team)))
+			deliver(c.team, cv)
+			drop_income[c.team] += cv
 			FX.impact(self, c.pos, false)
 			if c.team == 0 and hud: hud.flash_message("Supply crate +$%d" % c.value)
 			drop_crates.erase(c)
@@ -1642,9 +1688,10 @@ func _update_derricks(dt: float) -> void:
 			e.timer += dt
 			if e.timer >= e.every:
 				e.timer -= e.every
-				deliver(e.owner, e.income)
-				derrick_income[e.owner] += e.income
-				e.paid[e.owner] += e.income
+				var pay := int(round(e.income * income_mult(e.owner)))
+				deliver(e.owner, pay)
+				derrick_income[e.owner] += pay
+				e.paid[e.owner] += pay
 			e.phase += dt * 2.4
 			# crank turns; the walking beam follows the crank through the pitman (ratio from the model: 1.0 / 2.2)
 			if e.crank: (e.crank as Node3D).rotation.x = e.phase
@@ -1704,3 +1751,97 @@ func play_loop(n: Node, anim_name: String) -> void:
 	if not ap.has_animation(nm): return
 	ap.get_animation(nm).loop_mode = Animation.LOOP_LINEAR
 	ap.play(nm)
+
+
+# ------------------------------------------------------------------ upgrades and battle plans (M8)
+var upgrades := [{}, {}]          # team -> {upgrade id: true}
+var plan := ["", ""]              # active battle plan per team ("" = none)
+var plan_pending := ["", ""]      # plan being switched to
+var plan_switch_t := [0.0, 0.0]   # sim time when the pending plan becomes active
+
+
+func has_upgrade(team: int, id: String) -> bool:
+	return team >= 0 and team < 2 and upgrades[team].has(id)
+
+
+## Who is researching `id` for `team` right now (null if nobody).
+func researching_at(team: int, id: String) -> Building:
+	for b in structures(team):
+		if b.research_id == id: return b
+	return null
+
+
+## "" if `id` can be researched at structure b now, else the reason.
+func research_problem(b: Building, id: String) -> String:
+	var d: Dictionary = Upgrades.DEFS[id]
+	if b.bkind != d.at: return "Researched at the %s" % BuildingDefs.DEFS[d.at].name
+	if has_upgrade(b.team, id): return "Installed"
+	if researching_at(b.team, id): return "Already researching"
+	if b.research_id != "": return "This building is researching"
+	if not b.built: return "Under construction"
+	for r in d.requires:
+		if structures(b.team, r).is_empty(): return "Requires " + BuildingDefs.DEFS[r].name
+	if cash[b.team] < int(d.cost): return "Not enough cash"
+	return ""
+
+
+func complete_upgrade(team: int, id: String) -> void:
+	upgrades[team][id] = true
+	print("UPGRADE team %d %s t=%.1f" % [team, id, sim_time])
+	if team == 0 and hud: hud.flash_message("Research complete: %s" % Upgrades.DEFS[id].name)
+
+
+func plan_problem(team: int, id: String) -> String:
+	if not Upgrades.PLANS.has(id): return "Unknown plan"
+	if structures(team, "command_center").is_empty(): return "Requires a Command Center"
+	if not has_upgrade(team, Upgrades.PLAN_REQUIRES): return "Requires " + Upgrades.DEFS[Upgrades.PLAN_REQUIRES].name
+	if plan[team] == id or plan_pending[team] == id: return "Already selected"
+	return ""
+
+
+func _update_plans() -> void:
+	for t in 2:
+		if plan_pending[t] != "" and sim_time >= plan_switch_t[t]:
+			plan[t] = plan_pending[t]; plan_pending[t] = ""
+			if t == 0 and hud: hud.flash_message("Battle plan active: %s" % Upgrades.PLANS[plan[t]].name)
+
+
+func _plan_effect(team: int, key: String) -> float:
+	if team < 0 or team > 1 or plan[team] == "": return 1.0
+	return float(Upgrades.PLANS[plan[team]].effect.get(key, 1.0))
+
+
+## Damage-taken multiplier from upgrades and the battle plan (veterancy is applied in Unit.take_damage).
+func taken_mult(u: Unit) -> float:
+	if u.team < 0 or u.team > 1 or u is Building: return 1.0
+	var m := 1.0
+	for id in upgrades[u.team]:
+		if Upgrades.DEFS[id].effect.has("taken") and Upgrades.applies(id, u): m *= float(Upgrades.DEFS[id].effect.taken)
+	if u.domain == "ground": m *= _plan_effect(u.team, "taken")
+	return m
+
+
+## Damage-dealt multiplier from upgrades and the battle plan for shooter against target.
+func dealt_mult(shooter: Unit, target: Unit) -> float:
+	if shooter == null or not is_instance_valid(shooter) or shooter.team < 0 or shooter.team > 1 or shooter is Building: return 1.0
+	var m := 1.0
+	if has_upgrade(shooter.team, "guided_munitions") and Upgrades.applies("guided_munitions", shooter) and (target == null or target.domain == "ground"):
+		m *= float(Upgrades.DEFS.guided_munitions.effect.dmg_ground)
+	if shooter.domain == "ground": m *= _plan_effect(shooter.team, "dmg")
+	return m
+
+
+func sight_mult(team: int) -> float:
+	return _plan_effect(team, "sight")
+
+
+func speed_mult(u: Unit) -> float:
+	return _plan_effect(u.team, "speed") if u.domain == "ground" and not (u is Building) else 1.0
+
+
+func xp_mult(team: int) -> float:
+	return float(Upgrades.DEFS.adv_training.effect.xp) if has_upgrade(team, "adv_training") else 1.0
+
+
+func income_mult(team: int) -> float:
+	return float(Upgrades.DEFS.supply_efficiency.effect.income) if has_upgrade(team, "supply_efficiency") else 1.0

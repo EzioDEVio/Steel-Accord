@@ -17,6 +17,7 @@ var settings := {
 	"map": "proving_ground",
 	"nation0": "usa",
 	"nation1": "iran",
+	"ui_scale": 0.0,
 }
 
 ## Skirmish maps offered in the menu (id -> label). Heightfield maps live in res://maps/<id>/.

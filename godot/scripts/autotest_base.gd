@@ -89,6 +89,8 @@ func _run_qa() -> void:
 	await _until(func(): return wf != null and wf.built, 45.0)
 	await _qa_checks(ccp, bk, wf)
 	await _qa_m1(ccp)
+	await _qa_m7(ccp)
+	await _qa_m8(ccp)
 	_finish()
 
 
@@ -406,6 +408,107 @@ func _press_button_if(b: Building, k: String) -> void:
 	await _sel([b]); await _frames(3)
 	if battle.hud.econ.buttons.has(k) and not battle.hud.econ.buttons[k].disabled:
 		_press_button(battle.hud.econ.buttons[k]); await _frames(2)
+
+
+## M7: universal inspector and veterancy.
+func _qa_m7(ccp: Vector3) -> void:
+	var insp: Inspector = battle.hud.inspector
+	var rm: Unit = battle._spawn("rifleman", 0, ccp + Vector3(20, 0, -40), 0.0)
+	await _sel([rm]); await _wait_sim(0.4)
+	var txt: String = insp.body.get_parsed_text()
+	_log("inspector_unit", insp.visible and insp.title.text == rm.def.name and "Weapons" in txt and "Veterancy: Recruit" in txt,
+		"title=%s visible=%s" % [insp.title.text, str(insp.visible)])
+	var bk: Array = battle.structures(0, "barracks")
+	if not bk.is_empty():
+		var b: Building = bk[0]
+		battle.cash[0] += 2000
+		battle.issue({"type": "produce", "team": 0, "id": b.uid, "kind": "rifleman"})
+		await _wait_sim(0.3)
+		battle.commander._set_selection([]); battle.commander.sel_building = b
+		await _wait_sim(0.5)
+		txt = insp.body.get_parsed_text()
+		_log("inspector_building_queue", insp.title.text == b.bdef.name and "Production" in txt and "ETA" in txt, txt.substr(0, 160).replace("\n", " | "))
+	var af: Array = battle.structures(0, "airfield")
+	if not af.is_empty():
+		battle.commander.sel_building = af[0]
+		await _wait_sim(0.5)
+		txt = insp.body.get_parsed_text()
+		_log("inspector_airfield_pads", "Pads" in txt and "Pad 1:" in txt and "Pad 4:" in txt, txt.substr(txt.find("Pads"), 140).replace("\n", " | "))
+		battle.commander.sel_building = null
+	var grp: Array = [rm, battle._spawn("rifleman", 0, rm.position + Vector3(3, 0, 0), 0.0), battle._spawn("abrams", 0, rm.position + Vector3(10, 0, 0), 0.0)]
+	await _sel(grp); await _wait_sim(0.4)
+	var rows := insp.roster.get_child_count()
+	_log("inspector_group", insp.title.text == "3 selected" and rows == 2, "title=%s roster rows=%d" % [insp.title.text, rows])
+	# veterancy: kills promote, bonuses apply in the simulation and show in the inspector
+	var foe: Unit = battle._spawn("abrams", 1, rm.position + Vector3(0, 0, -200), 0.0)
+	var hp0: float = rm.hp
+	rm.take_damage(10.0, foe)
+	var taken0: float = hp0 - rm.hp
+	for i in 2:
+		var v: Unit = battle._spawn("abrams", 1, rm.position + Vector3(30 + i * 6, 0, -200), 0.0)
+		v.take_damage(99999.0, rm)
+	var promoted: bool = rm.vet_rank >= 1
+	var hp1: float = rm.hp
+	rm.take_damage(10.0, foe)
+	var taken1: float = hp1 - rm.hp
+	await _sel([rm]); await _wait_sim(0.4)
+	txt = insp.body.get_parsed_text()
+	_log("veterancy_promotion", promoted and taken1 < taken0 and "Veterancy: Veteran" in txt and "damage taken" in txt,
+		"rank=%s xp=%d damage taken %.1f -> %.1f, promotions=%d" % [Veterancy.RANKS[rm.vet_rank], int(rm.vet_xp), taken0, taken1, battle.promotions])
+	foe.take_damage(99999.0, null)
+	# pin keeps the object after deselecting; close hides until a new selection
+	insp._toggle_pin()
+	await _sel([]); await _wait_sim(0.4)
+	var pinned_ok: bool = insp.visible and insp.title.text == rm.def.name
+	insp._toggle_pin()
+	await _sel([]); await _wait_sim(0.4)
+	_log("inspector_pin", pinned_ok and not insp.visible, "pinned shown=%s, after unpin visible=%s" % [str(pinned_ok), str(insp.visible)])
+
+
+## M8: research at structures (real cost, progress, cancel refund, effect on listed units only) and battle plans.
+func _qa_m8(ccp: Vector3) -> void:
+	battle.cash[0] += 20000
+	var wfs: Array = battle.structures(0, "war_factory")
+	var wf: Building = wfs[0] if not wfs.is_empty() else battle.add_structure("war_factory", 0, ccp + Vector3(0, 0, -70), true)
+	await _sel([]); battle.commander.sel_building = wf
+	await _wait_sim(0.4)
+	var btn: Button = battle.hud.econ.buttons.get("up:composite_armor")
+	var c0: int = battle.cash[0]
+	if btn and not btn.disabled: _press_button(btn)
+	await _wait_sim(0.5)
+	_log("research_starts", wf.research_id == "composite_armor" and battle.cash[0] == c0 - 1500, "research=%s cash %d -> %d" % [wf.research_id, c0, battle.cash[0]])
+	# cancel refunds, restart
+	battle.issue({"type": "cancel_research", "team": 0, "id": wf.uid}); await _wait_sim(0.3)
+	var refunded: bool = wf.research_id == "" and battle.cash[0] == c0
+	battle.issue({"type": "research", "team": 0, "id": wf.uid, "upgrade": "composite_armor"}); await _wait_sim(0.3)
+	_log("research_cancel_refund", refunded and wf.research_id == "composite_armor", "refunded=%s" % str(refunded))
+	var tank: Unit = battle._spawn("abrams", 0, ccp + Vector3(-30, 0, -60), 0.0)
+	var jeep: Unit = battle._spawn("hmmwv_50cal", 0, ccp + Vector3(-40, 0, -60), 0.0)
+	var t_before := tank.hp; tank.take_damage(100.0, null); var dt0: float = t_before - tank.hp
+	await _until(func(): return battle.has_upgrade(0, "composite_armor"), 60.0)
+	var t1 := tank.hp; tank.take_damage(100.0, null); var dt1: float = t1 - tank.hp
+	var j1 := jeep.hp; jeep.take_damage(100.0, null); var dj: float = j1 - jeep.hp
+	_log("composite_armor_effect", battle.has_upgrade(0, "composite_armor") and dt1 < dt0 * 0.9 and is_equal_approx(dj, 100.0),
+		"Abrams takes %.0f -> %.0f; HMMWV .50 (not armoured) takes %.0f" % [dt0, dt1, dj])
+	await _sel([tank]); await _wait_sim(0.4)
+	var ti: String = battle.hud.inspector.body.get_parsed_text()
+	await _sel([jeep]); await _wait_sim(0.4)
+	var ji: String = battle.hud.inspector.body.get_parsed_text()
+	_log("inspector_upgrade_states", "Composite Armor: Installed" in ti and not ("Composite Armor" in ji), "tank lists it installed; HMMWV .50 does not list it")
+	# battle plans: locked until Advanced Training; then a plan activates, and switching has a delay
+	var cc: Building = battle.structures(0, "command_center")[0]
+	var why0: String = battle.plan_problem(0, "assault")
+	battle.issue({"type": "research", "team": 0, "id": cc.uid, "upgrade": "adv_training"})
+	await _until(func(): return battle.has_upgrade(0, "adv_training"), 70.0)
+	battle.issue({"type": "plan", "team": 0, "plan": "assault"})
+	await _until(func(): return battle.plan[0] == "assault", 10.0)
+	var m_assault: float = battle.dealt_mult(tank, null)
+	battle.issue({"type": "plan", "team": 0, "plan": "fortify"})
+	await _wait_sim(1.0)
+	var gap: bool = battle.plan[0] == "" and battle.plan_pending[0] == "fortify"
+	await _until(func(): return battle.plan[0] == "fortify", 20.0)
+	_log("battle_plans", why0.begins_with("Requires") and is_equal_approx(m_assault, 1.1) and gap and battle.plan[0] == "fortify" and battle.taken_mult(jeep) < 1.0,
+		"locked before: '%s'; assault dmg x%.2f; switching gap=%s; fortify active, HMMWV taken x%.2f" % [why0, m_assault, str(gap), battle.taken_mult(jeep)])
 
 
 func _finish() -> void:

@@ -55,6 +55,11 @@ func _make(key: String, title: String, cost: int, icon_path: String, cb: Callabl
 	l.position = Vector2(2, 41); l.size = Vector2(BTN.x - 4, 18)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.clip_text = true
+	if t == null:      # text-only buttons (research, plans): wrap over the whole button
+		l.position = Vector2(3, 3); l.size = Vector2(BTN.x - 6, BTN.y - 6)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		l.add_theme_font_size_override("font_size", 11)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(l)
 	add_child(b)
@@ -135,6 +140,33 @@ func _process(_dt: float) -> void:
 			buttons[k].tooltip_text = "%s - $%d, %d s\n%s%s" % [d.name, BuildingDefs.UNIT_COST[k][0], int(BuildingDefs.UNIT_COST[k][1]),
 				d.get("role", ""), ("\n" + why) if why != "" else ""]
 			if Nations.is_placeholder(battle.nation_of(team), k): buttons[k].tooltip_text += "\n(Shared placeholder model until the Iran art pack arrives)"
+		for key in buttons:
+			if key.begins_with("up:"):
+				var id: String = key.substr(3)
+				var d: Dictionary = Upgrades.DEFS[id]
+				var why: String = battle.research_problem(b, id)
+				var bt: Button = buttons[key]
+				var state := ""
+				if battle.has_upgrade(team, id): state = "INSTALLED"
+				elif b.research_id == id: state = "%d%% - click to cancel" % int(100.0 * (1.0 - b.research_left / float(d.time)))
+				elif battle.researching_at(team, id): state = "researching elsewhere"
+				bt.disabled = state == "" and why != ""
+				if state == "INSTALLED": bt.disabled = true
+				var lab := bt.get_child(bt.get_child_count() - 1) as Label
+				lab.text = ("%s  %s" % [d.name, state]) if state != "" else "%s  $%d" % [d.name, int(d.cost)]
+				bt.tooltip_text = "%s - $%d, %d s research\n%s\nAffects: %s%s" % [d.name, int(d.cost), int(d.time), d.desc,
+					Upgrades.SCOPE_TEXT[d.scope], ("\n" + why) if why != "" and state == "" else ""]
+			elif key.begins_with("plan:"):
+				var pid: String = key.substr(5)
+				var pd: Dictionary = Upgrades.PLANS[pid]
+				var why2: String = battle.plan_problem(team, pid)
+				var pb: Button = buttons[key]
+				var st2 := "ACTIVE" if battle.plan[team] == pid else ("preparing %d s" % int(ceil(battle.plan_switch_t[team] - battle.sim_time)) if battle.plan_pending[team] == pid else "")
+				pb.disabled = why2 != ""
+				var lab2 := pb.get_child(pb.get_child_count() - 1) as Label
+				lab2.text = "Plan: %s %s" % [pd.name, st2]
+				pb.tooltip_text = "Battle plan %s: %s\nOne plan at a time; switching takes %d s (no plan while switching).%s" % [pd.name, pd.desc,
+					int(Upgrades.PLAN_SWITCH_S), ("\n" + why2) if why2 != "" and st2 == "" else ""]
 		if buttons.has("sell"): buttons["sell"].disabled = not b.built or b.bkind == "command_center"
 		if buttons.has("repair"):
 			var rb: Button = buttons["repair"]
@@ -184,6 +216,20 @@ func _build_structure_menu(b: Building) -> void:
 		var nm: String = d.name.split(" (")[0]
 		_make(k, nm, int(BuildingDefs.UNIT_COST[k][0]), icon, cb, _cell(i), "")
 		i += 1
+	# research at this structure, then battle plans (Command Center)
+	for id in Upgrades.DEFS:
+		if Upgrades.DEFS[id].at != b.bkind: continue
+		var uid: String = id
+		var cbr := func():
+			if b.research_id == uid: battle.issue({"type": "cancel_research", "team": team, "id": b.uid})
+			else: battle.issue({"type": "research", "team": team, "id": b.uid, "upgrade": uid})
+		_make("up:" + id, Upgrades.DEFS[id].name, int(Upgrades.DEFS[id].cost), "", cbr, _cell(i), "")
+		i += 1
+	if b.bkind == "command_center":
+		for pid in Upgrades.PLANS:
+			var pp: String = pid
+			_make("plan:" + pid, "Plan: " + Upgrades.PLANS[pid].name, 0, "", func(): battle.issue({"type": "plan", "team": team, "plan": pp}), _cell(i), "")
+			i += 1
 	# action row: Repair / Sell
 	var rep := func(): battle.issue({"type": "repair", "team": team, "id": b.uid, "on": not b.repairing})
 	var rb: Button = hud._button("Repair", rep, Vector2(BTN.x, 28))
