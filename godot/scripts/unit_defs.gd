@@ -123,9 +123,9 @@ static func def_of(k: String) -> Dictionary:
 	return derived(k)
 
 
-## Iranian infantry: same movement, animation set and mechanics as the U.S. counterpart (the user's direction), with
+## Iranian units derived from a base type. Infantry: same movement, animation set and mechanics as the U.S. counterpart (the user's direction), with
 ## their own 3D models, names and small stat differences. PROVISIONAL values.
-const IRAN_INFANTRY := {
+const IRAN_DERIVED := {
 	"ir_rifleman": ["rifleman", {"name": "Rifleman (Iran)", "role": "Infantry - effective vs infantry, weak vs armour", "weapon_id": "g3"}],
 	"ir_rpg": ["at4", {"name": "RPG Gunner", "role": "Anti-tank rocket launcher - effective vs vehicles", "weapon_id": "rpg7"}],
 	"ir_mg": ["m240_gunner", {"name": "Machine Gunner (Iran)", "role": "Belt-fed machine gun - heavy anti-infantry fire", "weapon_id": "pkm"}],
@@ -135,16 +135,30 @@ const IRAN_INFANTRY := {
 	"irgc_sf": ["special_forces", {"name": "IRGC Special Forces", "role": "Elite IRGC operator - tough, long-range rifle, high damage",
 		"hp": 190.0, "sight": 72.0, "weapon_id": "irgc_rifle", "damage_mult": 1.1}],
 	"ir_paratrooper": ["paratrooper", {"name": "Paratrooper (Iran)", "role": "Airborne rifleman - arrives by parachute"}],
+	# Iranian aircraft (wave 1): own 3D models with Iranian roundels / fin flash; mechanics follow the base type
+	"ir_f14": ["f22", {"name": "F-14 (interceptor)", "role": "Long-range interceptor - hunts aircraft, light ground strike", "length": 19.1, "hp": 400.0, "speed": 54.0}],
+	"ir_f4": ["f16", {"name": "F-4 (fighter-bomber)", "role": "Fighter-bomber - missile strikes on ground targets; rearms at its pad", "length": 19.2, "hp": 380.0, "speed": 48.0}],
+	"ir_su24": ["fa18", {"name": "Su-24 (strike aircraft)", "role": "Strike jet - heavy ground-attack missile load", "length": 22.6, "hp": 450.0, "speed": 46.0}],
+	"ir_ah1j": ["ah64", {"name": "AH-1J (attack helicopter)", "role": "Attack helicopter - rockets and guided missiles vs armour", "length": 14.3, "hp": 440.0, "rotor": 6.7}],
+	# Iranian ground vehicles (wave 1)
+	"ir_karrar": ["abrams", {"name": "Karrar (main battle tank)", "role": "Main battle tank - anti-armour", "track_m_per_v": 0.8956, "length": 9.5}],
+	"ir_t72s": ["abrams", {"name": "T-72S (main battle tank)", "role": "Older main battle tank with reactive armour - cheaper, lighter", "track_m_per_v": 0.8956, "length": 9.5, "hp": 760.0}],
+	"ir_bmp2": ["bradley", {"name": "BMP-2 (infantry fighting vehicle)", "role": "IFV - 30 mm autocannon vs light targets, ATGM vs armour; carries 7", "track_m_per_v": 0.8355, "length": 6.72,
+		"transport": {"capacity": 7, "accepts": ["infantry"]}}],
+	"ir_boragh": ["stryker", {"name": "Boragh (8x8 APC)", "role": "Wheeled infantry carrier - remote machine gun, fast; carries 8", "length": 7.6,
+		"transport": {"capacity": 8, "accepts": ["infantry"]}}],
+	"ir_engineer_dozer": ["dozer", {"name": "Engineer Dozer", "role": "Builder - constructs and rebuilds structures. Light machine gun mount (unarmed).", "track_m_per_v": 0.8956, "length": 7.6}],
+	"ir_ch47": ["ch47", {"name": "CH-47C (heavy-lift helicopter)", "role": "Supply hauler - carries cash from supply piles to the Supply Depot"}],
 }
 static var _derived := {}
 
 
 static func derived(k: String) -> Dictionary:
 	if _derived.has(k): return _derived[k]
-	if not IRAN_INFANTRY.has(k):
+	if not IRAN_DERIVED.has(k):
 		push_error("unknown unit kind " + k)
 		return BASE_UNITS.rifleman
-	var e: Array = IRAN_INFANTRY[k]
+	var e: Array = IRAN_DERIVED[k]
 	var d: Dictionary = def_of(e[0]).duplicate(true)
 	var o: Dictionary = e[1]
 	for key in o:
@@ -152,6 +166,8 @@ static func derived(k: String) -> Dictionary:
 		d[key] = o[key]
 	var path := "res://assets/units3d/%s/%s.glb" % [k, k]
 	if ResourceLoader.exists(path): d["model3d"] = path
+	var icon := "res://assets/iran/icons/%s_icon.png" % k
+	if ResourceLoader.exists(icon): d["icon"] = icon
 	for w in d.get("weapons", []):
 		if o.has("weapon_id"): w["id"] = o.weapon_id
 		if o.has("damage_mult"): w["damage"] = float(w.damage) * float(o.damage_mult)
@@ -162,7 +178,7 @@ static func derived(k: String) -> Dictionary:
 
 
 static func all_kinds() -> Array:
-	return DEFS.keys() + BASE_UNITS.keys() + IRAN_INFANTRY.keys()
+	return DEFS.keys() + BASE_UNITS.keys() + IRAN_DERIVED.keys()
 
 
 static func armor_of(d: Dictionary) -> String:
@@ -349,6 +365,9 @@ const POWERS := {
 	"paradrop": {"name": "Paratroopers", "model3d": "res://assets/units3d/c130/c130.glb", "aircraft": "c130", "sprite": "res://assets/aircraft/c130/c130_top.png",
 		"icon": "res://assets/aircraft/c130/c130_top.png", "length": 40.4, "cooldown": 150.0, "speed": 60.0, "altitude": 36.0,
 		"troops": 6, "unit": "paratrooper", "requires": "airfield"},
+	"shahed": {"name": "Shahed Drone Strike", "model3d": "res://assets/units3d/ir_shahed/ir_shahed.glb", "aircraft": "ir_shahed",
+		"icon": "res://assets/iran/icons/ir_shahed_icon.png", "length": 3.3, "cooldown": 100.0, "speed": 45.0, "altitude": 22.0,
+		"drones": 4, "damage": 240.0, "splash": 7.0},
 	"recon": {"name": "Recon Overflight", "model3d": "res://assets/units3d/sr71/sr71.glb", "aircraft": "sr71", "sprite": "res://assets/aircraft/sr71/sr71_top.png",
 		"icon": "res://assets/aircraft/sr71/sr71_icon.png", "length": 32.7, "cooldown": 60.0, "speed": 160.0, "altitude": 36.0,
 		"reveal_width": 70.0, "reveal_time": 25.0},

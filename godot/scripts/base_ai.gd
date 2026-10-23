@@ -108,12 +108,12 @@ func _slot(anchor: Vector3, x: float, f: float) -> Vector3:
 func _produce(cc: Node) -> void:
 	var cash: int = battle.cash[team]
 	if cc and _mine(func(u): return u.def.get("builder", false)).is_empty() and cc.prod_queue.is_empty() and cash >= 1000:
-		battle.issue({"type": "produce", "team": team, "id": cc.uid, "kind": "dozer"})
+		battle.issue({"type": "produce", "team": team, "id": cc.uid, "kind": Nations.swap_unit(battle.nation_of(team), "dozer")})
 		return
 	var haulers := _mine(func(u): return u.def.get("hauler", false)).size()
 	for d in battle.structures(team, "supply_depot"):
 		if haulers < 2 and d.prod_queue.is_empty() and cash >= 1800 and battle.sim_time > 120.0:
-			battle.issue({"type": "produce", "team": team, "id": d.uid, "kind": "ch47"})
+			battle.issue({"type": "produce", "team": team, "id": d.uid, "kind": Nations.swap_unit(battle.nation_of(team), "ch47")})
 			return
 	var army := _mine(func(u): return not (u is Building) and u.def.get("weapons", []).size() > 0).size()
 	for b in battle.structures(team, "barracks"):

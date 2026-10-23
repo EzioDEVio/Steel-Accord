@@ -189,6 +189,29 @@ func _run() -> void:
 			_log("iran_battle_cry", battle.cries > c0, "battle cries %d -> %d (clip iran_shout, 14 s per-team cooldown)" % [c0, battle.cries])
 			for u in [us_r, ir_r]:
 				if not u.dead: u.take_damage(9999.0, null)
+			# Iranian support powers: Shahed drone strike and paratroopers from an Iranian C-130
+			var tgt: Vector3 = battle.grounded(Vector3(-150, 0, 200))
+			var victims: Array = []
+			for i in 3: victims.append(battle._spawn("hmmwv_50cal", 0, tgt + Vector3(i * 6 - 6, 0, 0), 0.0))
+			battle.power_ready[1]["shahed"] = 0.0
+			var h0: int = battle.drone_hits
+			battle.launch_power(1, "shahed", tgt)
+			await _until(func(): return battle.drones.is_empty() and battle.drone_hits > h0, 60.0)
+			var dmg_done: bool = victims.any(func(v): return v.dead or v.hp < v.def.hp)
+			_log("iran_shahed_strike", battle.drone_hits - h0 == int(UnitDefs.POWERS.shahed.drones) and dmg_done,
+				"drones hit %d, targets damaged=%s; US-only powers refused for Iran: '%s'" % [battle.drone_hits - h0, str(dmg_done), battle.power_problem(1, "carpet")])
+			for v in victims:
+				if not v.dead: v.take_damage(99999.0, null)
+			var air_ir: Array = Nations.produces("iran", "airfield", [])
+			var wf_ir: Array = Nations.produces("iran", "war_factory", [])
+			var all_ok := true
+			for k in air_ir + wf_ir + ["ir_ch47", "ir_engineer_dozer"]:
+				var d: Dictionary = UnitDefs.def_of(k)
+				if not (str(d.get("model3d", "")).contains("/ir_") or Nations.is_placeholder("iran", k)): all_ok = false
+				if not ResourceLoader.exists(str(d.get("model3d", ""))): all_ok = false
+			var dz: Array = battle.units.filter(func(u): return u.team == 1 and u.def.get("builder", false))
+			_log("iran_roster_models", all_ok and not dz.is_empty() and dz[0].kind == "ir_engineer_dozer" and battle.c130_model(1).contains("ir_c130"),
+				"airfield %s; war factory %s; builder %s; C-130 %s" % [str(air_ir), str(wf_ir), dz[0].kind if not dz.is_empty() else "none", battle.c130_model(1)])
 		var flag: Node = battle.get_node_or_null("Flag_team1")
 		_log("nation_flag", flag != null, "team 1 flag: %s" % (str(flag.scene_file_path) if flag else "none"))
 	if DisplayServer.get_name() != "headless":

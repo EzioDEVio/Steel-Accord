@@ -497,6 +497,7 @@ func sim_tick(dt: float) -> void:
 	_update_shots(dt)
 	_update_flights(dt)
 	_update_bombs(dt)
+	_update_drones(dt)
 	_update_supply_drops(dt)
 	_ground_units(dt)
 	_update_derricks(dt)
@@ -741,6 +742,7 @@ func power_cooldown_left(team: int, id: String) -> float:
 ## Support powers that need a structure (e.g. Paratroopers need an Airfield) in the base scenario.
 func power_problem(team: int, id: String) -> String:
 	var p: Dictionary = UnitDefs.POWERS[id]
+	if not (id in Nations.powers(nation_of(team))): return "Not available to %s" % Nations.name_of(nation_of(team))
 	if scenario == "base" and p.has("requires") and structures(team, p.requires).is_empty():
 		return "Requires " + BuildingDefs.DEFS[p.requires].name
 	return ""
@@ -750,13 +752,18 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 	if power_cooldown_left(team, id) > 0.0 or power_problem(team, id) != "": return
 	var p: Dictionary = UnitDefs.POWERS[id]
 	power_ready[team][id] = sim_time + float(p.cooldown)
+	if p.has("drones"):
+		_launch_drones(team, id, target)
+		return
 	var edge_z := map_bounds.end.y + 120.0 if team == 0 else map_bounds.position.y - 120.0
 	var start := Vector3(target.x * 0.7, ground_h(target.x, target.z), edge_z)
 	var dir := Vector3(target.x - start.x, 0, target.z - start.z).normalized()
 	var node := Node3D.new()
 	add_child(node)
-	if ResourceLoader.exists(str(p.get("model3d", "_"))):
-		var m3: Node3D = (load(p.model3d) as PackedScene).instantiate()
+	var pmodel := str(p.get("model3d", "_"))
+	if pmodel == C130_MODEL: pmodel = c130_model(team)
+	if ResourceLoader.exists(pmodel):
+		var m3: Node3D = (load(pmodel) as PackedScene).instantiate()
 		m3.scale = Vector3.ONE * UnitDefs.SCALE.aircraft
 		m3.position.y = p.altitude
 		node.add_child(m3)
@@ -1053,7 +1060,7 @@ func _spawn_bases() -> void:
 		var cc := add_structure("command_center", t, start_pos[t], true)
 		add_flag(t, cc.position + Vector3(cc.half.x + 4.0, 0, (cc.half.y - 2.0) * (1.0 if t == 0 else -1.0)))
 		var fwd := -1.0 if t == 0 else 1.0     # toward the map centre
-		var d := _spawn("dozer", t, cc.position + Vector3(-8, 0, fwd * (cc.half.y + 8.0)), 0.0 if t == 0 else PI)
+		var d := _spawn(Nations.swap_unit(nation_of(t), "dozer"), t, cc.position + Vector3(-8, 0, fwd * (cc.half.y + 8.0)), 0.0 if t == 0 else PI)
 		d.order_stop()
 	if terrain:
 		for sp in terrain.data.get("supply_piles", []):
@@ -1237,7 +1244,7 @@ func produce_problem(b: Building, k: String) -> String:
 
 func on_structure_built(b: Building, announce := true) -> void:
 	if b.bdef.has("free_unit"):
-		spawn_produced(b, b.bdef.free_unit)
+		spawn_produced(b, Nations.swap_unit(nation_of(b.team), str(b.bdef.free_unit)))
 	if announce and b.team == 0 and hud: hud.flash_message("%s complete" % b.bdef.name)
 
 
@@ -1368,6 +1375,11 @@ var drop_crates: Array = []
 var drop_income := [0, 0]     # {"node", "pos", "vy", "team", "value", "canopy"}
 const C130_SPRITE := "res://assets/aircraft/c130/c130_top.png"
 const C130_MODEL := "res://assets/units3d/c130/c130.glb"
+
+
+## The transport used for supply drops and paratroopers carries the team's own national markings.
+func c130_model(team: int) -> String:
+	return str(Nations.DEFS.get(nation_of(team), Nations.DEFS.usa).get("c130_model", C130_MODEL))
 const CRATE_MODEL := "res://assets/units3d/props/supply_crate_chute.glb"
 
 
@@ -1379,8 +1391,9 @@ func launch_supply_drop(b: Building) -> void:
 	var dir := (target - start); dir.y = 0.0; dir = dir.normalized()
 	var node := Node3D.new()
 	add_child(node)
-	if ResourceLoader.exists(C130_MODEL):
-		var m: Node3D = (load(C130_MODEL) as PackedScene).instantiate()
+	var c130: String = c130_model(b.team)
+	if ResourceLoader.exists(c130):
+		var m: Node3D = (load(c130) as PackedScene).instantiate()
 		m.scale = Vector3.ONE * UnitDefs.SCALE.aircraft
 		m.position.y = 34.0
 		node.add_child(m)
@@ -1845,3 +1858,64 @@ func xp_mult(team: int) -> float:
 
 func income_mult(team: int) -> float:
 	return float(Upgrades.DEFS.supply_efficiency.effect.income) if has_upgrade(team, "supply_efficiency") else 1.0
+
+
+# ------------------------------------------------------------------ loitering-munition strike (Iran: Shahed)
+## Several one-way drones fly in from the team's map edge at low altitude, spread over the target area, then dive
+## and detonate. They are a support-power effect (not units): they cannot be ordered or shot down yet.
+var drones: Array = []   # {"node", "pos", "aim", "speed", "alt", "team", "dmg", "splash", "diving"}
+var drone_hits := 0
+
+
+func _launch_drones(team: int, id: String, target: Vector3) -> void:
+	var p: Dictionary = UnitDefs.POWERS[id]
+	var n := int(p.drones)
+	var edge_z := map_bounds.end.y + 80.0 if team == 0 else map_bounds.position.y - 80.0
+	for i in n:
+		var off := Vector3((i - (n - 1) * 0.5) * 12.0, 0, (i % 2) * 8.0)
+		var start := Vector3(target.x * 0.6 + off.x * 2.0, 0, edge_z + (i % 2) * 15.0)
+		start.y = ground_h(start.x, start.z) + float(p.altitude)
+		var node := Node3D.new()
+		add_child(node)
+		if ResourceLoader.exists(str(p.model3d)):
+			var m: Node3D = (load(p.model3d) as PackedScene).instantiate()
+			node.add_child(m)
+		node.position = start
+		node.reset_physics_interpolation()
+		var aim: Vector3 = grounded(target + off)
+		drones.append({"node": node, "pos": start, "aim": aim, "speed": float(p.speed), "alt": float(p.altitude), "team": team,
+			"dmg": float(p.damage), "splash": float(p.splash), "diving": false})
+	SFX.play(self, "jet_flyby", target, -8.0, 1.9)
+	FX.target_marker(self, target, 16.0)
+	if hud and team == 0: hud.flash_message("%s inbound" % p.name)
+
+
+func _update_drones(dt: float) -> void:
+	for d in drones.duplicate():
+		var n: Node3D = d.node
+		for pr in n.find_children("Prop*", "Node3D", true, false): (pr as Node3D).rotate_object_local(Vector3.BACK, dt * 40.0)
+		var to: Vector3 = d.aim - d.pos
+		var flat := Vector2(to.x, to.z).length()
+		var gy := ground_h(d.pos.x, d.pos.z)
+		var v: Vector3
+		if not d.diving and flat < 45.0: d.diving = true
+		if d.diving:
+			v = to.normalized() * d.speed * 1.6
+		else:
+			v = Vector3(to.x, 0, to.z).normalized() * d.speed
+			v.y = (gy + d.alt - d.pos.y) * 2.0       # hold altitude over the terrain
+		d.pos += v * dt
+		n.position = d.pos
+		if v.length() > 0.1: n.look_at(d.pos + v, Vector3.UP)
+		if d.pos.y <= ground_h(d.pos.x, d.pos.z) + 0.5 or (d.diving and d.pos.distance_to(d.aim) < 1.5):
+			var p: Vector3 = grounded(d.pos)
+			FX.explosion(self, p + Vector3(0, 0.3, 0), clampf(d.splash / 6.0, 0.8, 1.8))
+			SFX.play(self, "explosion_big", p, 0.0, 1.1)
+			bomb_log.append(p)
+			drone_hits += 1
+			for o in units:
+				if o.dead or o.domain == "jet": continue
+				var dist := o.world_center().distance_to(p)
+				if dist < d.splash: o.take_damage(d.dmg * (1.0 - 0.6 * dist / d.splash), null)
+			n.queue_free()
+			drones.erase(d)

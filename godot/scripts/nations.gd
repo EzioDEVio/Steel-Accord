@@ -1,24 +1,31 @@
 # Steel Accord - playable nations. A nation chooses the flag, the display name and which units each structure offers.
 # Structures are shared for now; Iran's infantry is its own (3D models with mixed shaved / bearded grooming and the
-# IRGC special unit). Vehicles and aircraft for Iran wait for the Iran concept pack: until then the War Factory
-# offers the shared development vehicles as clearly-labelled placeholders and the Airfield offers no aircraft yet
-# (the shared aircraft carry U.S. insignia painted into their textures, which must stay U.S.-only). The Supply
-# Depot's CH-47 hauler is the one shared aircraft kept for Iran so its economy works; it is marked placeholder. The setting is fictional; no nation is cast as the villain.
+# IRGC special unit). Iran's War Factory builds its own vehicles (Boragh, BMP-2, T-72S, Karrar) plus two clearly
+# labelled shared placeholders (Avenger AA, Paladin artillery) until wave 2 (Khordad-3 / Raad-1) is integrated.
+# Iranian aircraft (F-14, F-4, Su-24, AH-1J, CH-47C hauler, C-130 for drops) have their own models and markings;
+# U.S. aircraft keep the U.S. star and are never used for Iran. The setting is fictional; no nation is cast as the villain.
 class_name Nations
 
 const DEFS := {
-	"usa": {"name": "United States", "short": "USA", "flag": "res://assets/units3d/props/flag_usa.glb", "produces": {}, "powers": []},
+	"usa": {"name": "United States", "short": "USA", "flag": "res://assets/units3d/props/flag_usa.glb", "produces": {},
+		"powers": ["carpet", "supersonic", "stealth", "paradrop", "recon"]},
 	"iran": {
 		"name": "Iran", "short": "IRN", "flag": "res://assets/units3d/props/flag_iran.glb",
 		"produces": {
 			"barracks": ["ir_rifleman", "ir_rpg", "ir_mg", "ir_medic", "ir_sniper", "ir_engineer", "irgc_sf"],
-			"war_factory": ["hmmwv_50cal", "mrap", "m113", "bradley", "abrams", "avenger", "paladin"],
-			"airfield": [],
+			"war_factory": ["ir_boragh", "ir_bmp2", "ir_t72s", "ir_karrar", "avenger", "paladin"],
+			"command_center": ["ir_engineer_dozer"],
+			"airfield": ["ir_f14", "ir_f4", "ir_su24", "ir_ah1j"],
+			"supply_depot": ["ir_ch47"],
 		},
 		"unit_swap": {"paratrooper": "ir_paratrooper", "rifleman": "ir_rifleman", "at4": "ir_rpg", "m240_gunner": "ir_mg",
 			"saw_gunner": "ir_mg", "medic": "ir_medic", "sniper": "ir_sniper", "eod_engineer": "ir_engineer", "special_forces": "irgc_sf",
-			"ranger": "irgc_sf"},
-		"placeholder": ["hmmwv_50cal", "mrap", "m113", "bradley", "abrams", "avenger", "paladin", "ch47", "dozer"],
+			"ranger": "irgc_sf", "ch47": "ir_ch47", "dozer": "ir_engineer_dozer", "abrams": "ir_karrar", "bradley": "ir_bmp2", "stryker": "ir_boragh",
+			"m113": "ir_bmp2", "hmmwv_50cal": "ir_boragh", "f16": "ir_f4", "a10": "ir_su24", "ah64": "ir_ah1j", "f22": "ir_f14", "fa18": "ir_su24"},
+		"c130_model": "res://assets/units3d/ir_c130/ir_c130.glb",
+		"powers": ["shahed", "paradrop"],
+		"power_icons": {"paradrop": "res://assets/iran/icons/ir_c130_icon.png"},
+		"placeholder": ["avenger", "paladin"],
 	},
 }
 
@@ -59,3 +66,12 @@ static func mix(nation: String, bkind: String, base_list: Array, us_mix: Array) 
 		var n := swap_unit(nation, k)
 		if n in can: out.append(n)
 	return out
+
+
+## Support powers this nation can call (each uses that nation's own aircraft).
+static func powers(nation: String) -> Array:
+	return DEFS.get(nation, DEFS.usa).get("powers", [])
+
+
+static func power_icon(nation: String, id: String) -> String:
+	return str(DEFS.get(nation, DEFS.usa).get("power_icons", {}).get(id, UnitDefs.POWERS[id].icon))

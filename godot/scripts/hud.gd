@@ -116,12 +116,13 @@ func _build_powers() -> void:
 	power_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(power_box)
 	var i := 0
-	for id in UnitDefs.POWERS:
+	var nat: String = battle.nation_of(commander.team)
+	for id in Nations.powers(nat):
 		var p: Dictionary = UnitDefs.POWERS[id]
 		var b := _button("", func(): commander.set_mode("power:" + id), Vector2(186, 62))
 		b.tooltip_text = "%s - click the button, then click the target on the map.\nCooldown %d s (PROVISIONAL)" % [p.name, int(p.cooldown)]
 		var icon := TextureRect.new()
-		icon.texture = load(p.icon)
+		icon.texture = load(Nations.power_icon(nat, id))
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.position = Vector2(4, 6); icon.size = Vector2(72, 50)

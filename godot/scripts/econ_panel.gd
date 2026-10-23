@@ -210,8 +210,8 @@ func _build_structure_menu(b: Building) -> void:
 	for k in b.produces_list():
 		var d: Dictionary = UnitDefs.def_of(k)
 		var icon: String = str(d.get("icon", ""))
-		if d.get("visual", "") == "vehicle_art": icon = str(UsArt.vehicle(d.art).get("icon", ""))
-		elif d.get("visual", "") == "infantry": icon = str(UsArt.infantry(d.art).get("icon", ""))
+		if icon == "" and d.get("visual", "") == "vehicle_art": icon = str(UsArt.vehicle(d.art).get("icon", ""))
+		elif icon == "" and d.get("visual", "") == "infantry": icon = str(UsArt.infantry(d.art).get("icon", ""))
 		var cb := func(): battle.issue({"type": "produce", "team": team, "id": b.uid, "kind": k})
 		var nm: String = d.name.split(" (")[0]
 		_make(k, nm, int(BuildingDefs.UNIT_COST[k][0]), icon, cb, _cell(i), "")
