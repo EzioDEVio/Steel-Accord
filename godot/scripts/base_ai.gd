@@ -24,6 +24,7 @@ var retreating := {}           # uid -> sim time the retreat started
 var wave_n0 := 0               # strength of the current attack wave when it left
 var last_attack_t := -999.0
 var losses_seen := 0
+var garrisoning := {}          # civic building uid -> uids sent to occupy it
 
 # build order (kind, local x, local forward offset from the Command Center; forward = toward the map centre)
 const ORDER := [
@@ -78,6 +79,7 @@ func tick(dt: float) -> void:
 	_research()
 	_look()
 	_scout()
+	_garrison()
 	_army()
 
 
@@ -291,6 +293,33 @@ func _scout() -> void:
 	battle.issue({"type": "move", "team": team, "ids": [pick.uid], "points": [route[0]]})
 	for i in range(1, route.size()):
 		battle.issue({"type": "move", "team": team, "ids": [pick.uid], "points": [route[i]], "append": true})
+
+
+## Occupy civilian buildings near our base with spare infantry (one building at a time, three soldiers).
+func _garrison() -> void:
+	for id in garrisoning.keys():
+		var b: Unit = battle.by_id.get(id)
+		if b == null or b.dead or b.team == 1 - team:
+			garrisoning.erase(id); continue
+		garrisoning[id] = garrisoning[id].filter(func(x): return battle.by_id.has(x) and not battle.by_id[x].dead and battle.by_id[x].board_target != null)
+		if garrisoning[id].is_empty(): garrisoning.erase(id)
+	if not garrisoning.is_empty(): return
+	var cc := _cc()
+	if cc == null: return
+	var inf := _mine(func(u): return u.def.get("visual") == "infantry" and u.state == Unit.S.IDLE and not (u.uid in attacking) and u.board_target == null)
+	if inf.size() < 5: return
+	var best: Building = null
+	var bd := 260.0
+	for u in battle.units:
+		if not (u is Building) or u.dead or not (u as Building).is_civic(): continue
+		if not (u.team < 0 or (u.team == team and u.capacity_left() >= 3)): continue
+		var d: float = cc.position.distance_to(u.position)
+		if d < bd: bd = d; best = u
+	if best == null: return
+	inf.sort_custom(func(a, b): return a.flat_dist(best.position) < b.flat_dist(best.position))
+	var ids: Array = inf.slice(0, 3).map(func(u): return u.uid)
+	garrisoning[best.uid] = ids
+	battle.issue({"type": "board", "team": team, "ids": ids, "target": best.uid})
 
 
 ## Fall back: attackers below 30 % health go home for repair (vehicles to the War Factory bay); a wave that lost more
