@@ -23,7 +23,8 @@ const UNIT_FIELDS := ["hp", "state", "goal", "queue", "path", "path_i", "repath_
 const BUILDING_FIELDS := ["hp", "progress", "built", "prod_queue", "prod_left", "rally", "has_rally", "builder_seen_t", "ever_seen",
 	"repairing", "repair_debt", "repair_blocked", "drop_t", "research_id", "research_left", "servicing", "w_reload"]
 const AI_FIELDS := ["think_t", "waves", "attacking", "capturing", "scout_t", "scout_uid", "retreating", "losses_seen", "last_attack_t",
-	"known", "wave_n0", "attack_size", "garrisoning"]
+	"known", "wave_n0", "attack_size", "garrisoning", "enemy_seen", "seen_derricks", "tf_obj", "tf_leg", "tf_stage", "tf_t", "feint",
+	"air_tasks", "next_power_t", "save_t", "prod_n", "bombarded", "defending"]
 
 
 # ------------------------------------------------------------------ capture
