@@ -198,13 +198,18 @@ func build_visual() -> void:
 	mat.set_shader_parameter("n_macro", _noise_rgba(512, false, [[101, 0.0067, 3], [102, 0.023, 3], [103, 0.075, 2], [104, 0.04, 2]], false))
 	# seamless detail tile (19 m per tile = 3.7 cm/px): R ~6 m, G ~2 m, B ~0.7 m, A ~3 m (independent seed: clusters)
 	mat.set_shader_parameter("n_detail", _noise_rgba(512, true, [[111, 0.006, 3], [112, 0.018, 3], [113, 0.05, 2], [114, 0.012, 2]], true))
+	var t1 := Time.get_ticks_msec()
 	mat.set_shader_parameter("n_normal", await World.noise_tex(0.05, 19, 512, true, 4))
-	print("TERRAIN noise textures %d ms" % (Time.get_ticks_msec() - t0))
+	print("TERRAIN macro+detail noise %d ms, normal noise %d ms" % [t1 - t0, Time.get_ticks_msec() - t1])
 	# the height grid as a half-float texture: the shader derives smoothed shading normals from it (see shader)
 	_hmap_tex = ImageTexture.create_from_image(_hmap_image())
 	mat.set_shader_parameter("hmap", _hmap_tex)
 	mat.set_shader_parameter("hmap_info", Vector4(origin.x, origin.y, step, n))
-	if splat: mat.set_shader_parameter("splat", ImageTexture.create_from_image(splat))
+	if splat:
+		# rendering copy with mipmaps (the shader blurs the rock channel); gameplay keeps reading splat_bytes
+		var sv := splat.duplicate() as Image
+		sv.generate_mipmaps()
+		mat.set_shader_parameter("splat", ImageTexture.create_from_image(sv))
 	if road_mask: mat.set_shader_parameter("roads", ImageTexture.create_from_image(road_mask))
 	mat.set_shader_parameter("map_rect", Vector4(origin.x, origin.y, step * (n - 1), step * (n - 1)))
 	var nc := int(ceil(float(n - 1) / CHUNK_CELLS))

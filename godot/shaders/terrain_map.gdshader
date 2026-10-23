@@ -16,7 +16,7 @@ shader_type spatial;
 render_mode diffuse_burley;
 #include "res://shaders/fog.gdshaderinc"
 
-uniform sampler2D splat : filter_linear, repeat_disable;
+uniform sampler2D splat : filter_linear_mipmap, repeat_disable;     // mipmapped copy (rendering only)
 uniform sampler2D roads : filter_linear, repeat_disable;
 uniform sampler2D n_macro : filter_linear, repeat_disable;          // R ~350 m, G ~100 m, B ~30 m, A ~60 m (warp)
 uniform sampler2D n_detail : filter_linear_mipmap, repeat_enable;   // R ~6 m, G ~2 m, B ~0.7 m, A ~3 m  (at 19 m/tile)
@@ -78,10 +78,11 @@ float hgt(vec2 p) {
 // World normal of the bilinear height grid differenced over +-d metres. The benches on the anticline flanks are
 // 2-6 m steps sampled on a 2 m grid; lit per vertex they alias into a regular field of triangular facets. This
 // normal (and the slope from it) reads them as soft bands instead. Geometry and gameplay heights are unchanged.
-vec3 smooth_normal(vec2 p, float d) {
-	float hx = hgt(p + vec2(d, 0.0)) - hgt(p - vec2(d, 0.0));
-	float hz = hgt(p + vec2(0.0, d)) - hgt(p - vec2(0.0, d));
-	return normalize(vec3(-hx, 2.0 * d, -hz));
+// Returns xyz = normal, w = mean height of the taps (a smoothed height for the strata bands).
+vec4 smooth_normal(vec2 p, float d) {
+	float e = hgt(p + vec2(d, 0.0)), w = hgt(p - vec2(d, 0.0));
+	float s = hgt(p + vec2(0.0, d)), n = hgt(p - vec2(0.0, d));
+	return vec4(normalize(vec3(w - e, 2.0 * d, n - s)), (e + w + s + n) * 0.25);
 }
 
 // Softens a splat weight into a noisy, patchy border instead of a uniform cross-fade.
@@ -101,9 +102,15 @@ void fragment() {
 
 	// splat with a warped lookup (+-3 m) so material borders do not follow the 2 m splat raster
 	vec2 warp = (vec2(M.a, M.b) - 0.5) * 5.0 + (H.rg - 0.5) * 2.0;
-	vec4 sp = texture(splat, uv + warp / map_rect.zw);
+	vec4 sp = textureLod(splat, uv + warp / map_rect.zw, 0.0);
+	// rock is painted on every 2-6 m bench riser as 1-2 px lines; at full resolution they alias into a regular field of
+	// facets, so the colour reads rock from a blurred mip (strata from the smoothed height draw the bands instead)
+	sp.r = mix(sp.r, textureLod(splat, uv + warp / map_rect.zw, 1.6).r, 0.8);
 	float road = texture(roads, uv).r;
-	vec3 nw = normalize(mix(normalize(wnrm), smooth_normal(p, 3.0), shade_smooth));
+	vec4 s3 = smooth_normal(p, 3.0), s8 = smooth_normal(p, 8.0);   // the wide one averages across a whole bench
+	vec3 sn = normalize(s3.xyz * 0.35 + s8.xyz * 0.65);
+	float hs = mix(s3.w, s8.w, 0.6);                         // smoothed height: strata follow contours, not facets
+	vec3 nw = normalize(mix(normalize(wnrm), sn, shade_smooth));
 	float slope = 1.0 - clamp(nw.y, 0.0, 1.0);
 	float grain = mix(0.5, F.b, fine_amt);
 	float mid = H.r * 0.55 + M.b * 0.45;                     // 2-30 m mottling
@@ -116,7 +123,7 @@ void fragment() {
 	// --- rock: tone on 6-30 m, strata following height but warped so they are not ruler-straight
 	vec3 rock = mix(vec3(0.40, 0.36, 0.31), vec3(0.55, 0.50, 0.44), clamp(H.r * 0.6 + M.b * 0.5 - 0.05, 0.0, 1.0));
 	rock *= 0.8 + 0.3 * mix(H.b, grain, 0.5);
-	rock = mix(rock, vec3(0.62, 0.56, 0.47), smoothstep(0.6, 0.75, fract(wpos.y * 0.18 + H.g * 0.5 + M.a * 1.6)) * 0.35);
+	rock = mix(rock, vec3(0.62, 0.56, 0.47), smoothstep(0.6, 0.75, fract(hs * 0.18 + H.g * 0.5 + M.a * 1.6)) * 0.35);
 	rock *= mix(1.0, 0.8, smoothstep(0.3, 0.75, slope));     // steep faces darker
 	// --- gravel: pebbly grain plus 2-6 m clusters of darker / lighter stone
 	vec3 gravel = mix(vec3(0.50, 0.47, 0.42), vec3(0.62, 0.58, 0.51), clamp(grain * 0.6 + H.g * 0.5 - 0.05, 0.0, 1.0));
