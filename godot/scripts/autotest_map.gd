@@ -181,12 +181,12 @@ func _run() -> void:
 			if u.has_meta("grooming"): groom[u.get_meta("grooming")] = int(groom.get(u.get_meta("grooming"), 0)) + 1
 		_log("ai_nation_roster", ok_nat, "nation %s infantry kinds %s grooming %s" % [nat, str(kinds.keys()), str(groom)])
 		if nat == "iran":
-			var c0: int = battle.cries
+			var cry0: int = battle.cries
 			var p0: Vector3 = battle.grounded(Vector3(250, 0, 120))
 			var us_r: Unit = battle._spawn("rifleman", 0, p0, 0.0)
 			var ir_r: Unit = battle._spawn("ir_rifleman", 1, p0 + Vector3(0, 0, -25), PI)
 			await _wait_sim(4.0)
-			_log("iran_battle_cry", battle.cries > c0, "battle cries %d -> %d (clip iran_shout, 14 s per-team cooldown)" % [c0, battle.cries])
+			_log("iran_battle_cry", battle.cries > cry0, "battle cries %d -> %d (clip iran_shout, 14 s per-team cooldown)" % [cry0, battle.cries])
 			for u in [us_r, ir_r]:
 				if not u.dead: u.take_damage(9999.0, null)
 			# Iranian support powers: Shahed drone strike and paratroopers from an Iranian C-130

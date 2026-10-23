@@ -298,19 +298,19 @@ func _describe_building(b: Building) -> void:
 	for id in Upgrades.DEFS:
 		if Upgrades.DEFS[id].at != b.bkind: continue
 		var d: Dictionary = Upgrades.DEFS[id]
-		var st := ""
-		if battle.has_upgrade(b.team, id): st = "Installed"
-		elif b.research_id == id: st = "Researching %d%%, %d s left" % [int(100.0 * (1.0 - b.research_left / float(d.time))), int(ceil(b.research_left))]
+		var rst := ""
+		if battle.has_upgrade(b.team, id): rst = "Installed"
+		elif b.research_id == id: rst = "Researching %d%%, %d s left" % [int(100.0 * (1.0 - b.research_left / float(d.time))), int(ceil(b.research_left))]
 		else:
 			var why: String = battle.research_problem(b, id)
-			st = ("Available ($%d, %d s)" % [int(d.cost), int(d.time)]) if why == "" else "Locked - %s" % why
-		res += "  %s: %s\n    %s\n" % [d.name, st, d.desc]
+			rst = ("Available ($%d, %d s)" % [int(d.cost), int(d.time)]) if why == "" else "Locked - %s" % why
+		res += "  %s: %s\n    %s\n" % [d.name, rst, d.desc]
 	if res != "": t += _h("Research") + res
 	if b.bkind == "command_center":
 		var tm: int = b.team
 		var cur: String = battle.plan[tm]
 		var pend: String = battle.plan_pending[tm]
-		var ptxt := Upgrades.PLANS[cur].name if cur != "" else "none"
+		var ptxt: String = Upgrades.PLANS[cur].name if cur != "" else "none"
 		if pend != "": ptxt += "  (switching to %s in %d s)" % [Upgrades.PLANS[pend].name, int(ceil(battle.plan_switch_t[tm] - battle.sim_time))]
 		var why3: String = battle.plan_problem(tm, "assault")
 		t += _kv("Battle plan", ptxt + (("  - " + why3) if why3.begins_with("Requires") else ""))
