@@ -2,7 +2,7 @@
 
 Oct 22, 2026 · @Ezio
 
-Every request from the 10 handoff briefs and the chat, checked against the code and the latest test runs: 316 done, 164 partial, 55 not started, 15 deferred by design, 16 superseded.
+Every request from the 10 handoff briefs and the chat, checked against the code and the latest test runs: 327 done, 164 partial, 57 not started, 15 deferred by design, 16 superseded.
 
 ## Summary
 
@@ -22,8 +22,9 @@ Windows checks ran under Wine, not on a real Windows PC. Evidence codes: AB = ba
 | 08: Zagros Basin (Iran) map prompt | 21 | 2 | 0 | 0 | 0 |
 | 09: Iran arsenal handoff | 8 | 5 | 4 | 0 | 0 |
 | 10: UI Inspector panels, Iran and Skirmish setup | 32 | 5 | 0 | 0 | 0 |
+| 11: Zero Hour-style control bar | 11 | 0 | 2 | 0 | 0 |
 | Chat requests | 23 | 1 | 0 | 0 | 0 |
-| **Total** | **316** | **164** | **55** | **15** | **16** |
+| **Total** | **327** | **164** | **57** | **15** | **16** |
 
 **The 10 most important open items**
 
@@ -660,3 +661,23 @@ The screenshots and CNCNZ page mentioned in this brief did not reach the project
 | 22 | IRGC special unit | Done | `irgc_sf` |
 | 23 | Farsi battle shout when Iranians attack | Done | `AM: iran_battle_cry` (14 s cooldown per side). Audio source/licence still to confirm before release |
 | 24 | Iranian vehicles and aircraft from the arsenal pack | Partial | Wave 1 done; wave 2 and Iranian structures missing |
+
+## 11: Zero Hour-style control bar (chat request, Oct 22)
+
+Reference: the Zero Hour engine source (`ControlBar.cpp`: 14 command buttons in 2 rows of 7; right HUD portrait with veterancy overlay and up to 5 upgrade cameos lit when installed; up to 9 build-queue buttons) and the client's screenshots. Layout and behaviour follow that pattern; all art, icons and the frame are original (`content/manifest/ui_icons.json`). Report: B1.8 notes in `build/win/README_PLAYTEST.txt`; screens in `docs/screens/b18/`.
+
+| # | Request | Status | Evidence / what is missing |
+| --- | --- | --- | --- |
+| 1 | Research the Zero Hour interface (command panel tiles, unit status panel) | Done | Engine source read; StrategyWiki controls page; CommandSet slot layout |
+| 2 | Building selected: a panel of tiles listing everything it can build, research and do | Done | 2×7 grid: units (cost, queued count, progress sweep), research (amber, tick when installed), plans (teal), Repair/Sell fixed last; scr:`b18/ui_1080_warfactory.png`, `ui_1080_cc.png` |
+| 3 | Same for every building | Done | Barracks, Armour Works, Air Base, Command HQ captured; grid is generic |
+| 4 | Soldier selected: window of tiles with completed training and equipment status | Done | Selection panel: portrait + rank, health, state, XP, and up to 5 research tiles that apply to the unit (lit = installed, dim = not yet) plus the active plan; scr:`b18/ui_1080_soldier.png`, `ui_1080_karrar.png` |
+| 5 | Specific Zero Hour upgrades (chemical suits, flashbangs) | Not started | Those upgrades do not exist in Steel Accord; the tiles show our real research only |
+| 6 | Number troops, vehicles and tanks into groups | Done | Ctrl+0..9; a unit is in one group at a time; number shown next to its health bar and on the portrait; scr:`b18/ui_1080_group.png` |
+| 7 | Ctrl+A select all | Done | Existing; also a Select All tile; plus Q / E / H / . / Space hotkeys |
+| 8 | Name groups | Not started | Groups are numbered only; naming was not built (ask if wanted) |
+| 9 | Tidy, consistently placed panels | Done | One framed bar: radar, side buttons, grid, selection panel; cash tab and power gauge on top; Details panel only on request |
+| 10 | Double selection rings and floating health bars | Done | One ring per unit; bars anchored to each model's top |
+| 11 | Units stacking in single file | Done | AI group orders spread into a grid; infantry spacing widened |
+| 12 | 1080p / 1440p / 4K | Done | scr:`b18/ui_*`; bar shrinks to fit screens narrower than 1404 px |
+| 13 | Windows build | Done | B1.8; Wine: map 24/24, QA 35/35 (not a real Windows PC) |
