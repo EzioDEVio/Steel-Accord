@@ -760,7 +760,7 @@ func _run_build() -> void:
 		if battle.gnav.box_free_static(cand + Vector3(-12, 0, -8), Vector2(36, 30)) and battle.gnav.box_free(cand, Vector2(26, 18)):
 			wc = cand; break
 	if wc == Vector3.INF:
-		printerr("TESTDBG no clear patch for the wall test"); wc = Vector3(-55, 0, 112)
+		wc = Vector3(-55, 0, 112)     # boulder check too strict: fall back to the default patch
 	var ta: Building = battle.add_structure("defense_tower", 0, wc + Vector3(-20, 0, 0), true)
 	var tb: Building = battle.add_structure("defense_tower", 0, wc + Vector3(20, 0, 0), true)
 	await _wait_sim(0.3)

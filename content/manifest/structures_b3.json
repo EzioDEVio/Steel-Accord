@@ -1,0 +1,36 @@
+{
+ "pack": "B3 construction structures (walls)",
+ "generator": "tools/art/bld_concrete_wall_3d.py",
+ "pipeline": "tools/art/bldkit_b.py (shared structure kit, unchanged); icon renderer env_civic_3d.render_icon (unchanged)",
+ "command": "python3 -I tools/art/bld_concrete_wall_3d.py godot/assets/units3d/concrete_wall --icon godot/assets/ui/structures/concrete_wall_icon.png",
+ "method": "code-placed primitives in Blender (bpy module): extruded T-wall cross-section (jersey-profile foot, battered slab) in three pours, rebar lifting loops, team-colour band (material SA_Team, tinted in game), stencil plate, drainage slots; separate end post. Procedural tileable numpy surfaces (grey cast concrete with form-tie dots); Cycles CPU bake of colour x AO into one JPEG atlas per model; GLB export with the atlas embedded",
+ "tools": "Blender (bpy), numpy, Pillow - no AI image generation, no external textures, scans or photos",
+ "creator": "Claude (construction/garrison engineer agent), Steel Accord B3",
+ "license": "original work, project-owned",
+ "status": "shippable",
+ "content_notes": "Generic precast barrier; no markings, logos, writing or emblems (the stencil plate is blank).",
+ "conventions": "1 unit = 1 m; origin = footprint centre at ground level; front faces Godot +Z (Blender -Y). Segment footprint 6 x 2 m, panel ends exactly at x = +-3 so segments butt together; the game scales a segment along X (0.5-1.35) to fit a drawn line exactly.",
+ "items": [
+  {
+   "id": "concrete_wall",
+   "path": "res://assets/units3d/concrete_wall/concrete_wall.glb",
+   "footprint_m": [6, 2],
+   "height_m": 3.6,
+   "description": "Precast concrete T-wall segment: wide sloped foot, 3.6 m slab in three pours, two lifting loops, team-colour band",
+   "icon": "res://assets/ui/structures/concrete_wall_icon.png"
+  },
+  {
+   "id": "concrete_wall_post",
+   "path": "res://assets/units3d/concrete_wall/concrete_wall_post.glb",
+   "footprint_m": [1.5, 2.1],
+   "height_m": 4.05,
+   "description": "Square cast end post with cap and footing, team-colour band; shown at the free ends of a concrete wall line"
+  },
+  {
+   "id": "concrete_wall_icon",
+   "path": "res://assets/ui/structures/concrete_wall_icon.png",
+   "size_px": [256, 192],
+   "description": "Build-menu portrait: front-3/4 Cycles render of concrete_wall.glb on neutral grey"
+  }
+ ]
+}
