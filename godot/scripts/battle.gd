@@ -1898,7 +1898,7 @@ func _update_drones(dt: float) -> void:
 		var flat := Vector2(to.x, to.z).length()
 		var gy := ground_h(d.pos.x, d.pos.z)
 		var v: Vector3
-		if not d.diving and flat < 45.0: d.diving = true
+		if not d.diving and flat < 14.0: d.diving = true      # steep terminal dive so ridges do not catch it short
 		if d.diving:
 			v = to.normalized() * d.speed * 1.6
 		else:
