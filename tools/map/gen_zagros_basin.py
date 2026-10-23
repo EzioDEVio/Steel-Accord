@@ -54,6 +54,11 @@ MOVEMENT = {
                 "cost": {"sand": 1.1, "gravel": 1.0, "rock": 2.2, "riverbed": 1.25, "scrub": 1.1, "road": 0.8}},
 }
 BUILDING_MAX_SLOPE = 8.0
+# limestone bench shaping of the anticline flanks (build/terrace): step height per bench (inner, outer ridge) in metres,
+# riser share of each step, and how much of the terraced profile replaces the smooth one
+TERRACE_STEP = tuple(float(v) for v in os.environ.get("ZB_TSTEP", "6.5,7.0").split(","))
+TERRACE_RISER = float(os.environ.get("ZB_TRISER", "0.38"))
+TERRACE_MIX = float(os.environ.get("ZB_TMIX", "0.7"))
 
 xs = -HALF + STEP * np.arange(N)
 X, Z = np.meshgrid(xs, xs)                    # X[row=z index, col=x index]
@@ -286,17 +291,22 @@ def build(args):
     q = np.sqrt(((TP - ht) / 85.0) ** 2 + ((A_ - ha) / 46.0) ** 2)
     r3 = 10.0 * np.clip(1 - q ** 2, 0, None) ** 2.0
 
-    def terrace(r, step, frac=0.62, mix=0.7, jitter=None):
+    def terrace(r, step, riser=TERRACE_RISER, mix=TERRACE_MIX, jitter=None):
+        # Limestone benches: a gently sloping tread, then a riser over the last `riser` fraction of each step with a
+        # smootherstep profile (zero slope AND curvature where it meets the treads), so bench edges are rounded and each
+        # riser spans several 2 m grid cells. Narrow hard-edged risers (the old 6.5-7 m steps, riser = 38 % of a step)
+        # aliased into a regular field of triangular facets on the 2 m grid. See docs/TERRAIN_TILING.md.
         rr = r if jitter is None else r + jitter
         k = rr / step; f = np.floor(k); fr = k - f
-        tr = (f + smoothstep(frac, 1.0, fr)) * step
+        u = np.clip((fr - (1.0 - riser)) / riser, 0.0, 1.0)
+        tr = (f + u * u * u * (u * (u * 6.0 - 15.0) + 10.0)) * step
         return np.maximum(0, r * (1 - mix) + (tr - (0 if jitter is None else jitter)) * mix)
 
     jit = 2.2 * sym_noise(3, 40.0, 40.0) * smoothstep(3, 15, r1 + r2)
     gmod = smoothstep(-0.8, 1.2, sym_noise(4, 60.0, 60.0))
     gul = np.clip(sym_noise(11, 9.0, 50.0), 0, None) * (0.4 + 0.6 * gmod)   # gullies run down-dip (across strike)
     gul2 = np.clip(sym_noise(12, 16.0, 90.0), 0, None)
-    ridges = terrace(r1, 6.5, jitter=jit) + terrace(r2, 7.0, jitter=jit) + r3
+    ridges = terrace(r1, TERRACE_STEP[0], jitter=jit) + terrace(r2, TERRACE_STEP[1], jitter=jit) + r3
     ridges -= (r1 + r2) * (0.07 * gul + 0.05 * gul2) * smoothstep(4, 20, r1 + r2)
     base = floor_fn(A_) + 1.2 * sym_noise(13, 160.0, 160.0) + 0.5 * sym_noise(14, 45.0, 60.0)
 
