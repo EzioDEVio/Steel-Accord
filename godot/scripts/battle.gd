@@ -100,8 +100,7 @@ func _ready() -> void:
 	await _bake_nav()
 	print("LOAD nav %d ms" % (Time.get_ticks_msec() - _t0))
 	if terrain:
-		for c in terrain.data.get("civic", []): civic_spawns.append([str(c.type), map_point(c)])
-		for cs in civic_spawns: add_civic(cs[0], cs[1])
+		for cs in civic_spawns: add_civic(cs[0], cs[1], false)
 		civic_spawns.clear()
 	_spawn_forces()
 	print("LOAD forces %d ms" % (Time.get_ticks_msec() - _t0))
@@ -1768,17 +1767,25 @@ func _eject_garrison(b: Building) -> void:
 
 
 ## Map civic building (neutral, built). Placed on flattened ground like any structure; never in the build menu.
-func add_civic(k: String, pos: Vector3) -> Building:
-	if not BuildingDefs.DEFS.has(k) or not ResourceLoader.exists(str(BuildingDefs.DEFS[k].model3d)): return null
+## Finds a fairly level spot near pos for a civic building and levels it (no navigation needed yet).
+func _civic_site(k: String, pos: Vector3) -> Vector3:
 	var half: Vector2 = BuildingDefs.DEFS[k].size * 0.5
 	var p := pos
 	if terrain:
 		for tries in 30:
 			var st := terrain.footprint_stats(p, half)
-			if st.y <= 14.0 and gnav.box_free(p, half + Vector2(1, 1)) and map_bounds.grow(-20).has_point(Vector2(p.x, p.z)): break
+			var clear := true
+			for o in obstacles_2d:
+				if absf(o.x - p.x) < half.x + o.z and absf(o.y - p.z) < half.y + o.z: clear = false; break
+			if st.y <= 14.0 and clear and map_bounds.grow(-20).has_point(Vector2(p.x, p.z)): break
 			var a := float(tries) * 2.4
 			p = pos + Vector3(cos(a), 0, sin(a)) * (4.0 + tries * 1.5)
-	p = prepare_site(k, p)
+	return prepare_site(k, p)
+
+
+func add_civic(k: String, pos: Vector3, search := true) -> Building:
+	if not BuildingDefs.DEFS.has(k) or not ResourceLoader.exists(str(BuildingDefs.DEFS[k].model3d)): return null
+	var p := _civic_site(k, pos) if search else pos
 	var b := Building.new()
 	add_child(b)
 	b.setup_structure(self, k, -1, new_uid(), p, true)
@@ -1826,13 +1833,24 @@ func _build_terrain_map() -> void:
 	var per_kind := {}
 	var missing := {}
 	var house_i := 0
-	for pr in d.get("props", []):
-		var kind := str(pr.get("kind", pr.get("type", "")))
-		# village houses become garrisonable civilian houses (mirrored pairs get the same type)
-		if kind == "village_house" and ResourceLoader.exists("res://assets/units3d/civic/civ_house_a/civ_house_a.glb"):
+	# civilian buildings first: village houses become garrisonable houses (mirrored pairs get the same type), plus the
+	# map's "civic" list. Their ground is levelled now, before props are placed, so props stay grounded.
+	if ResourceLoader.exists("res://assets/units3d/civic/civ_house_a/civ_house_a.glb"):
+		for pr in d.get("props", []):
+			if str(pr.get("kind", pr.get("type", ""))) != "village_house": continue
 			civic_spawns.append(["civ_house_b" if (house_i / 2) % 3 == 1 else "civ_house_a", map_point(pr)])
 			house_i += 1
-			continue
+		for c in d.get("civic", []): civic_spawns.append([str(c.type), map_point(c)])
+		for cs in civic_spawns: cs[1] = _civic_site(cs[0], cs[1])
+	for pr in d.get("props", []):
+		var kind := str(pr.get("kind", pr.get("type", "")))
+		if kind == "village_house" and not civic_spawns.is_empty(): continue
+		var pp0 := map_point(pr)
+		var inside_civic := false
+		for cs in civic_spawns:
+			var ch: Vector2 = BuildingDefs.DEFS[cs[0]].size * 0.5 + Vector2(3, 3)
+			if absf(pp0.x - cs[1].x) < ch.x and absf(pp0.z - cs[1].z) < ch.y: inside_civic = true; break
+		if inside_civic: continue
 		if _prop_path(kind) == "":
 			missing[kind] = true
 			continue

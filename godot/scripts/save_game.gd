@@ -48,13 +48,12 @@ static func _unit_rec(b: Node, u: Unit) -> Dictionary:
 	var fields: Array = BUILDING_FIELDS if u is Building else UNIT_FIELDS
 	for f in fields:
 		if f in u: r.f[f] = _enc(u.get(f))
+	r["passengers"] = u.passengers.map(func(p): return _unit_rec(b, p))     # transports and occupied buildings
 	if u is Building:
 		var bb := u as Building
 		r["bkind"] = bb.bkind
 		r["pads"] = bb.pads.map(func(p): return int(p.uid))
-	else:
-		r["passengers"] = u.passengers.map(func(p): return _unit_rec(b, p))
-		if not u.haul_pile.is_empty(): r["haul_pile"] = b.piles.find(u.haul_pile)
+	elif not u.haul_pile.is_empty(): r["haul_pile"] = b.piles.find(u.haul_pile)
 	return r
 
 

@@ -165,7 +165,20 @@ func _run() -> void:
 	var jet: Unit = battle._spawn("f16", 0, cc.position + fwd * 40.0, 0.0)
 	jet.airborne = true; jet.altitude = float(jet.def.altitude); jet.speed_cur = float(jet.def.speed); jet.body.position.y = jet.altitude
 	heli.altitude = float(heli.def.altitude); heli.body.position.y = heli.altitude
-	var far_goal: Vector3 = battle.start_pos[1]
+	# fly over the highest ground on the map and on beyond it
+	var top := Vector3.ZERO
+	var top_h := -INF
+	var mb: Rect2 = battle.map_bounds.grow(-80.0)
+	var gx := mb.position.x
+	while gx < mb.end.x:
+		var gz := mb.position.y
+		while gz < mb.end.y:
+			var hh: float = battle.ground_h(gx, gz)
+			if hh > top_h: top_h = hh; top = Vector3(gx, 0, gz)
+			gz += 20.0
+		gx += 20.0
+	var dir_over: Vector3 = (top - cc.position); dir_over.y = 0.0
+	var far_goal: Vector3 = top + dir_over.normalized() * 60.0
 	battle.issue({"type": "move", "team": 0, "ids": [heli.uid, jet.uid], "points": [far_goal, far_goal]})
 	var min_clear := {"ah64": INF, "f16": INF}
 	var peak := 0.0
