@@ -54,6 +54,7 @@ static func unit_icon_path(k: String) -> String:
 
 
 static func building_icon_path(k: String) -> String:
+	if BuildingDefs.DEFS[k].get("civic", false): return "res://assets/ui/civic/%s_icon.png" % k
 	return str(UsArt.building(BuildingDefs.DEFS[k].art).get("icon", ""))
 
 

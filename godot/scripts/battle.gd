@@ -1715,6 +1715,8 @@ func _lose_passengers(tr: Unit) -> void:
 ## A civic building changes side when the first soldier enters and becomes neutral again when the last leaves.
 func _set_owner(b: Building, t: int) -> void:
 	b.team = t
+	if t == 0:   # the player's fog pass skips own units: make sure the building is shown once we hold it
+		b.ever_seen = true; seen[b.uid] = true; b.visible = true
 	b.set_selected(false)
 	if commander and commander.sel_building == b and t != commander.team: commander.sel_building = null
 
@@ -1767,6 +1769,9 @@ func _eject_garrison(b: Building) -> void:
 
 
 ## Map civic building (neutral, built). Placed on flattened ground like any structure; never in the build menu.
+var _civic_placed: Array = []
+
+
 ## Finds a fairly level spot near pos for a civic building and levels it (no navigation needed yet).
 func _civic_site(k: String, pos: Vector3) -> Vector3:
 	var half: Vector2 = BuildingDefs.DEFS[k].size * 0.5
@@ -1777,10 +1782,18 @@ func _civic_site(k: String, pos: Vector3) -> Vector3:
 			var clear := true
 			for o in obstacles_2d:
 				if absf(o.x - p.x) < half.x + o.z and absf(o.y - p.z) < half.y + o.z: clear = false; break
+			# keep supply piles, derricks and other civic sites free (piles are about 16 m across)
+			for site in terrain.data.get("supply_piles", []) + terrain.data.get("oil_derricks", []):
+				var sp := map_point(site)
+				if absf(sp.x - p.x) < half.x + 14.0 and absf(sp.z - p.z) < half.y + 14.0: clear = false; break
+			for q in _civic_placed:
+				if absf(q.x - p.x) < half.x + 8.0 and absf(q.z - p.z) < half.y + 8.0: clear = false; break
 			if st.y <= 14.0 and clear and map_bounds.grow(-20).has_point(Vector2(p.x, p.z)): break
 			var a := float(tries) * 2.4
 			p = pos + Vector3(cos(a), 0, sin(a)) * (4.0 + tries * 1.5)
-	return prepare_site(k, p)
+	var site := prepare_site(k, p)
+	_civic_placed.append(site)
+	return site
 
 
 func add_civic(k: String, pos: Vector3, search := true) -> Building:
