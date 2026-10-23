@@ -1,8 +1,8 @@
-ir_karrar: tris total 8661
-  Hull         MESH  tris   1125 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
+ir_karrar: tris total 8649
+  Hull         MESH  tris   1113 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
   Turret       MESH  tris   1260 parent -          world (0.0, 0.35, 1.42) local (0.0, 0.35, 1.42)
-  Gun          MESH  tris    428 parent Turret     world (0.0, 1.3, 1.86) local (0.0, 0.95, 0.44)
-  Muzzle       EMPTY tris      0 parent Gun        world (0.0, 6.07, 1.86) local (0.0, 4.77, 0.0)
+  Gun          MESH  tris    428 parent Turret     world (0.0, 1.3, 1.9) local (0.0, 0.95, 0.48)
+  Muzzle       EMPTY tris      0 parent Gun        world (0.0, 6.07, 1.9) local (0.0, 4.77, 0.0)
   WheelL0      MESH  tris    188 parent -          world (-1.4, 2.3, 0.475) local (-1.4, 2.3, 0.475)
   WheelL1      MESH  tris    188 parent -          world (-1.4, 1.47, 0.475) local (-1.4, 1.47, 0.475)
   WheelL2      MESH  tris    188 parent -          world (-1.4, 0.66, 0.475) local (-1.4, 0.66, 0.475)
@@ -21,9 +21,9 @@ ir_karrar: tris total 8661
   SprocketR    MESH  tris    464 parent -          world (1.4, -3.05, 0.62) local (1.4, -3.05, 0.62)
   TrackL       MESH  tris   1144 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
   TrackR       MESH  tris   1144 parent -          world (0.0, 0.0, 0.0) local (0.0, 0.0, 0.0)
-turret pivot (0.0, 0.35, 1.42), gun trunnion (0.0, 1.3, 1.86), muzzle y 6.05
+turret pivot (0.0, 0.35, 1.42), gun trunnion (0.0, 1.3, 1.9), muzzle y 6.05
 hull 6.90 m (nose 3.45 .. rear -3.45), 9.50 m with gun, 3.60 m over skirts, turret roof 2.20 m
 road wheel r 0.375, idler (front) r 0.27, sprocket (rear) r 0.31
 track loop 14.329 m, links 96, link pitch 0.1493 m, metres per V (track_m_per_v) 0.8956 (tile = 6 links)
-atlas coverage 0.591
+atlas coverage 0.589
 normals check: OK (signed volume per component, zero-length normals)
