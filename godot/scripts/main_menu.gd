@@ -3,6 +3,7 @@ extends Control
 
 var content: VBoxContainer
 var side: PanelContainer
+var ui_root: Control   # menu panels; scaled with the screen height like the in-game HUD (1440p x1.33, 4K x2)
 
 
 func _ready() -> void:
@@ -22,10 +23,13 @@ func _ready() -> void:
 	shade.color = Color(0, 0, 0, 0.35)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(shade)
+	ui_root = Control.new()
+	ui_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ui_root)
 	var left := VBoxContainer.new()
 	left.position = Vector2(70, 80)
 	left.add_theme_constant_override("separation", 12)
-	add_child(left)
+	ui_root.add_child(left)
 	left.add_child(UIKit.label("STEEL ACCORD", 64, Color(0.95, 0.97, 0.95)))
 	left.add_child(UIKit.label("Development build B1.7 - USA and Iran", 16, UIKit.ACCENT))
 	var spacer := Control.new(); spacer.custom_minimum_size = Vector2(0, 30)
@@ -37,7 +41,7 @@ func _ready() -> void:
 	left.add_child(UIKit.button("Exit", func(): Game.quit()))
 	side = UIKit.panel(Vector2(520, 420))
 	side.position = Vector2(500, 170)
-	add_child(side)
+	ui_root.add_child(side)
 	content = VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	side.add_child(content)
@@ -53,6 +57,13 @@ func _ready() -> void:
 			if a.begins_with("out="): out = a.substr(4)
 		get_viewport().get_texture().get_image().save_png(out)
 		get_tree().quit()
+
+
+func _process(_dt: float) -> void:
+	if ui_root == null: return
+	var fixed: float = float(Game.settings.get("ui_scale", 0.0))
+	var k: float = fixed if fixed > 0.0 else maxf(1.0, get_viewport_rect().size.y / 1080.0)
+	ui_root.scale = Vector2(k, k)
 
 
 func _clear() -> void:
