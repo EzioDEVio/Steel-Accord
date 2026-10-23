@@ -4,7 +4,8 @@ Generic modern Middle-East / Mediterranean town style: light sand, beige and off
 accents. No real-world logos, brands, writing or flags. The hospital is marked ONLY with a plain white "H" (on a green
 panel, and in a white circle on the rooftop helipad); no red cross / crescent / crystal or any protected emblem.
 
-Run:  python3 -I env_civic_3d.py <out_root> [--only id,id] [--sheet <contact_sheet.png>] [--previews-only]
+Run:  python3 -I env_civic_3d.py <out_root> [--only id,id] [--sheet <contact_sheet.png>] [--icons <dir>] [--previews-only]
+      --icons writes <dir>/<id>_icon.png: 256 x 192 RGB front-3/4 portrait for the selection panel (neutral grey bg).
 Out:  <out_root>/<id>/<id>.glb for id in civ_house_a, civ_house_b, civ_apartment, civ_center, civ_hospital
       Each GLB: one mesh node `<id>` (atlas material CV_<Id>, 1024 px baked colour x AO; `<id>`_2S double-sided
       variant only where dish shells need it) + empties `Door`, `Port1..PortN` (+ `Heal` on the hospital).
@@ -892,6 +893,70 @@ def contact_sheet(root, sheet, ids, info):
     print("contact sheet", sheet)
 
 
+# ====================================================================== selection-panel portrait icons
+ICON_BG = (64, 66, 68)          # plain neutral grey (RGB) behind the building
+ICON_SIZE = (256, 192)
+
+
+def render_icon(glb, bid, out_png, fill=0.85, az=-35.0, el=30.0, ss=3):
+    """Front-3/4 portrait icon: perspective camera (game FOV 40 deg) fitted so the above-ground part of the building
+    fills `fill` of the frame on its larger axis; soft daylight; shadow catcher ground; composited on ICON_BG."""
+    from bpy_extras.object_utils import world_to_camera_view
+    from PIL import Image
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    scene = bpy.context.scene
+    bpy.ops.import_scene.gltf(filepath=glb)
+    pts = [o.matrix_world @ v.co for o in scene.objects if o.type == "MESH" for v in o.data.vertices]
+    pts = [p for p in pts if p.z >= 0.0]                      # ignore the 0.5 m below-ground skirt
+    W, H = ICON_SIZE[0] * ss, ICON_SIZE[1] * ss
+    scene.render.engine = "CYCLES"; scene.cycles.device = "CPU"; scene.cycles.samples = 48
+    scene.cycles.use_denoising = True; scene.cycles.max_bounces = 4
+    scene.render.resolution_x, scene.render.resolution_y = W, H
+    scene.render.film_transparent = True
+    scene.view_settings.view_transform = "Standard"
+    w = bpy.data.worlds.new("w"); scene.world = w; w.use_nodes = True
+    bg = w.node_tree.nodes["Background"]; bg.inputs["Color"].default_value = (0.55, 0.6, 0.68, 1); bg.inputs["Strength"].default_value = 0.9
+    sun = bpy.data.lights.new("sun", "SUN"); sun.energy = 3.2; sun.angle = math.radians(12)      # soft daylight
+    so = bpy.data.objects.new("sun", sun); scene.collection.objects.link(so)
+    so.rotation_euler = Euler((math.radians(38), 0, math.radians(-50)))
+    bpy.ops.mesh.primitive_plane_add(size=400, location=(0, 0, -0.002))
+    gnd = bpy.context.active_object; gnd.is_shadow_catcher = True
+    cam_d = bpy.data.cameras.new("cam"); cam = bpy.data.objects.new("cam", cam_d); scene.collection.objects.link(cam)
+    scene.camera = cam; cam_d.clip_end = 2000
+    cam_d.sensor_fit = "VERTICAL"; cam_d.angle_y = math.radians(40)
+    ctr = sum(pts, V()) / len(pts)
+    a, e = math.radians(az), math.radians(el)
+    d = V((math.sin(a) * math.cos(e), -math.cos(a) * math.cos(e), math.sin(e)))
+    cam.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()
+
+    def extent(dist):
+        cam.location = ctr + d * dist
+        cam_d.shift_x = cam_d.shift_y = 0.0
+        bpy.context.view_layer.update()
+        cs = [world_to_camera_view(scene, cam, p) for p in pts]
+        xs = [c.x for c in cs]; ys = [c.y for c in cs]
+        return min(xs), max(xs), min(ys), max(ys)
+    lo, hi = 5.0, 400.0                                        # fit: larger normalised span -> move closer
+    for _ in range(40):
+        mid = (lo + hi) / 2
+        x0, x1, y0, y1 = extent(mid)
+        if max(x1 - x0, y1 - y0) > fill:
+            lo = mid
+        else:
+            hi = mid
+    x0, x1, y0, y1 = extent(hi)
+    # centre the bbox with lens shift (shift is in units of the larger sensor side = width here)
+    cam_d.shift_x = ((x0 + x1) / 2 - 0.5)
+    cam_d.shift_y = ((y0 + y1) / 2 - 0.5) * H / W
+    tmp = out_png + ".tmp.png"
+    scene.render.filepath = tmp
+    bpy.ops.render.render(write_still=True)
+    im = Image.open(tmp).convert("RGBA"); os.remove(tmp)
+    base = Image.new("RGBA", im.size, (*ICON_BG, 255)); base.alpha_composite(im)
+    base.convert("RGB").resize(ICON_SIZE, Image.LANCZOS).save(out_png)
+    print("icon", out_png, "fit span", round(max(x1 - x0, y1 - y0), 3))
+
+
 # ====================================================================== main
 def main(argv):
     argv = list(argv)
@@ -900,7 +965,7 @@ def main(argv):
         if name in argv:
             i = argv.index(name); v = argv[i + 1]; del argv[i:i + 2]; return v
         return None
-    only = opt("--only"); sheet = opt("--sheet")
+    only = opt("--only"); sheet = opt("--sheet"); icons = opt("--icons")
     skip = "--previews-only" in argv
     if skip:
         argv.remove("--previews-only")
@@ -922,6 +987,10 @@ def main(argv):
                 print(f"   {k:6s} godot {gltf_to_godot(emp[k])}")
     if sheet:
         contact_sheet(root, sheet, ids, info)
+    if icons:
+        os.makedirs(icons, exist_ok=True)
+        for bid in ids:
+            render_icon(os.path.join(root, bid, bid + ".glb"), bid, os.path.join(icons, bid + "_icon.png"))
 
 
 if __name__ == "__main__":

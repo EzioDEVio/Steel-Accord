@@ -87,7 +87,8 @@ vec4 smooth_normal(vec2 p, float d) {
 
 // Softens a splat weight into a noisy, patchy border instead of a uniform cross-fade.
 float breakup(float w, float n) {
-	return smoothstep(0.12, 0.88, w + (n - 0.5) * 0.55) * smoothstep(0.0, 0.06, w);
+	// wide ramp: a sharp threshold on the bilinear 2 m splat would draw straight-edged polygon patches
+	return smoothstep(-0.05, 1.05, w + (n - 0.5) * 0.6) * smoothstep(0.0, 0.08, w);
 }
 
 void fragment() {
@@ -103,9 +104,8 @@ void fragment() {
 	// splat with a warped lookup (+-3 m) so material borders do not follow the 2 m splat raster
 	vec2 warp = (vec2(M.a, M.b) - 0.5) * 5.0 + (H.rg - 0.5) * 2.0;
 	vec4 sp = textureLod(splat, uv + warp / map_rect.zw, 0.0);
-	// rock is painted on every 2-6 m bench riser as 1-2 px lines; at full resolution they alias into a regular field of
-	// facets, so the colour reads rock from a blurred mip (strata from the smoothed height draw the bands instead)
-	sp.r = mix(sp.r, textureLod(splat, uv + warp / map_rect.zw, 1.6).r, 0.8);
+	// thin rock lines on bench risers alias on the 2 m grid, so the colour reads rock partly from a blurred mip (strata from the smoothed height draw the bands instead)
+	sp.r = mix(sp.r, textureLod(splat, uv + warp / map_rect.zw, 1.0).r, 0.5);
 	float road = texture(roads, uv).r;
 	vec4 s3 = smooth_normal(p, 3.0), s8 = smooth_normal(p, 8.0);   // the wide one averages across a whole bench
 	vec3 sn = normalize(s3.xyz * 0.35 + s8.xyz * 0.65);

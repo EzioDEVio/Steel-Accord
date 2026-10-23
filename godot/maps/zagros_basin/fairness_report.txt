@@ -35,10 +35,10 @@ BARRIERS: A->B connectivity with every pass blocked (goat trails open) / with ev
   wheeled   passes blocked: disconnected;  all blocked: disconnected
   tracked   passes blocked: disconnected;  all blocked: disconnected
 
-Max slope 78.4 deg; cells > 38 deg: 57462; > 45 deg: 47757
-  infantry  passable fraction 0.841
+Max slope 79.3 deg; cells > 38 deg: 48011; > 45 deg: 38906
+  infantry  passable fraction 0.867
   wheeled   passable fraction 0.749
-  tracked   passable fraction 0.800
+  tracked   passable fraction 0.821
 
 FLATNESS (starts: 100 m radius; pads: full rectangle):
   start_team0: {'height_range_m': 0.03, 'max_slope_deg': 2.31, 'mean_h': 14.09}
