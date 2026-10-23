@@ -38,7 +38,8 @@ func _place(k: String, at: Vector3) -> Building:
 	battle.commander.mouse_override = Vector2(-1, -1)
 	var now: Array = battle.structures(0, k, false)
 	if now.size() <= before:
-		printerr("TESTDBG place %s at %s refused: %s" % [k, str(at), battle.placement_problem(0, k, battle.commander.ghost_pos)])
+		printerr("TESTDBG place %s at %s refused: %s (ghost at %s, mode '%s', control under mouse: %s)" % [k, str(at), battle.placement_problem(0, k, battle.commander.ghost_pos),
+			str(battle.commander.ghost_pos), battle.commander.mode, str(get_viewport().gui_get_hovered_control())])
 		for o in battle.obstacles_2d:
 			if Vector2(o.x - at.x, o.y - at.z).length() < 25.0: printerr("TESTDBG   obstacle ", o)
 		for u in battle.units:

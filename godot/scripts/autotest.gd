@@ -69,7 +69,7 @@ func _key(k: Key, ctrl := false) -> void:
 
 
 func _press_button(b: Button) -> void:
-	_click(MOUSE_BUTTON_LEFT, b.get_global_rect().get_center())
+	_click(MOUSE_BUTTON_LEFT, b.get_global_transform_with_canvas() * (b.size / 2.0))   # screen point (HUD layer may be scaled)
 
 
 func _team(kinds: Array) -> Array:
