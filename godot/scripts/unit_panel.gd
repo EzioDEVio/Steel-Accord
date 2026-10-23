@@ -51,7 +51,7 @@ func _process(_dt: float) -> void:
 	var sig := ",".join(objs.map(func(u): return str(u.uid)))
 	if subject is Building:
 		var b := subject as Building
-		sig += "|q" + ",".join(b.prod_queue) + "|r" + b.research_id + "|" + str(b.built)
+		sig += "|q" + ",".join(b.prod_queue) + "|r" + b.research_id + "|" + str(b.built) + "|p" + ",".join(b.pads.map(func(p): return str(p.uid)))
 	elif subject:
 		sig += "|u%d" % battle.upgrades[subject.team].size() + battle.plan[subject.team] if subject.team >= 0 and subject.team < 2 else ""
 	if sig != _sig:
@@ -132,6 +132,23 @@ func _build_queue(b: Building) -> void:
 		if qi == 0:
 			_add_progress(t, func(): return (1.0 - b.prod_left / float(BuildingDefs.UNIT_COST[b.prod_queue[0]][1])) if not b.prod_queue.is_empty() else -1.0)
 		i += 1
+	# Airfield pads: one tile per pad with the aircraft on it (or empty), after the queue
+	if not b.pads.is_empty():
+		i = maxi(i, 9 - b.pads.size())
+		for pi in b.pads.size():
+			var pu: Unit = battle.by_id.get(int(b.pads[pi].uid))
+			var occ: bool = pu != null and not pu.dead
+			var tip := "Pad %d - %s" % [pi + 1, ("%s, %s" % [pu.def.name, hud.inspector._state(pu)]) if occ else "free"]
+			var t := _small(tip, _tex(EconPanel.unit_icon_path(pu.kind)) if occ else null, i, func(): if occ: commander._set_selection([pu]), Vector2(52, 40))
+			var n := pi + 1
+			var ov := Control.new()
+			ov.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			ov.size = t.size
+			ov.draw.connect(func():
+				ov.draw_string(ThemeDB.fallback_font, Vector2(3, 12), "P%d" % n, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.75, 0.85, 0.82))
+				if not occ: ov.draw_string(ThemeDB.fallback_font, Vector2(0, 30), "free", HORIZONTAL_ALIGNMENT_CENTER, ov.size.x, 11, Color(0.5, 0.56, 0.54)))
+			t.add_child(ov)
+			i += 1
 
 
 func _add_progress(t: Button, f: Callable) -> void:
@@ -209,7 +226,9 @@ func _draw() -> void:
 			draw_string(f, Vector2(x0, 94), vt, HORIZONTAL_ALIGNMENT_LEFT, w + 30, 12, Color(1.0, 0.84, 0.4) if u.vet_rank > 0 else Color(0.6, 0.66, 0.64))
 		elif u is Building and (u as Building).built:
 			var bb := u as Building
-			draw_string(f, Vector2(x0, 94), "Power %+d%s" % [bb.bdef.power, ("   Queue: %d" % bb.prod_queue.size()) if not bb.prod_queue.is_empty() else ""], HORIZONTAL_ALIGNMENT_LEFT, w + 30, 12, Color(0.6, 0.66, 0.64))
+			var pads_txt := ""
+			if not bb.pads.is_empty(): pads_txt = "   Pads %d / %d in use" % [bb.pads.filter(func(p): return battle.by_id.has(int(p.uid)) and not battle.by_id[int(p.uid)].dead).size(), bb.pads.size()]
+			draw_string(f, Vector2(x0, 94), "Power %+d%s%s" % [bb.bdef.power, ("   Queue: %d" % bb.prod_queue.size()) if not bb.prod_queue.is_empty() else "", pads_txt], HORIZONTAL_ALIGNMENT_LEFT, w + 30, 12, Color(0.6, 0.66, 0.64))
 	else:
 		var hp := 0.0; var mx := 0.0
 		for o in objs: hp += o.hp; mx += o.def.hp
