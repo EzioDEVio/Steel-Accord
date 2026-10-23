@@ -1543,6 +1543,8 @@ func unload_one(tr: Unit, p: Unit) -> bool:
 
 
 func _lose_passengers(tr: Unit) -> void:
+	if tr.team == 0 and hud and not tr.passengers.is_empty():
+		hud.flash_message("%s destroyed - %d passengers lost" % [tr.def.name, tr.passengers.size()])
 	for p in tr.passengers:
 		p.dead = true
 		if p.team == 0: losses += 1

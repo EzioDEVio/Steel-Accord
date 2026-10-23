@@ -307,7 +307,7 @@ func _draw_queue(q: Array) -> void:
 	if qs == _qsig:
 		if b and not q.is_empty() and queue_box.get_child_count() > 0:
 			var total := float(BuildingDefs.UNIT_COST[q[0]][1])
-			(queue_box.get_child(0) as Button).text = "%s %d%%" % [str(q[0]).substr(0, 4), int(100.0 * (1.0 - b.prod_left / total))]
+			(queue_box.get_child(0) as Button).text = "%s %d%%" % [_qname(q[0]).substr(0, 5), int(100.0 * (1.0 - b.prod_left / total))]
 		return
 	_qsig = qs
 	for c in queue_box.get_children(): c.queue_free()
@@ -318,13 +318,18 @@ func _draw_queue(q: Array) -> void:
 		t.custom_minimum_size = Vector2(54, 26); t.size = Vector2(54, 26)
 		t.position = Vector2(i * 58, 0)
 		t.add_theme_font_size_override("font_size", 10)
-		var label: String = str(q[i]).substr(0, 7)
+		var label: String = _qname(q[i]).substr(0, 8)
 		if i == 0 and b:
 			var total := float(BuildingDefs.UNIT_COST[q[0]][1])
-			label = "%s %d%%" % [label.substr(0, 4), int(100.0 * (1.0 - b.prod_left / total))]
+			label = "%s %d%%" % [label.substr(0, 5), int(100.0 * (1.0 - b.prod_left / total))]
 		t.text = label
-		t.tooltip_text = "Click to cancel the last queued unit (refund)"
+		t.tooltip_text = "%s - click to cancel the last queued unit (refund)" % str(UnitDefs.def_of(q[i]).get("name", q[i]))
 		var team: int = commander.team
 		var bid := b.uid
 		t.pressed.connect(func(): battle.issue({"type": "cancel_unit", "team": team, "id": bid}))
 		queue_box.add_child(t)
+
+
+## Short display name of a unit kind for the queue tiles ("Karrar (main battle tank)" -> "Karrar").
+func _qname(kind: String) -> String:
+	return str(UnitDefs.def_of(kind).get("name", kind)).split(" (")[0]

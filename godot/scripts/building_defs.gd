@@ -37,7 +37,7 @@ const DEFS := {
 		"name": "War Factory", "art": "war_factory", "model3d": "res://assets/units3d/war_factory/war_factory.glb", "cost": 2000, "build_time": 25.0, "power": -2,
 		"hp": 3000.0, "size": Vector2(28, 22), "sight": 60.0, "produces": ["hmmwv", "hmmwv_50cal", "hmmwv_tow", "mrap", "hmmwv_medical", "m113", "stryker", "bradley", "abrams", "avenger", "paladin", "m777"],
 		"requires": ["supply_depot"], "repair": true,
-		"desc": "Builds vehicles. Damaged vehicles parked at its repair bay are repaired (select vehicles, click the War Factory).",
+		"desc": "Builds vehicles. Damaged vehicles parked at its repair bay are repaired (select vehicles, then click this building).",
 	},
 	"airfield": {
 		"name": "Airfield", "art": "airfield", "model3d": "res://assets/units3d/airfield/airfield.glb", "cost": 1200, "build_time": 25.0, "power": -2,

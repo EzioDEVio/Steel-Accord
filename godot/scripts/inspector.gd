@@ -159,7 +159,7 @@ func _weapons(u: Unit) -> String:
 		var tg: Array = w.get("targets", []).map(func(t): return TARGET_NAMES.get(t, t))
 		var mr: float = float(w.get("min_range", 0.0))
 		out += "  %s  [color=#c9d4cf]range %d m%s, dmg %d%s, reload %.1f s[/color]  vs %s\n" % [
-			str(w.id).replace("_", " "), int(w.range), (" (min %d)" % int(mr)) if mr > 0.0 else "", int(w.damage),
+			battle.lbl(u.team, "w:" + str(w.id), str(w.id).replace("_", " ")), int(w.range), (" (min %d)" % int(mr)) if mr > 0.0 else "", int(w.damage),
 			(" splash %.0f m" % float(w.splash)) if float(w.get("splash", 0.0)) > 0.0 else "",
 			float(w.reload) * Veterancy.mult(u, "reload"), ", ".join(tg)]
 	return out

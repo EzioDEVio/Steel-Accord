@@ -18,6 +18,7 @@ var settings := {
 	"nation0": "usa",
 	"nation1": "iran",
 	"ui_scale": 0.0,
+	"sfx_volume": 0.8,
 	"color0": 0,
 	"color1": 1,
 	"start_cash": 10000,

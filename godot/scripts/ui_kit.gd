@@ -109,6 +109,17 @@ static func options_box(on_change: Callable = Callable()) -> VBoxContainer:
 	sl.value_changed.connect(set_speed)
 	row2.add_child(sl)
 	v.add_child(row2)
+	var row4 := HBoxContainer.new()
+	row4.add_child(label("Effects volume  ", 15))
+	var vs := HSlider.new()
+	vs.min_value = 0.0; vs.max_value = 1.0; vs.step = 0.05; vs.value = float(Game.settings.get("sfx_volume", 0.8))
+	vs.custom_minimum_size = Vector2(200, 24)
+	vs.focus_mode = Control.FOCUS_NONE
+	vs.value_changed.connect(func(x):
+		Game.settings["sfx_volume"] = x
+		notify.call())
+	row4.add_child(vs)
+	v.add_child(row4)
 	var scales := {"Auto": 0.0, "100%": 1.0, "125%": 1.25, "150%": 1.5, "200%": 2.0}
 	var cur := "Auto"
 	for k in scales:

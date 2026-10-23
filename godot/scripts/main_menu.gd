@@ -106,7 +106,7 @@ func _show_skirmish() -> void:
 				Game.settings.difficulty = x
 				Game.save())
 			od.custom_minimum_size = Vector2(110, 32)
-			od.tooltip_text = "Computer opponent. Easy: attacks late with a big wave. Hard: thinks faster, attacks early."
+			od.tooltip_text = "Computer opponent.\nEasy: attacks late with a big wave; its weapons deal 80% damage.\nNormal: 100%.\nHard: thinks faster, attacks early; its weapons deal 115% damage."
 			grid.add_child(od)
 	leftc.add_child(UIKit.label("Two players, one vs one (more slots and allied teams arrive with multiplayer).", 11, Color(0.55, 0.6, 0.58)))
 	# ---- match settings

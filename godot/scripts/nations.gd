@@ -29,6 +29,13 @@ const DEFS := {
 		"labels": {
 			"command_center": "Command Headquarters", "power_plant": "Power Station", "barracks": "Garrison Barracks",
 			"supply_depot": "Logistics Depot", "war_factory": "Armour Works", "airfield": "Air Base", "defense_tower": "Missile Post",
+			# weapon display names (key "w:<weapon id>"; fictional, generic)
+			"w:m4": "Assault rifle", "w:m4_medic": "Assault rifle", "w:m4_para": "Assault rifle", "w:m4_ranger": "Assault carbine",
+			"w:at4": "RPG launcher", "w:m249": "PKM machine gun", "w:m240": "PKM machine gun", "w:mk17": "Marksman rifle",
+			"w:120mm": "125mm main gun", "w:m2_cupola": "12.7mm cupola MG", "w:25mm": "30mm autocannon", "w:m2_apc": "12.7mm MG",
+			"w:rws_stryker": "12.7mm remote MG", "w:tow": "ATGM", "w:atgm": "ATGM", "w:aim120": "Air-to-air missiles",
+			"w:aam": "Air-to-air missiles", "w:agm": "Guided missiles", "w:agm_heavy": "Heavy guided missiles", "w:sdb": "Guided bombs",
+			"w:jdam": "Guided bombs", "w:gau_cannon": "Autocannon", "w:rockets": "Rocket pods", "w:door_guns": "Door guns",
 			"drop_zone": "Airdrop Zone", "radar": "Radar Station", "hesco": "Earth Barrier",
 			"adv_armor": "Infantry Body Armour", "composite_armor": "Reactive Armour Kits", "guided_munitions": "Precision Strike Kits",
 			"supply_efficiency": "Logistics Network", "adv_training": "Combat Training Programme",
