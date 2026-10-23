@@ -931,7 +931,9 @@ func capacity_left() -> int:
 
 
 func accepts(u: Unit) -> bool:
-	if not is_transport() or u.team != team or u.dead: return false
+	if not is_transport() or u.dead: return false
+	# civilian buildings: anyone may enter an empty one; occupied ones only take the occupiers' side
+	if u.team != team and not (self is Building and team < 0): return false
 	return "infantry" in def.transport.accepts and u.def.get("visual", "") == "infantry"
 
 

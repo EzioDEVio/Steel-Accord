@@ -396,7 +396,7 @@ def civ_house_a(kit, P):
 
 def civ_house_b(kit, P):
     """12 x 10 m two-storey house: beige plaster, roof stair hut, walled courtyard on the east side, front balcony."""
-    X0, X1, Y0, Y1 = -6.0, 2.6, -3.9, 5.0
+    X0, X1, Y0, Y1 = -5.6, 2.6, -3.9, 4.6
     F1, H = 3.2, 6.4
     block(P, "plas_beige", "roofc", X0, X1, Y0, Y1, H)
     ring(P, "plas_dark", X0, X1, Y0, Y1, SUB, 0.45, o=0.04)
@@ -430,28 +430,34 @@ def civ_house_b(kit, P):
     ac_unit(P, F["left"], 0.4, F1 + 2.2)
     spout(P, F["back"], -5.5, H + 0.05); spout(P, F["right"], 4.6, H + 0.05)
     # roof stair hut (door faces the roof's open side, -Y), tanks, solar heater, dish
-    SX0, SX1, SY0, SY1, SH = -5.6, -3.0, 2.2, 4.6, H + 2.5
+    SX0, SX1, SY0, SY1, SH = -5.2, -2.8, 1.9, 4.2, H + 2.5
     block(P, "plas_beige", "roofc", SX0, SX1, SY0, SY1, SH, z0=H)
     ring(P, "trim", SX0, SX1, SY0, SY1, SH - 0.15, SH + 0.05, o=0.06)
-    door(P, Face("y", SY0, -1), -4.3, 0.9, 2.05, leaf="door", step=False, z0=H, hood=0.5)
-    window(P, Face("x", SX1, 1), 3.4, H + 1.2, 0.6, 0.6, sill=False)
-    tank(P, -5.0, 3.6, SH, r=0.5, h=1.0, m="tank_w", stand=0.0)
-    tank(P, -3.7, 3.6, SH, r=0.45, h=0.9, m="tank_b", stand=0.0)
-    solar_heater(P, -0.6, 3.4, H)
+    door(P, Face("y", SY0, -1), -4.0, 0.9, 2.05, leaf="door", step=False, z0=H, hood=0.5)
+    window(P, Face("x", SX1, 1), 3.1, H + 1.2, 0.6, 0.6, sill=False)
+    tank(P, -4.6, 3.3, SH, r=0.5, h=1.0, m="tank_w", stand=0.0)
+    tank(P, -3.4, 3.3, SH, r=0.45, h=0.9, m="tank_b", stand=0.0)
+    solar_heater(P, -0.6, 3.0, H)
     dish(P, 1.6, -2.8, H, r=0.42, ang=0.0)
     roof_ac(P, 1.2, 1.2, H)
     # courtyard: walls with coping, gate, paving, tree, bench
     CX0, CX1, CY0, CY1, WH, T = X1, 6.0, -5.0, 5.0, 2.2, 0.25
-    for (a0, a1, b0, b1) in ((CX1 - T, CX1, CY0, CY1), (CX0, CX1, CY1 - T, CY1), (CX0, 3.5, CY0, CY0 + T),
-                             (5.2, CX1, CY0, CY0 + T), (CX0, CX0 + T, CY0, Y0)):
+    # wall runs butt against each other / the gate piers - no overlapping boxes (overlaps trap AO -> black streaks)
+    PW = 0.18
+    for (a0, a1, b0, b1, ax) in ((CX1 - T, CX1, CY0, CY1, "y"), (X1, CX1 - T, CY1 - T, CY1, "x"),
+                                 (CX0, 3.5 - PW, CY0, CY0 + T, "x"), (5.2 + PW, CX1 - T, CY0, CY0 + T, "x"),
+                                 (CX0, CX0 + T, CY0 + T, Y0, "y")):
         P.span("plas_beige", a0, a1, b0, b1, SUB, WH)
-        P.span("trim", a0 - 0.04, a1 + 0.04, b0 - 0.04, b1 + 0.04, WH, WH + 0.08)
+        if ax == "x":
+            P.span("trim", a0, a1, b0 - 0.04, b1 + 0.04, WH, WH + 0.08)
+        else:
+            P.span("trim", a0 - 0.04, a1 + 0.04, b0, b1, WH, WH + 0.08)
     for x in (3.5, 5.2):
         P.span("plas_dark", x - 0.18, x + 0.18, CY0 - 0.05, CY0 + 0.3, SUB, WH + 0.35)
         P.span("trim", x - 0.22, x + 0.22, CY0 - 0.09, CY0 + 0.34, WH + 0.35, WH + 0.43)
     P.span("shut_g", 3.68, 5.02, CY0 + 0.08, CY0 + 0.14, 0.05, 2.1, bottom=True)          # closed steel gate
     P.span("pave", CX0, CX1 - T, CY0 + T, CY1 - T, -0.1, 0.04)
-    tree(P, 4.9, 3.4, h=4.2, r=1.7, seed=21)
+    tree(P, 4.3, 3.2, h=4.2, r=1.4, seed=21)
     P.span("woodold", 4.9, 5.6, -1.6, 0.4, 0.0, 0.45)
     P.span("trim", -5.8, -4.2, -4.9, Y0, -0.1, 0.12)
     D = (4.35, -5.6, 0.0)                               # outside the courtyard gate
@@ -464,7 +470,7 @@ def civ_house_b(kit, P):
 
 def civ_apartment(kit, P):
     """18 x 12 m four-storey apartment block: shops on the ground floor, balconies, busy roof."""
-    X0, X1, Y0, Y1 = -8.8, 8.8, -4.8, 5.8
+    X0, X1, Y0, Y1 = -8.5, 8.5, -4.8, 5.5
     LV = [0.0, 3.6, 6.7, 9.8]; H = 12.9
     block(P, "plas_white", "roofc", X0, X1, Y0, Y1, H)
     P.span("plas_beige", X0 - 0.04, X1 + 0.04, Y0 - 0.04, Y0, SUB, LV[1])                 # ground floor band, front
@@ -544,7 +550,7 @@ def civ_apartment(kit, P):
 def civ_center(kit, P):
     """22 x 16 m community centre: two storeys, stone-clad ground floor, glazed entrance with a canopy,
     a bare flagpole (no flag) and a monument sign board with an abstract emblem only (no text)."""
-    X0, X1, Y0, Y1 = -10.2, 10.2, -3.2, 7.6
+    X0, X1, Y0, Y1 = -10.2, 10.2, -3.2, 7.2
     F1, H = 4.2, 8.0
     block(P, "plas_white", "roofc", X0, X1, Y0, Y1, H)
     ring(P, "ashlar", X0, X1, Y0, Y1, SUB, F1, o=0.06)
@@ -584,7 +590,7 @@ def civ_center(kit, P):
     for u in (-8.0, -4.8, -1.6, 4.8, 8.0):
         window(P, F["back"], u, 1.0, 1.3, 1.8, bars=3, n0=0.06)
         window(P, F["back"], u, F1 + 1.0, 1.3, 1.8, sill=False, hood=True)
-    door(P, F["back"], 1.6, 1.8, 2.4, leaf="door", hood=0.9, n0=0.06)
+    door(P, F["back"], 1.6, 1.8, 2.4, leaf="door", hood=0.6, n0=0.06)
     # forecourt: paving, planters, benches, flagpole (bare), monument sign
     P.span("pave", -10.6, 10.6, -7.8, Y0, -0.1, 0.06)
     P.span("trim", -10.7, 10.7, -7.95, -7.8, -0.1, 0.16)
@@ -610,7 +616,7 @@ def civ_center(kit, P):
     sf.span(P, "sign_w", sx - 0.4, sx + 1.3, 0.0, 0.03, 1.4, 1.52)
     sf.span(P, "sign_w", sx - 0.4, sx + 0.8, 0.0, 0.03, 1.0, 1.12)
     # roof: stair hut, large AC units, skylight, dish
-    SX0, SX1, SY0, SY1, SH = 5.0, 8.2, 4.0, 7.0, H + 2.6
+    SX0, SX1, SY0, SY1, SH = 5.0, 8.2, 3.6, 6.6, H + 2.6
     block(P, "plas_white", "roofc", SX0, SX1, SY0, SY1, SH, z0=H)
     ring(P, "acc_teal", SX0, SX1, SY0, SY1, SH - 0.2, SH, o=0.05)
     door(P, Face("x", SX0, -1), 5.5, 0.9, 2.1, leaf="door", step=False, z0=H, hood=0.4)
@@ -620,7 +626,7 @@ def civ_center(kit, P):
         P.cyl("dark", (x, y, H + 1.17), 0.45, 0.04, seg=12)
     P.frustum("glass", -1.0, 2.6, 1.0, 4.6, H, H + 0.9, 0.5)
     dish(P, 8.6, 1.0, H, r=0.5, ang=-0.4)
-    antenna(P, 7.4, 6.4, SH, 2.0)
+    antenna(P, 7.4, 6.0, SH, 2.0)
     D = (0.0, -7.4, 0.0)
     ports = [(f, -8.6, F1 + 1.9), (f, -4.8, F1 + 1.9), (f, 6.6, F1 + 1.9), (f, 8.6, 2.1),
              (F["left"], -1.2, F1 + 1.9), (F["left"], 5.6, 2.1), (F["right"], 2.2, F1 + 1.9), (F["right"], -1.2, 2.1),
@@ -632,7 +638,7 @@ def civ_center(kit, P):
 def civ_hospital(kit, P):
     """24 x 18 m three-storey hospital: ribbon windows, ambulance-bay canopy at the entrance, rooftop helipad with a
     white 'H' in a circle, white 'H' on green panels. No red cross / crescent / crystal anywhere."""
-    X0, X1, Y0, Y1 = -11.8, 11.8, -4.0, 8.8
+    X0, X1, Y0, Y1 = -11.5, 11.5, -4.0, 8.3
     LV = [0.0, 3.9, 7.5]; H = 11.1
     block(P, "plas_white", "roofc", X0, X1, Y0, Y1, H)
     ring(P, "plas_dark", X0, X1, Y0, Y1, SUB, 0.5, o=0.04)
@@ -646,7 +652,7 @@ def civ_hospital(kit, P):
         face.span(P, "ribbon", u0, u1, 0.08, 0.1, z, z + hgt)
         face.span(P, "trim", u0 - 0.2, u1 + 0.2, 0, 0.35, z + hgt + 0.25, z + hgt + 0.35)    # sun-shade ledge
     # stair core (front left) with a vertical slot window
-    SCX0, SCX1 = -11.8, -8.6
+    SCX0, SCX1 = X0, -8.6
     P.span("plas_beige", SCX0 - 0.02, SCX1, Y0 - 0.5, Y0, SUB, H + 1.0)
     P.span("trim", SCX0 - 0.06, SCX1 + 0.04, Y0 - 0.56, Y0, H + 1.0, H + 1.1)
     Face("y", Y0 - 0.5, -1).span(P, "wglass", -10.6, -9.8, 0.0, 0.03, 1.0, H - 3.2)
@@ -663,7 +669,7 @@ def civ_hospital(kit, P):
                 ribbon_band(F[side], 2.0, u1, z + 0.95)
             else:
                 ribbon_band(F[side], u0, u1, z + 0.95)
-    door(P, F["back"], 0.0, 2.6, 2.6, leaf="door", hood=1.0, n0=0.0)
+    door(P, F["back"], 0.0, 2.6, 2.6, leaf="door", hood=0.5, n0=0.0)
     # entrance lobby: glazed box under the canopy
     LX0, LX1, LY0 = -5.0, 5.0, -5.4
     block(P, "glass", "roofc", LX0, LX1, LY0, Y0, 3.6)
@@ -729,7 +735,7 @@ def civ_hospital(kit, P):
     # safety-net shelf on three sides, access stair from the roof on the west side
     NZ = HZ - 0.32
     P.span("grate", HX - HS, HX + HS + 0.6, HY - HS - 0.6, HY - HS, NZ, NZ + 0.05)
-    P.span("grate", HX - HS, HX + HS + 0.6, HY + HS, HY + HS + 0.6, NZ, NZ + 0.05)
+    P.span("grate", HX - HS, HX + HS + 0.6, HY + HS, HY + HS + 0.4, NZ, NZ + 0.05)
     P.span("grate", HX + HS, HX + HS + 0.6, HY - HS, HY + HS, NZ, NZ + 0.05)
     for k in range(6):
         z1 = H + 0.2 * (k + 1)

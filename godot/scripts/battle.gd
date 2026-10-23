@@ -72,6 +72,7 @@ var hud: HUD
 
 func _ready() -> void:
 	args = _args()
+	if not Game.pending_load.is_empty(): loaded_meta = Game.pending_load.meta   # nations / map come from the save
 	scenario = "army" if ("army" in args or ("test" in args and not "base" in args) or "airdiag" in args or "evidence" in args) else "base"
 	var _t0 := Time.get_ticks_msec()
 	_select_map()
@@ -98,6 +99,10 @@ func _ready() -> void:
 		_build_map()
 	await _bake_nav()
 	print("LOAD nav %d ms" % (Time.get_ticks_msec() - _t0))
+	if terrain:
+		for c in terrain.data.get("civic", []): civic_spawns.append([str(c.type), map_point(c)])
+		for cs in civic_spawns: add_civic(cs[0], cs[1])
+		civic_spawns.clear()
 	_spawn_forces()
 	print("LOAD forces %d ms" % (Time.get_ticks_msec() - _t0))
 	for id in UnitDefs.POWERS:
@@ -128,6 +133,22 @@ func _ready() -> void:
 	pause_menu.battle = self
 	add_child(pause_menu)
 	apply_settings()
+	if not Game.pending_load.is_empty():
+		var data: Dictionary = Game.pending_load
+		Game.pending_load = {}
+		loaded_meta = data.meta
+		SaveGame.restore(self, data)
+		if "loadcheck" in args:   # end-to-end test: the rebuilt match must match the fingerprint stored with the file
+			var want: Variant = JSON.parse_string(FileAccess.get_file_as_string(str(args.get("loadsave", "")).replace(".sav", ".sig")))
+			var got: Variant = JSON.parse_string(JSON.stringify(SaveGame.signature(self)))
+			var bad: Array = []
+			if want is Dictionary:
+				for k in want:
+					if str(want[k]) != str(got.get(k)): bad.append("%s: %s -> %s" % [k, str(want[k]).substr(0, 60), str(got.get(k)).substr(0, 60)])
+			printerr("LOADTEST %s units=%s structures=%s cash=%s differences: %s" % [str(want is Dictionary and bad.is_empty()), str(got.units), str(got.structures), str(got.cash), "; ".join(bad) if not bad.is_empty() else "none"])
+			print("RESULT %d/1" % (1 if want is Dictionary and bad.is_empty() else 0))
+			await get_tree().create_timer(2.0).timeout
+			get_tree().quit()
 	if scenario == "base": hud.flash_message("Build up: select your Dozer and place a Power Plant. The enemy base is to the north.")
 	else: hud.flash_message("Enemy armour reported to the north. Destroy all hostile units.")
 	if "uishots" in args:
@@ -180,6 +201,7 @@ func _ready() -> void:
 ## Proving Ground unless a map is named explicitly, so the existing regression tests are unchanged.
 func _select_map() -> void:
 	var want := str(args.get("map", "" if _automated() else str(Game.settings.get("map", "proving_ground"))))
+	if not Game.pending_load.is_empty(): want = str(Game.pending_load.meta.get("map", want))   # a saved game picks its map
 	if want == "" or want == "proving_ground" or not TerrainMap.exists(want):
 		map_id = "proving_ground"
 		return
@@ -395,10 +417,19 @@ func _spawn_forces() -> void:
 			u.state = Unit.S.LANDED; u.altitude = 0.4; u.speed_cur = 0.0; u.body.position.y = 0.4; u.airborne = false
 
 
+## Unit ids are never reused (units.size() + 1 was: boarding removes infantry from the list, so ids could repeat).
+var uid_next := 1
+
+
+func new_uid() -> int:
+	uid_next += 1
+	return uid_next - 1
+
+
 func _spawn(kind: String, team: int, pos: Vector3, yaw: float) -> Unit:
 	var u := Unit.new()
 	add_child(u)
-	u.setup(self, kind, team, units.size() + 1, grounded(pos), yaw)
+	u.setup(self, kind, team, new_uid(), grounded(pos), yaw)
 	u.reset_physics_interpolation()
 	units.append(u)
 	by_id[u.uid] = u
@@ -461,7 +492,8 @@ func _execute(cmd: Dictionary) -> void:
 				var tr: Unit = by_id.get(cmd.target)
 				if tr and tr.accepts(u):
 					u.board_target = tr
-					u.order_move(tr.position)
+					var door: Vector3 = (tr as Building).door_pos if tr is Building and (tr as Building).door_pos != Vector3.INF else tr.position
+					u.order_move(door)
 			"unload":
 				if u.is_transport() and not u.passengers.is_empty():
 					if u.domain == "heli": u.unload_pending = true
@@ -520,6 +552,7 @@ func sim_tick(dt: float) -> void:
 	_ground_units(dt)
 	if p: _pmark("ground")
 	_update_derricks(dt)
+	_update_garrisons(dt)
 	_update_plans()
 	if tick_n % 150 == 0:
 		trend_samples.append([sim_time, income[0], spent[0], income[1], spent[1]])
@@ -676,7 +709,7 @@ func find_enemy_near_point(u: Unit, p: Vector3, r: float) -> Unit:
 	var bd := r
 	var bd2 := r * r
 	for o in units:
-		if o.dead or o.team == u.team: continue
+		if o.dead or o.team == u.team or o.team < 0: continue
 		var dx := o.position.x - p.x
 		var dz := o.position.z - p.z
 		var d2 := dx * dx + dz * dz
@@ -960,6 +993,10 @@ func _update_bombs(dt: float) -> void:
 
 # ------------------------------------------------------------------ deaths and visibility
 func on_unit_died(u: Unit) -> void:
+	if u is Building and (u as Building).is_civic():
+		_eject_garrison(u as Building)
+		u.team = -1
+		return
 	if not u.passengers.is_empty(): _lose_passengers(u)
 	if u.engine_snd: u.engine_snd.stop()
 	if u.team == 0: losses += 1
@@ -1138,7 +1175,7 @@ func is_visible_to(team: int, u: Unit) -> bool:
 func alive_count(team: int) -> int:
 	var n := 0
 	for u in units:
-		if u.team == team and not u.dead: n += 1
+		if u.team == team and not u.dead and not (u is Building and (u as Building).is_civic()): n += 1
 	return n
 
 
@@ -1190,7 +1227,7 @@ func add_structure(k: String, team: int, pos: Vector3, built := false) -> Buildi
 	pos = prepare_site(k, pos)
 	var b := Building.new()
 	add_child(b)
-	b.setup_structure(self, k, team, units.size() + 1, pos, built)
+	b.setup_structure(self, k, team, new_uid(), pos, built)
 	b.reset_physics_interpolation()
 	units.append(b)
 	by_id[b.uid] = b
@@ -1446,27 +1483,31 @@ var rubble: Array = []   # {"pos", "kind", "team", "half", "node"}
 ## A destroyed structure leaves rubble on its footprint (not an obstacle). A Dozer can rebuild the same structure
 ## there through the normal construction flow (normal cost, prerequisites and build time).
 func add_rubble(b: Building) -> void:
+	add_rubble_at(b.position, b.bkind, -2 if b.is_civic() else b.team, b.half, b.uid)
+
+
+func add_rubble_at(pos: Vector3, bkind: String, bteam: int, bhalf: Vector2, seed_id: int) -> void:
 	var n := Node3D.new()
-	n.position = b.position
+	n.position = pos
 	add_child(n)
 	var dark := StandardMaterial3D.new(); dark.albedo_color = Color(0.13, 0.12, 0.11); dark.roughness = 1.0
 	var conc := StandardMaterial3D.new(); conc.albedo_color = Color(0.36, 0.34, 0.31); conc.roughness = 0.95
 	var slab := MeshInstance3D.new()
-	var bm := BoxMesh.new(); bm.size = Vector3(b.half.x * 2.0, 0.3, b.half.y * 2.0); bm.material = dark
+	var bm := BoxMesh.new(); bm.size = Vector3(bhalf.x * 2.0, 0.3, bhalf.y * 2.0); bm.material = dark
 	slab.mesh = bm; slab.position.y = 0.15
 	n.add_child(slab)
-	var r := RandomNumberGenerator.new(); r.seed = b.uid * 7919
-	for i in int(clampf(b.half.x * b.half.y / 6.0, 6, 40)):
+	var r := RandomNumberGenerator.new(); r.seed = seed_id * 7919
+	for i in int(clampf(bhalf.x * bhalf.y / 6.0, 6, 40)):
 		var m := MeshInstance3D.new()
 		var cm := BoxMesh.new()
 		cm.size = Vector3(r.randf_range(0.8, 3.5), r.randf_range(0.4, 2.0), r.randf_range(0.8, 3.5))
 		cm.material = conc if i % 3 else dark
 		m.mesh = cm
-		m.position = Vector3(r.randf_range(-b.half.x, b.half.x) * 0.85, cm.size.y * 0.4, r.randf_range(-b.half.y, b.half.y) * 0.85)
+		m.position = Vector3(r.randf_range(-bhalf.x, bhalf.x) * 0.85, cm.size.y * 0.4, r.randf_range(-bhalf.y, bhalf.y) * 0.85)
 		m.rotation = Vector3(r.randf_range(-0.4, 0.4), r.randf() * TAU, r.randf_range(-0.4, 0.4))
 		n.add_child(m)
 	FX.wreck_fire(n)
-	rubble.append({"pos": b.position, "kind": b.bkind, "team": b.team, "half": b.half, "node": n})
+	rubble.append({"pos": pos, "kind": bkind, "team": bteam, "half": bhalf, "node": n, "seed": seed_id})
 
 
 func _clear_rubble(pos: Vector3, h: Vector2) -> void:
@@ -1618,8 +1659,11 @@ func _board(u: Unit, tr: Unit) -> void:
 	units.erase(u)
 	u.visible = false
 	u.process_mode = Node.PROCESS_MODE_DISABLED
+	if tr is Building and (tr as Building).is_civic() and tr.team != u.team: _set_owner(tr as Building, u.team)
 	tr.passengers.append(u)
-	if tr.team == 0 and hud: hud.flash_message("%s boarded %s (%d/%d)" % [u.def.name, tr.def.name, tr.passengers.size(), tr.def.transport.capacity])
+	if tr.team == 0 and hud:
+		var verb := "occupied" if tr is Building else "boarded"
+		hud.flash_message("%s %s %s (%d/%d)" % [u.def.name, verb, tr.def.name, tr.passengers.size(), tr.def.transport.capacity])
 
 
 func unload_all(tr: Unit) -> void:
@@ -1648,9 +1692,12 @@ func unload_one(tr: Unit, p: Unit) -> bool:
 	p.position = spot
 	p.process_mode = Node.PROCESS_MODE_INHERIT
 	p.visible = true
+	p.altitude = 0.0
+	if p.body: p.body.position.y = 0.0
 	p.order_stop()
 	p.reset_physics_interpolation()
 	units.append(p)
+	if tr is Building and (tr as Building).is_civic() and tr.passengers.is_empty(): _set_owner(tr as Building, -1)
 	return true
 
 
@@ -1665,13 +1712,94 @@ func _lose_passengers(tr: Unit) -> void:
 	tr.passengers.clear()
 
 
+# ------------------------------------------------------------------ civilian buildings (garrisons)
+## A civic building changes side when the first soldier enters and becomes neutral again when the last leaves.
+func _set_owner(b: Building, t: int) -> void:
+	b.team = t
+	b.set_selected(false)
+	if commander and commander.sel_building == b and t != commander.team: commander.sel_building = null
+
+
+## Occupants fire from the windows (+15 % range, the building's view) and cannot be hit; a hospital heals them.
+const GARRISON_RANGE := 1.15
+
+
+func _update_garrisons(dt: float) -> void:
+	for u in units:
+		if not (u is Building) or u.dead or u.passengers.is_empty(): continue
+		var b := u as Building
+		if not b.is_civic(): continue
+		var heal: float = float(b.bdef.get("garrison_heal", 0.0))
+		for i in b.passengers.size():
+			var p: Unit = b.passengers[i]
+			if heal > 0.0 and p.hp < p.def.hp:
+				p.hp = minf(p.def.hp, p.hp + p.def.hp * heal * dt)
+			var pp := b.port(i)
+			p.position = Vector3(pp.x, ground_h(pp.x, pp.z), pp.z)
+			p.altitude = maxf(0.0, pp.y - p.position.y)
+			if p.target and (p.target.dead or p.target.team == p.team or p.target.team < 0): p.target = null
+			for wi in p.def.weapons.size():
+				p.w_reload[wi] = maxf(0.0, float(p.w_reload[wi]) - dt)
+			if p.target == null and (tick_n + p.uid) % 6 == 0:
+				p.target = find_enemy_near_point(p, pp, p.max_range_any() * GARRISON_RANGE)
+			if p.target == null: continue
+			var d := Vector2(p.target.position.x - pp.x, p.target.position.z - pp.z).length()
+			for wi in p.def.weapons.size():
+				var w: Dictionary = p.def.weapons[wi]
+				if float(p.w_reload[wi]) > 0.0 or not (p.target.domain in w.targets): continue
+				if d > float(w.range) * GARRISON_RANGE or d < float(w.get("min_range", 0.0)): continue
+				fire(p, w, p.target, p.target.world_center())
+				p.w_reload[wi] = float(w.reload) * Veterancy.mult(p, "reload")
+				p.last_fire_t = sim_time
+			if d > p.max_range_any() * GARRISON_RANGE * 1.2: p.target = null
+
+
+## The building is destroyed: occupants get out hurt (half their health), or die when there is no room.
+func _eject_garrison(b: Building) -> void:
+	var n := b.passengers.size()
+	if n == 0: return
+	var out := 0
+	for p in b.passengers.duplicate():
+		p.hp = maxf(1.0, p.hp * 0.5)
+		if unload_one(b, p): out += 1
+	var lost := b.passengers.size()
+	_lose_passengers(b)
+	if hud and b.team == 0: hud.flash_message("%s destroyed - %d got out, %d lost" % [b.def.name, out, lost])
+
+
+## Map civic building (neutral, built). Placed on flattened ground like any structure; never in the build menu.
+func add_civic(k: String, pos: Vector3) -> Building:
+	if not BuildingDefs.DEFS.has(k) or not ResourceLoader.exists(str(BuildingDefs.DEFS[k].model3d)): return null
+	var half: Vector2 = BuildingDefs.DEFS[k].size * 0.5
+	var p := pos
+	if terrain:
+		for tries in 30:
+			var st := terrain.footprint_stats(p, half)
+			if st.y <= 14.0 and gnav.box_free(p, half + Vector2(1, 1)) and map_bounds.grow(-20).has_point(Vector2(p.x, p.z)): break
+			var a := float(tries) * 2.4
+			p = pos + Vector3(cos(a), 0, sin(a)) * (4.0 + tries * 1.5)
+	p = prepare_site(k, p)
+	var b := Building.new()
+	add_child(b)
+	b.setup_structure(self, k, -1, new_uid(), p, true)
+	b.reset_physics_interpolation()
+	units.append(b)
+	by_id[b.uid] = b
+	return b
+
+
 # ------------------------------------------------------------------ heightfield maps (Zagros Basin and later maps)
 ## Flattens the footprint of a structure about to be placed (skirted) and returns the grounded position.
+var loaded_meta := {}          # meta of the save this battle was rebuilt from
+var flatten_log: Array = []     # [[centre with height, half size]] in order: terrain edits made by construction
+
+
 func prepare_site(k: String, pos: Vector3) -> Vector3:
 	if terrain == null: return Vector3(pos.x, 0.0, pos.z)
 	var half: Vector2 = BuildingDefs.DEFS[k].size * 0.5
 	var st := terrain.footprint_stats(pos, half)
 	terrain.flatten(pos, half + Vector2(2.0, 2.0), st.z, 8.0)
+	flatten_log.append([Vector3(pos.x, st.z, pos.z), half + Vector2(2.0, 2.0)])   # replayed when a saved game loads
 	return Vector3(pos.x, st.z, pos.z)
 
 
@@ -1690,12 +1818,21 @@ func _prop_path(kind: String) -> String:
 
 ## Places map.json props on the terrain. Each prop kind becomes one MultiMesh per mesh part (hundreds of scrub
 ## bushes cost a few draw calls); "block_r" adds a navigation obstacle.
+var civic_spawns: Array = []    # [kind, position] placed once navigation exists
+
+
 func _build_terrain_map() -> void:
 	var d: Dictionary = terrain.data
 	var per_kind := {}
 	var missing := {}
+	var house_i := 0
 	for pr in d.get("props", []):
 		var kind := str(pr.get("kind", pr.get("type", "")))
+		# village houses become garrisonable civilian houses (mirrored pairs get the same type)
+		if kind == "village_house" and ResourceLoader.exists("res://assets/units3d/civic/civ_house_a/civ_house_a.glb"):
+			civic_spawns.append(["civ_house_b" if (house_i / 2) % 3 == 1 else "civ_house_a", map_point(pr)])
+			house_i += 1
+			continue
 		if _prop_path(kind) == "":
 			missing[kind] = true
 			continue
@@ -1831,6 +1968,7 @@ func nation_of(team: int) -> String:
 	if team < 0: return ""
 	var k := "nation%d" % team
 	if args.has(k): return str(args[k])
+	if loaded_meta.has(k): return str(loaded_meta[k])    # a loaded save keeps its armies
 	if _automated(): return "usa"
 	return str(Game.settings.get(k, "usa"))
 

@@ -4,7 +4,7 @@
 extends Node
 
 var battle: Node
-var out := "/tmp/sa_test"
+var out := "user://test_output/sa_test"
 var checks: Array = []
 var shots := 0
 

@@ -4,7 +4,7 @@
 extends Node
 
 var battle: Node
-var out := "/tmp/sa_pilot"
+var out := "user://test_output/sa_pilot"
 
 
 func _ready() -> void:

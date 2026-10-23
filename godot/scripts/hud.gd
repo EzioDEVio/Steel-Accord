@@ -255,8 +255,10 @@ func _update_prod_strip() -> void:
 			btn.set_meta("b", bb)
 			prod_strip.add_child(btn)
 	for c in prod_strip.get_children():
-		var b: Building = c.get_meta("b")
-		if c.is_queued_for_deletion() or not is_instance_valid(b) or b.dead: continue
+		var bm: Variant = c.get_meta("b")
+		if c.is_queued_for_deletion() or not is_instance_valid(bm): continue
+		var b: Building = bm
+		if b.dead: continue
 		if b.built and b.prod_queue.is_empty(): continue
 		if not b.built:
 			c.text = "%s  building %d%%" % [b.def.name, int(b.progress * 100.0)]
@@ -356,6 +358,18 @@ func _draw() -> void:
 		draw_rect(Rect2(r.position - Vector2(0, 4), Vector2(w, 2)), UnitDefs.team_color(u.team).lightened(0.25))
 		if u.selected and u.domain == "jet":
 			_text(sp + Vector2(-w / 2, 18), _ammo_text(u), 11, Color(1, 0.85, 0.5))
+	# occupied civilian buildings: owner colour and head count, always shown
+	for u: Unit in battle.units:
+		if not (u is Building) or u.dead or u.passengers.is_empty() or not (u as Building).is_civic() or not battle.is_visible_to(commander.team, u): continue
+		var tp: Vector3 = u.bar_anchor()
+		if cam.is_position_behind(tp): continue
+		var bp := cam.unproject_position(tp) / ui_scale + Vector2(0, -14)
+		var txt := "%d/%d" % [u.passengers.size(), int(u.def.transport.capacity)]
+		var tc: Color = UnitDefs.team_color(u.team)
+		draw_rect(Rect2(bp - Vector2(24, 9), Vector2(48, 18)), Color(0, 0, 0, 0.7))
+		draw_rect(Rect2(bp - Vector2(24, 9), Vector2(6, 18)), tc)
+		_text(bp + Vector2(-15, 5), txt, 12, Color(1, 1, 1))
+		if float((u as Building).bdef.get("garrison_heal", 0.0)) > 0.0: _text(bp + Vector2(15, 5), "+", 14, Color(0.5, 1.0, 0.6))
 	if commander.dragging and commander.drag_from.distance_to(commander.drag_to) > 6.0 and commander.mode == "":
 		var r := Rect2(commander.drag_from / ui_scale, Vector2.ZERO).expand(commander.drag_to / ui_scale)
 		draw_rect(r, Color(0.4, 1.0, 0.55, 0.12))

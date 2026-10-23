@@ -92,6 +92,8 @@ func _run_qa() -> void:
 	await _qa_m1(ccp)
 	await _qa_m7(ccp)
 	await _qa_m8(ccp)
+	await _qa_ai_retreat(ccp)
+	await _qa_save_load(ccp)
 	_finish()
 
 
@@ -187,6 +189,9 @@ func _run_main() -> void:
 	_log("ai_builds_and_earns", ai_ok, "structures=%d income=%d army=%d t=%.0f" % [battle.structures(1).size(), battle.income[1], ai_units.size(), battle.sim_time])
 	var attacked := await _until(func(): return battle.base_ai.waves > 0, 240.0)
 	_log("ai_attacks", attacked, "waves=%d t=%.0f" % [battle.base_ai.waves, battle.sim_time])
+	var ai: BaseAI = battle.base_ai
+	var scouted := await _until(func(): return ai.known.size() > 0, 120.0)
+	_log("ai_scouts_and_remembers", scouted and ai.scout_t > 40.0, "known enemy structures %d, next scouting trip at %.0f s, t=%.0f" % [ai.known.size(), ai.scout_t, battle.sim_time])
 	# combat roles: AT4 vs a vehicle does far more damage than a rifle; rifle vs infantry more than vs armour
 	var am := UnitDefs.ARMOR_MULT
 	_log("counter_matrix", am.rocket.heavy > am.bullet.heavy * 5.0 and am.bullet.infantry > am.bullet.heavy * 5.0, "")
@@ -524,6 +529,85 @@ func _qa_m8(ccp: Vector3) -> void:
 	await _until(func(): return battle.plan[0] == "fortify", 20.0)
 	_log("battle_plans", why0.begins_with("Requires") and is_equal_approx(m_assault, 1.1) and gap and battle.plan[0] == "fortify" and battle.taken_mult(jeep) < 1.0,
 		"locked before: '%s'; assault dmg x%.2f; switching gap=%s; fortify active, HMMWV taken x%.2f" % [why0, m_assault, str(gap), battle.taken_mult(jeep)])
+
+
+## B2: save and load. Capture a busy state (structures, queues, research, plan, transports, groups), write it, read it
+## back, rebuild the battle from it in place and compare fingerprints; then play on for 10 s. Also leaves
+## user://saves/qa_e2e.sav + .sig for the separate end-to-end run (main menu -> load -> fresh match).
+## B2 AI behaviour in isolation (the QA run has no live AI): a small team-1 wave attacks; one badly hurt unit falls
+## back for repair; when the wave is shattered the rest are called home and the next wave is bigger.
+func _qa_ai_retreat(ccp: Vector3) -> void:
+	var ai := BaseAI.new(battle, 1, "Normal")
+	var far: Vector3 = battle.start_pos[1]
+	var wave: Array = []
+	for i in 6:
+		wave.append(battle._spawn("abrams" if i < 2 else "rifleman", 1, far + Vector3(-40 + i * 8, 0, 60), 0.0))
+	await _wait_sim(0.2)
+	ai.attacking = wave.map(func(u): return u.uid); ai.wave_n0 = wave.size(); ai.last_attack_t = battle.sim_time - 30.0
+	var hurt: Unit = wave[0]
+	hurt.hp = hurt.def.hp * 0.2
+	ai._army()
+	await _wait_sim(0.2)
+	var hurt_back: bool = ai.retreating.has(hurt.uid) and not (hurt.uid in ai.attacking)
+	for i in range(2, 6): wave[i].take_damage(99999.0, null)
+	var size0: int = ai.attack_size
+	ai._army()
+	await _wait_sim(0.2)
+	var called_off: bool = ai.attacking.is_empty() and ai.retreating.has(wave[1].uid) and ai.attack_size == size0 + 2
+	_log("ai_retreats_when_hurt", hurt_back and called_off, "hurt unit falls back %s; wave lost 4 of 6 -> called off %s, next wave size %d -> %d" % [
+		str(hurt_back), str(called_off), size0, ai.attack_size])
+	for u in wave: if not u.dead: u.take_damage(99999.0, null)
+
+
+func _qa_save_load(ccp: Vector3) -> void:
+	battle.cash[0] += 5000
+	var wfs: Array = battle.structures(0, "war_factory")
+	if not wfs.is_empty():
+		battle.issue({"type": "produce", "team": 0, "id": wfs[0].uid, "kind": "hmmwv"})
+		battle.issue({"type": "produce", "team": 0, "id": wfs[0].uid, "kind": "abrams"})
+	var hv: Unit = battle._spawn("hmmwv", 0, ccp + Vector3(30, 0, -60), 0.0)
+	var r1: Unit = battle._spawn("rifleman", 0, ccp + Vector3(33, 0, -60), 0.0)
+	await _wait_sim(0.3)
+	battle._board(r1, hv)
+	var sq: Array = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").slice(0, 3)
+	battle.commander._set_selection(sq); battle.commander.assign_group(4)
+	var mover: Unit = sq[0] if not sq.is_empty() else null
+	if mover: battle.issue({"type": "move", "team": 0, "ids": [mover.uid], "points": [mover.position + Vector3(40, 0, -20)]})
+	await _wait_sim(1.0)
+	var sig0: Dictionary = SaveGame.signature(battle)
+	var data: Dictionary = SaveGame.capture(battle)
+	var path := SaveGame.DIR + "/qa_test.sav"
+	var wrote := SaveGame.write(path, data)
+	var back := SaveGame.read(path)
+	_log("save_writes_and_reads", wrote and not back.is_empty() and back.units.size() == data.units.size(),
+		"%d units/structures saved, file %d bytes" % [data.units.size(), FileAccess.get_file_as_bytes(path).size()])
+	var goal0: Vector3 = mover.goal if mover else Vector3.ZERO
+	var mover_id: int = mover.uid if mover else -1
+	var hv_id: int = hv.uid
+	SaveGame.restore(battle, back)
+	var sig1: Dictionary = SaveGame.signature(battle)     # before any simulation tick runs
+	var diffs: Array = []
+	for k in sig0:
+		if str(sig0[k]) != str(sig1[k]): diffs.append("%s: %s -> %s" % [k, str(sig0[k]).substr(0, 60), str(sig1[k]).substr(0, 60)])
+	_log("load_restores_state", diffs.is_empty(), "fingerprint keys %d, differences: %s" % [sig0.size(), "; ".join(diffs) if not diffs.is_empty() else "none"])
+	await _frames(3)
+	var hv2: Unit = battle.by_id.get(hv_id)
+	var m2: Unit = battle.by_id.get(mover_id)
+	var g4: Array = battle.commander.groups.get(4, [])
+	var cc2: Array = battle.structures(0, "command_center")
+	var refs_ok: bool = hv2 != null and hv2.passengers.size() == 1 and g4.size() == sq.size() and m2 != null and m2.goal.distance_to(goal0) < 0.5 \
+		and not cc2.is_empty() and not battle.gnav.box_free(cc2[0].position, Vector2(2, 2))
+	_log("load_restores_links", refs_ok, "transport passengers %d, group 4 size %d, mover goal kept %s, CC blocks pathing %s" % [
+		hv2.passengers.size() if hv2 else -1, g4.size(), str(m2 != null and m2.goal.distance_to(goal0) < 0.5), str(not cc2.is_empty() and not battle.gnav.box_free(cc2[0].position, Vector2(2, 2)))])
+	var t_before: float = battle.sim_time
+	await _wait_sim(10.0)
+	var moved: bool = m2 != null and m2.flat_dist(goal0) < 6.0
+	_log("play_continues_after_load", battle.sim_time > t_before + 9.0 and moved, "sim %.1f -> %.1f s, mover reached its goal %s" % [t_before, battle.sim_time, str(moved)])
+	# end-to-end file for the second run
+	var e2e := SaveGame.capture(battle)
+	SaveGame.write(SaveGame.DIR + "/qa_e2e.sav", e2e)
+	var f := FileAccess.open(SaveGame.DIR + "/qa_e2e.sig", FileAccess.WRITE)
+	f.store_string(JSON.stringify(SaveGame.signature(battle))); f.close()
 
 
 func _finish() -> void:

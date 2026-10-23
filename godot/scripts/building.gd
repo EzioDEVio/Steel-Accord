@@ -42,6 +42,7 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 	def = {"name": Nations.label(b.nation_of(t), building_kind, bdef.name), "hp": bdef.hp, "radius": maxf(half.x, half.y) * 0.8, "height": 6.0, "sight": bdef.sight,
 		"speed": 0.0, "accel": 0.0, "turn_deg": 0.0, "weapons": bdef.get("weapons", []), "structure": true,
 		"icon": "", "armor": "structure", "visual": "structure"}
+	if bdef.has("transport"): def["transport"] = bdef.transport      # civilian buildings: infantry occupy them
 	hp = bdef.hp if start_built else bdef.hp * 0.1
 	progress = 1.0 if start_built else 0.0
 	built = start_built
@@ -76,6 +77,17 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 
 
 ## Structures face the map centre (their doors, exits and the airfield apron are on that side).
+func is_civic() -> bool:
+	return bdef.get("civic", false)
+
+
+## Firing position for occupant i (model ports, else points round the roof edge).
+func port(i: int) -> Vector3:
+	if not ports.is_empty(): return ports[i % ports.size()]
+	var a := TAU * float(i) / 8.0
+	return position + Vector3(cos(a) * half.x * 0.9, model_h * 0.6, sin(a) * half.y * 0.9)
+
+
 func front_dir() -> Vector3:
 	return Vector3(0, 0, -1) if position.z > 0.0 else Vector3(0, 0, 1)
 
@@ -172,6 +184,8 @@ func _build_model(path: String) -> void:
 var model_pads: Array = []          # airfield parking spots (world)
 var runway := []                    # [start, end] world points, airfield only
 var exit_node: Node3D
+var ports: Array = []               # civilian buildings: window / roof positions occupants fire from (world)
+var door_pos := Vector3.INF
 var repair_bay: Node3D
 var drop_point: Node3D
 var radar_dish: Node3D
@@ -195,6 +209,8 @@ func _collect_model_nodes() -> void:
 		elif nm == "RadarDish": radar_dish = n
 		elif nm == "Turret": b_turret = n
 		elif nm == "Muzzle": b_muzzle = n
+		elif nm.begins_with("Port") and nm.substr(4).is_valid_int(): ports.append((n as Node3D).global_position)
+		elif nm == "Door": door_pos = (n as Node3D).global_position
 		elif nm.begins_with("Light_") and n is MeshInstance3D:
 			var mi := n as MeshInstance3D
 			var src := mi.get_active_material(0)

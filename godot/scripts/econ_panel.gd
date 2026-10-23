@@ -171,7 +171,8 @@ func _process(_dt: float) -> void:
 	var dz: Array = commander.dozers()
 	var trs: Array = live.filter(func(x): return x.is_transport())
 	var sig := ""
-	if b: sig = "b%d:%s:%d" % [b.uid, str(b.built), page]
+	if b and b.is_civic(): sig = "civ%d:%d" % [b.uid, b.passengers.size()]
+	elif b: sig = "b%d:%s:%d" % [b.uid, str(b.built), page]
 	elif not dz.is_empty(): sig = "dozer"
 	elif not live.is_empty():
 		sig = "units:%s" % str(live.any(func(u): return u.is_air()))
@@ -179,13 +180,19 @@ func _process(_dt: float) -> void:
 	if sig != _sig:
 		_sig = sig
 		_clear()
-		if b: _build_structure(b)
+		if b and b.is_civic(): _build_civic(b)
+		elif b: _build_structure(b)
 		elif sig == "dozer": _build_dozer()
 		elif sig != "": _build_orders(live, trs[0] if sig.begins_with("tr") else null)
 	visible = sig != ""
 	info = ""
 	if not visible: return
-	if b: _update_structure(b, team)
+	if b and b.is_civic():
+		var heal: float = float(b.bdef.get("garrison_heal", 0.0))
+		info = "%s - %d / %d inside. They fire from the windows (+15%% range) and cannot be hit until it falls.%s" % [b.def.name,
+			b.passengers.size(), int(b.def.transport.capacity), (" Occupants heal %d%% per second." % int(heal * 100.0)) if heal > 0.0 else ""]
+		if buttons.has("unload"): buttons["unload"].disabled = b.passengers.is_empty()
+	elif b: _update_structure(b, team)
 	elif sig == "dozer": _update_dozer(team)
 	else: _update_orders(live)
 
@@ -322,6 +329,20 @@ func _update_structure(b: Building, team: int) -> void:
 		rb.tooltip_text = "%s\nRestores %d%% health per second for $%.0f per second (half the build cost for a full repair).%s" % [
 			"Stop repairing" if b.repairing else ("Repair (already at full health)" if full else "Repair"),
 			int(Building.REPAIR_RATE * 100.0), b.repair_cost_per_s(), ("\nPaused: " + b.repair_blocked) if b.repair_blocked != "" else ""]
+
+
+# ---- civilian building held by us: get everyone out, or one soldier at a time
+func _build_civic(b: Building) -> void:
+	var team: int = commander.team
+	var bid := b.uid
+	_tile("unload", 0, "order", ICON_DIR + "unload.png", "Evacuate (D) - everyone leaves the building", func(): battle.issue({"type": "unload", "team": team, "ids": [bid]}), {"hot": "D"})
+	var slot := 1
+	for p in b.passengers:
+		if slot >= SLOTS: break
+		var pu: Unit = p
+		_tile("p%d" % pu.uid, slot, "passenger", unit_icon_path(pu.kind), "%s (%d / %d health) - click: this soldier leaves" % [pu.def.name, int(pu.hp), int(pu.def.hp)],
+			func(): battle.issue({"type": "unload_one", "team": team, "id": bid, "passenger": pu.uid}))
+		slot += 1
 
 
 # ---- units

@@ -10294,6 +10294,57 @@
    "scale": 0.84
   }
  ],
+ "civic": [
+  {
+   "type": "civ_hospital",
+   "pos": [
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "type": "civ_center",
+   "pos": [
+    -195.0,
+    330.0
+   ]
+  },
+  {
+   "type": "civ_center",
+   "pos": [
+    195.0,
+    -330.0
+   ]
+  },
+  {
+   "type": "civ_apartment",
+   "pos": [
+    -285.0,
+    280.0
+   ]
+  },
+  {
+   "type": "civ_apartment",
+   "pos": [
+    285.0,
+    -280.0
+   ]
+  },
+  {
+   "type": "civ_apartment",
+   "pos": [
+    110.0,
+    120.0
+   ]
+  },
+  {
+   "type": "civ_apartment",
+   "pos": [
+    -110.0,
+    -120.0
+   ]
+  }
+ ],
  "prop_types": {
   "village_house": {
    "glb": "res://assets/units3d/props/village_house.glb",

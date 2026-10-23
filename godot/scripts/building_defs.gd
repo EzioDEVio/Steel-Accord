@@ -12,7 +12,7 @@ const HAUL_LOAD_TIME := 3.0
 const HAUL_UNLOAD_TIME := 2.0
 const PILE_CASH := 20000             # per supply pile
 
-const DEFS := {
+const BASE_DEFS := {
 	"command_center": {
 		"name": "Command Center", "art": "command_center", "model3d": "res://assets/units3d/command_center/command_center.glb", "cost": 2000, "build_time": 40.0, "power": 0,
 		"hp": 5000.0, "size": Vector2(26, 22), "sight": 90.0, "produces": ["dozer"], "requires": [],
@@ -70,6 +70,43 @@ const DEFS := {
 }
 
 ## Order of the dozer's build menu.
+## Neutral civilian buildings on maps (not buildable). Infantry occupy them through the transport mechanics:
+## occupants fire from the windows with +15 % range and cannot be shot until the building falls (they get out
+## hurt, or die if there is no room). A hospital heals its occupants. Empty buildings belong to nobody.
+const CIVIC := {
+	"civ_house_a": {"name": "House", "size": Vector2(10, 9), "hp": 1600.0, "capacity": 5, "heal": 0.0, "sight": 55.0,
+		"desc": "Civilian house. Up to 5 infantry can occupy it and fire from the windows."},
+	"civ_house_b": {"name": "Two-storey House", "size": Vector2(12, 10), "hp": 2000.0, "capacity": 6, "heal": 0.0, "sight": 60.0,
+		"desc": "Civilian house with a courtyard. Up to 6 infantry can occupy it and fire from the windows."},
+	"civ_apartment": {"name": "Apartment Block", "size": Vector2(18, 12), "hp": 3200.0, "capacity": 10, "heal": 0.0, "sight": 75.0,
+		"desc": "Four-storey block. Up to 10 infantry can occupy it; the height gives a long view."},
+	"civ_center": {"name": "Civic Centre", "size": Vector2(22, 16), "hp": 3600.0, "capacity": 10, "heal": 0.0, "sight": 65.0,
+		"desc": "Community centre. Up to 10 infantry can occupy it and fire from the windows."},
+	"civ_hospital": {"name": "Hospital", "size": Vector2(24, 18), "hp": 4000.0, "capacity": 10, "heal": 0.03, "sight": 65.0,
+		"desc": "Hospital. Up to 10 infantry can occupy it; occupants recover 3 % of their health per second."},
+}
+
+
+## Every structure kind: the buildable ones plus the civilian buildings placed by maps.
+static var DEFS: Dictionary = _all_defs()
+
+
+static func _all_defs() -> Dictionary:
+	var d: Dictionary = BASE_DEFS.duplicate(true)
+	d.merge(_civic_defs())
+	return d
+
+
+static func _civic_defs() -> Dictionary:
+	var out := {}
+	for k in CIVIC:
+		var c: Dictionary = CIVIC[k]
+		out[k] = {"name": c.name, "art": "", "model3d": "res://assets/units3d/civic/%s/%s.glb" % [k, k], "cost": 0, "build_time": 0.0,
+			"power": 0, "hp": c.hp, "size": c.size, "sight": c.sight, "produces": [], "requires": [], "desc": c.desc,
+			"civic": true, "transport": {"capacity": c.capacity, "accepts": ["infantry"]}, "garrison_heal": c.heal}
+	return out
+
+
 const BUILD_MENU := ["power_plant", "barracks", "supply_depot", "war_factory", "airfield", "defense_tower", "hesco", "radar", "drop_zone"]
 
 ## Production cost / time for units (unit stats live in UnitDefs). PROVISIONAL.

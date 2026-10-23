@@ -23,7 +23,7 @@ func _ready() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(center)
-	var p: PanelContainer = UIKit.panel(Vector2(420, 0))
+	var p: PanelContainer = UIKit.panel(Vector2(600, 0))
 	center.add_child(p)
 	box = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
@@ -41,12 +41,38 @@ func open_pause() -> void:
 	_clear()
 	box.add_child(UIKit.label("PAUSED", 28, UIKit.ACCENT))
 	box.add_child(UIKit.button("Resume", func(): close()))
+	if battle.scenario == "base":
+		box.add_child(UIKit.button("Save Game", func(): _save()))
+		box.add_child(UIKit.button("Load Game", func(): _load_list()))
 	box.add_child(UIKit.button("Restart Match", func(): Game.restart_match()))
 	box.add_child(UIKit.button("Options", func(): _options()))
 	box.add_child(UIKit.button("Main Menu", func(): Game.main_menu()))
 	box.add_child(UIKit.button("Exit to Desktop", func(): Game.quit()))
 	visible = true
 	get_tree().paused = true
+
+
+func _save() -> void:
+	var name := "save_" + Time.get_datetime_string_from_system(false, false).replace(":", "").replace("-", "").replace("T", "_")
+	var ok := SaveGame.write("%s/%s.sav" % [SaveGame.DIR, name], SaveGame.capture(battle))
+	_clear()
+	box.add_child(UIKit.label("Game saved" if ok else "Could not write the save file", 22, UIKit.ACCENT if ok else Color(1, 0.4, 0.35)))
+	box.add_child(UIKit.label(name, 13))
+	box.add_child(UIKit.button("Back", func(): open_pause()))
+
+
+func _load_list() -> void:
+	_clear()
+	box.add_child(UIKit.label("LOAD GAME", 24, UIKit.ACCENT))
+	var saves := SaveGame.list_saves()
+	if saves.is_empty(): box.add_child(UIKit.label("No saved games yet.", 14))
+	for sv in saves.slice(0, 8):
+		var path: String = sv.path
+		var b := UIKit.button(SaveGame.describe(sv.meta), func(): SaveGame.load_into_new_match(SaveGame.read(path)))
+		b.custom_minimum_size = Vector2(560, 34)
+		b.add_theme_font_size_override("font_size", 12)
+		box.add_child(b)
+	box.add_child(UIKit.button("Back", func(): open_pause()))
 
 
 func _options() -> void:

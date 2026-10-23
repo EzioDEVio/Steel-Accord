@@ -1,7 +1,10 @@
 # Steel Accord - skirmish opponent for the base loop (B1.2). Deterministic: decisions depend only on simulation state
 # and sim time, and every action goes through Battle.issue() like the player's orders (so it is logged for replays).
 # Behaviour: fixed build order around its Command Center, keeps a Dozer, adds haulers, trains a mixed army,
-# defends structures under attack, and attacks the nearest enemy structure once its army is large enough.
+# defends structures under attack, scouts, and attacks what it has seen once its army is large enough.
+# Knowledge (B2): it targets only enemy structures its units have seen (remembered) and enemy units in sight now;
+# with nothing known it heads for the enemy start. Badly damaged attackers fall back for repair; a wave that loses
+# most of its strength is called off and the next one is bigger.
 class_name BaseAI
 extends RefCounted
 
@@ -14,6 +17,13 @@ var attack_after := 150.0
 var waves := 0
 var attacking: Array = []      # uids sent on the current attack
 var capturing := {}            # derrick id -> uids sent to capture it
+var known := {}                # enemy structure uid -> position (seen by our units at least once)
+var scout_t := 40.0            # sim time of the next scouting trip
+var scout_uid := -1
+var retreating := {}           # uid -> sim time the retreat started
+var wave_n0 := 0               # strength of the current attack wave when it left
+var last_attack_t := -999.0
+var losses_seen := 0
 
 # build order (kind, local x, local forward offset from the Command Center; forward = toward the map centre)
 const ORDER := [
@@ -66,6 +76,8 @@ func tick(dt: float) -> void:
 	_produce(cc)
 	_capture_derricks()
 	_research()
+	_look()
+	_scout()
 	_army()
 
 
@@ -143,9 +155,10 @@ func _army() -> void:
 			if not ids.is_empty():
 				battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": battle.spread(ids, e.position)})
 			return
-	# attack when the idle army is big enough
 	attacking = attacking.filter(func(id): return battle.by_id.has(id) and not battle.by_id[id].dead)
-	var idle := fighters.filter(func(u): return not (u.uid in attacking) and u.state == Unit.S.IDLE)
+	_retreat(fighters)
+	# attack when the idle army is big enough
+	var idle := fighters.filter(func(u): return not (u.uid in attacking) and not retreating.has(u.uid) and u.uid != scout_uid and u.state == Unit.S.IDLE)
 	if battle.sim_time >= attack_after and idle.size() >= attack_size:
 		var tgt := _enemy_target(idle[0].position)
 		if tgt == Vector3.INF: return
@@ -156,6 +169,8 @@ func _army() -> void:
 			pts.append(tgt + Vector3(cos(a), 0, sin(a)) * 8.0)
 		battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": pts})
 		attacking.append_array(ids)
+		wave_n0 = attacking.size()
+		last_attack_t = battle.sim_time
 		waves += 1
 	# attackers that went idle (target area cleared) push on to the next enemy structure
 	var done := fighters.filter(func(u): return u.uid in attacking and u.state == Unit.S.IDLE)
@@ -211,12 +226,97 @@ func _capture_derricks() -> void:
 	battle.issue({"type": "attack_move", "team": team, "ids": ids, "points": [best.pos + Vector3(3, 0, 3), best.pos + Vector3(-3, 0, 3)]})
 
 
+## Target: the nearest enemy we know about - remembered structures first (victory needs them gone), then enemy units
+## in sight now; nothing known yet -> the enemy start position (starts are known on 1 v 1 maps).
 func _enemy_target(from: Vector3) -> Vector3:
 	var best := Vector3.INF
 	var bd := INF
-	for u in battle.units:
-		if u.dead or u.team == team or u.team < 0: continue
-		var w := 1.0 if u is Building else 1.6     # prefer structures (victory needs them gone)
-		var d: float = from.distance_to(u.position) * w
-		if d < bd: bd = d; best = u.position
+	for id in known.keys():
+		var u: Unit = battle.by_id.get(id)
+		if u == null or u.dead:
+			known.erase(id)
+			continue
+		var d: float = from.distance_to(known[id])
+		if d < bd: bd = d; best = known[id]
+	for u in _in_sight:
+		if u.dead or u is Building: continue
+		var d2: float = from.distance_to(u.position) * 1.6
+		if d2 < bd: bd = d2; best = u.position
+	if best == Vector3.INF:
+		var enemy_start: Vector3 = battle.start_pos[1 - team]
+		var alive: bool = battle.units.any(func(u): return not u.dead and u.team == 1 - team)
+		if alive: best = enemy_start
 	return best
+
+
+## What our units can see right now (sight radius); enemy structures seen are remembered.
+var _in_sight: Array = []
+
+
+func _look() -> void:
+	_in_sight.clear()
+	var mine := _mine(func(u): return true)
+	for e in battle.units:
+		if e.dead or e.team == team or e.team < 0: continue
+		for m in mine:
+			if m.flat_dist(e.position) <= m.sight_r():
+				_in_sight.append(e)
+				if e is Building: known[e.uid] = e.position
+				break
+
+
+## Scouting: every ~75 s one fast, cheap unit drives past the enemy start, the oil derricks and the map centre.
+const SCOUT_KINDS := ["hmmwv", "hmmwv_50cal", "ir_boragh", "mrap", "rifleman", "ir_rifleman"]
+
+
+func _scout() -> void:
+	var s: Unit = battle.by_id.get(scout_uid)
+	if s and not s.dead:
+		if s.state == Unit.S.IDLE and s.queue.is_empty(): scout_uid = -1      # trip finished: back into the army
+		return
+	scout_uid = -1
+	if battle.sim_time < scout_t: return
+	scout_t = battle.sim_time + 75.0
+	var pick: Unit = null
+	for k in SCOUT_KINDS:
+		for u in _mine(func(x): return x.kind == k and x.state == Unit.S.IDLE and not (x.uid in attacking)):
+			pick = u; break
+		if pick: break
+	if pick == null: return
+	scout_uid = pick.uid
+	var route: Array = [battle.start_pos[1 - team] + Vector3(0, 0, 60.0 * _fwd())]
+	for e in battle.derricks: route.append(e.pos)
+	route.append(Vector3.ZERO)
+	route.append(battle.start_pos[team] + Vector3(0, 0, 70.0 * _fwd()))
+	battle.issue({"type": "move", "team": team, "ids": [pick.uid], "points": [route[0]]})
+	for i in range(1, route.size()):
+		battle.issue({"type": "move", "team": team, "ids": [pick.uid], "points": [route[i]], "append": true})
+
+
+## Fall back: attackers below 30 % health go home for repair (vehicles to the War Factory bay); a wave that lost more
+## than 60 % of its strength is called off - everyone regroups at home and the next wave is two units bigger.
+func _retreat(fighters: Array) -> void:
+	var cc := _cc()
+	var home: Vector3 = cc.position + Vector3(0, 0, 40.0 * _fwd()) if cc else battle.start_pos[team]
+	var wfs: Array = battle.structures(team, "war_factory")
+	for id in retreating.keys():
+		var u: Unit = battle.by_id.get(id)
+		if u == null or u.dead or u.hp >= u.def.hp * 0.9 or battle.sim_time - float(retreating[id]) > 75.0: retreating.erase(id)
+	var back: Array = []
+	for u in fighters:
+		if u.uid in attacking and u.hp < u.def.hp * 0.3 and not retreating.has(u.uid):
+			back.append(u)
+	if wave_n0 > 0 and not attacking.is_empty() and attacking.size() < wave_n0 * 0.4 and battle.sim_time - last_attack_t > 20.0:
+		for id in attacking:
+			var u: Unit = battle.by_id.get(id)
+			if u and not u.dead and not (u in back): back.append(u)
+		attack_size = mini(attack_size + 2, 16)
+		wave_n0 = 0
+	for u in back:
+		attacking.erase(u.uid)
+		retreating[u.uid] = battle.sim_time
+		var dest: Vector3 = home
+		if u.def.get("visual") != "infantry" and u.domain == "ground" and not wfs.is_empty():
+			var wf: Building = wfs[0]
+			dest = wf.position + wf.front_dir() * (wf.half.y + 8.0)
+		battle.issue({"type": "move", "team": team, "ids": [u.uid], "points": [dest]})

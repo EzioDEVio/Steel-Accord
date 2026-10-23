@@ -30,6 +30,7 @@ var settings := {
 ## Skirmish maps offered in the menu (id -> label). Heightfield maps live in res://maps/<id>/.
 const MAPS := {"proving_ground": "Proving Ground (flat test range, 600 m)", "zagros_basin": "Zagros Basin (foothills, oil derricks)"}
 var last_result := {}
+var pending_load := {}      # a saved game the next battle rebuilds (SaveGame.load_into_new_match)
 
 
 func _ready() -> void:

@@ -63,6 +63,17 @@ A_ = np.abs(S)                                # distance from the basin axis
 TP = T * np.sign(S + 1e-9)                    # along-strike coordinate in the local side's frame (B = A rotated)
 
 
+# Garrisonable civilian buildings (B2): a contested hospital in the middle of the basin, and a civic centre and an
+# apartment block by each village, plus a mirrored pair of apartment blocks in the basin. Point-symmetric pairs.
+# (Village houses listed under "props" are also turned into garrisonable houses by the game.)
+CIVIC = [
+    {"type": "civ_hospital", "pos": [0.0, 0.0]},
+    {"type": "civ_center", "pos": [-195.0, 330.0]}, {"type": "civ_center", "pos": [195.0, -330.0]},
+    {"type": "civ_apartment", "pos": [-285.0, 280.0]}, {"type": "civ_apartment", "pos": [285.0, -280.0]},
+    {"type": "civ_apartment", "pos": [110.0, 120.0]}, {"type": "civ_apartment", "pos": [-110.0, -120.0]},
+]
+
+
 def w2tp(x, z):
     return x * UX + z * UZ, x * NX + z * NZ
 
@@ -633,6 +644,7 @@ def main():
         "oil_derricks": derricks,
         "roads": roads,
         "props": props,
+        "civic": CIVIC,
         "prop_types": PROP_TYPES,
         "movement": MOVEMENT,
         "building_max_slope_deg": BUILDING_MAX_SLOPE,

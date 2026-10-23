@@ -51,13 +51,14 @@ func _process(_dt: float) -> void:
 	var sig := ",".join(objs.map(func(u): return str(u.uid)))
 	if subject is Building:
 		var b := subject as Building
-		sig += "|q" + ",".join(b.prod_queue) + "|r" + b.research_id + "|" + str(b.built) + "|p" + ",".join(b.pads.map(func(p): return str(p.uid)))
+		sig += "|o%d" % b.passengers.size() + "|q" + ",".join(b.prod_queue) + "|r" + b.research_id + "|" + str(b.built) + "|p" + ",".join(b.pads.map(func(p): return str(p.uid)))
 	elif subject:
 		sig += "|u%d" % battle.upgrades[subject.team].size() + battle.plan[subject.team] if subject.team >= 0 and subject.team < 2 else ""
 	if sig != _sig:
 		_sig = sig
 		for c in row.get_children(): c.queue_free()
-		if subject is Building: _build_queue(subject as Building)
+		if subject is Building and (subject as Building).is_civic(): _build_occupants(subject as Building)
+		elif subject is Building: _build_queue(subject as Building)
 		elif subject: _build_cameos(subject)
 		elif objs.size() > 1: _build_roster()
 	queue_redraw()
@@ -111,6 +112,17 @@ func _build_cameos(u: Unit) -> void:
 	if pl != "" and u.domain == "ground" and not (u is Building):
 		var pd: Dictionary = Upgrades.PLANS[pl]
 		_small("Battle plan %s - active\n%s" % [battle.lbl(u.team, pl, pd.name), pd.desc], _tex(EconPanel.ICON_DIR + pl + ".png"), i, func(): pass)
+
+
+## Occupants of a civilian building (click one: that soldier leaves).
+func _build_occupants(b: Building) -> void:
+	var team: int = b.team
+	var bid := b.uid
+	for i in mini(b.passengers.size(), 9):
+		var pu: Unit = b.passengers[i]
+		var t := _small("%s - %d / %d health; click: leave the building" % [pu.def.name, int(pu.hp), int(pu.def.hp)], _tex(EconPanel.unit_icon_path(pu.kind)), i,
+			func(): battle.issue({"type": "unload_one", "team": team, "id": bid, "passenger": pu.uid}), Vector2(52, 40))
+		_add_progress(t, func(): return pu.hp / pu.def.hp if is_instance_valid(pu) else -1.0)
 
 
 ## Build queue of a structure (research first when one is running).
@@ -247,6 +259,9 @@ func _types() -> int:
 
 
 func _bstate(b: Building) -> String:
+	if b.is_civic():
+		var heal: float = float(b.bdef.get("garrison_heal", 0.0))
+		return "Occupied: %d / %d soldiers%s" % [b.passengers.size(), int(b.def.transport.capacity), "  -  healing them" if heal > 0.0 and not b.passengers.is_empty() else ""]
 	if not b.built: return "Under construction %d%%" % int(b.progress * 100.0)
 	var parts: Array = ["Operational"]
 	if b.bdef.power < 0 and not battle.power_ok(b.team): parts = ["Low power - working at half speed"]

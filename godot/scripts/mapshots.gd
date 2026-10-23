@@ -4,7 +4,7 @@
 extends Node
 
 var battle: Node
-var out := "/tmp/sa_mapshots"
+var out := "user://test_output/sa_mapshots"
 
 
 func _ready() -> void:
@@ -46,6 +46,11 @@ func _run() -> void:
 	get_tree().root.size = Vector2i(1280, 720)
 	RenderingServer.global_shader_parameter_set("fog_on", 0.0)
 	await _wait(0.3)
+	if "terrainfast" in battle.args:
+		# terrain-only iteration: no bases / units, straight to the terrainonly cameras (only=<prefix> picks views)
+		await _terrain_views()
+		get_tree().quit()
+		return
 	for t in 2:
 		battle.cash[t] = 90000
 		var c: Vector3 = battle.start_pos[t]
@@ -107,11 +112,7 @@ func _run() -> void:
 		return
 	if "terrainonly" in battle.args:
 		# fixed terrain-texturing review views (tiling / repetition check); same cameras every run
-		_cam(battle.grounded(Vector3(60, 0, -150)), 120.0, 160.0, 45.0); await _shot("tr_1_basin_mid")
-		_cam(Vector3(0, 0, 0), 230.0, 0.0, 55.0); await _shot("tr_2_centre_far")
-		_cam(Vector3(0, 0, 150), 230.0, 35.0, 40.0); await _shot("tr_3_ridges_low")
-		_cam(battle.grounded(Vector3(-218, 0, -45)), 65.0, 300.0, 38.0); await _shot("tr_4_basin_close")
-		_cam(battle.grounded(Vector3(-300, 0, 120)), 180.0, 120.0, 70.0); await _shot("tr_5_steep_top")
+		await _terrain_views()
 		get_tree().quit()
 		return
 	if "infonly" in battle.args:
@@ -149,6 +150,17 @@ func _run() -> void:
 		elif e.owner == 0:
 			_cam(e.pos, 40.0, 30.0, 40.0); await _shot("zb_derrick_usa")
 	get_tree().quit()
+
+
+## Fixed terrain-texturing review cameras (tiling / repetition check), shared by "terrainonly" and "terrainfast".
+func _terrain_views() -> void:
+	var only := str(battle.args.get("only", ""))
+	var views := [["tr_1_basin_mid", Vector3(60, 0, -150), 120.0, 160.0, 45.0], ["tr_2_centre_far", Vector3(0, 0, 0), 230.0, 0.0, 55.0],
+		["tr_3_ridges_low", Vector3(0, 0, 150), 230.0, 35.0, 40.0], ["tr_4_basin_close", Vector3(-218, 0, -45), 65.0, 300.0, 38.0],
+		["tr_5_steep_top", Vector3(-300, 0, 120), 180.0, 120.0, 70.0]]
+	for v in views:
+		if only != "" and not (v[0] as String).begins_with(only): continue
+		_cam(battle.grounded(v[1]), v[2], v[3], v[4]); await _shot(v[0])
 
 
 ## UI review with the player as Iran: inspector + command card for a soldier, tank, tactical vehicle, aircraft and the

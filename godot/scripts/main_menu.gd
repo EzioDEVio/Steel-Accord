@@ -8,6 +8,17 @@ var ui_root: Control   # menu panels; scaled with the screen height like the in-
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# automated end-to-end load test: load a save the same way the Load Game button does
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("loadsave="):
+			var data := SaveGame.read(a.substr(9))
+			if data.is_empty():
+				printerr("LOADTEST could not read ", a.substr(9))
+				print("RESULT 0/1")
+				get_tree().quit()
+				return
+			(func(): SaveGame.load_into_new_match(data)).call_deferred()
+			return
 	# automated runs (tests / diagnostics / evidence) skip the menu
 	for a in OS.get_cmdline_user_args():
 		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots", "pilotshots", "m1shots", "maptest", "mapshots"] or a.begins_with("test"):
@@ -35,6 +46,7 @@ func _ready() -> void:
 	var spacer := Control.new(); spacer.custom_minimum_size = Vector2(0, 30)
 	left.add_child(spacer)
 	left.add_child(UIKit.button("Skirmish", func(): _show_skirmish()))
+	left.add_child(UIKit.button("Load Game", func(): _show_load()))
 	left.add_child(UIKit.button("Options", func(): _show_options()))
 	left.add_child(UIKit.button("Controls", func(): _show_controls()))
 	left.add_child(UIKit.button("Credits", func(): _show_credits()))
@@ -52,7 +64,8 @@ func _ready() -> void:
 	if "menushot" in OS.get_cmdline_user_args():
 		for i in 8: await get_tree().process_frame
 		await RenderingServer.frame_post_draw
-		var out := "/tmp/sa_menu.png"
+		var out := "user://test_output/sa_menu.png"
+		DirAccess.make_dir_recursive_absolute("user://test_output")
 		for a in OS.get_cmdline_user_args():
 			if a.begins_with("out="): out = a.substr(4)
 		get_viewport().get_texture().get_image().save_png(out)
@@ -213,6 +226,21 @@ func _show_controls() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD
 		l.custom_minimum_size = Vector2(500, 0)
 		content.add_child(l)
+
+
+func _show_load() -> void:
+	_clear()
+	side.position = Vector2(560, 230)
+	content.add_child(UIKit.label("LOAD GAME", 22, UIKit.ACCENT))
+	var saves := SaveGame.list_saves()
+	if saves.is_empty():
+		content.add_child(UIKit.label("No saved games yet. In a match: Menu (F10) - Save Game, or F5 for a quick save.", 13))
+	for sv in saves.slice(0, 10):
+		var path: String = sv.path
+		var b := UIKit.button("%s   (%s)" % [SaveGame.describe(sv.meta), sv.name], func(): SaveGame.load_into_new_match(SaveGame.read(path)))
+		b.custom_minimum_size = Vector2(640, 34)
+		b.add_theme_font_size_override("font_size", 12)
+		content.add_child(b)
 
 
 func _show_credits() -> void:

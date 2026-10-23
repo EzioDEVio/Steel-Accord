@@ -3,7 +3,7 @@
 extends Node
 
 var battle: Node
-var out := "/tmp/sa_vischeck"
+var out := "user://test_output/sa_vischeck"
 
 
 func _ready() -> void:

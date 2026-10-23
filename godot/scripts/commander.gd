@@ -93,7 +93,7 @@ func _key(k: InputEventKey) -> void:
 		KEY_R:
 			if has_sel: cmd_return()
 		KEY_D:
-			if has_sel: cmd_unload()
+			if has_sel or (sel_building and is_instance_valid(sel_building)): cmd_unload()
 		KEY_Q:
 			_select_on_screen(func(u): return u.def.get("weapons", []).size() > 0 and not u.def.get("builder", false), "q")
 		KEY_E:
@@ -114,6 +114,14 @@ func _key(k: InputEventKey) -> void:
 				var c := Vector3.ZERO
 				for u in ls: c += u.global_position
 				camera.focus(c / ls.size())
+		KEY_F5:
+			if battle.scenario == "base":
+				var ok := SaveGame.write(SaveGame.DIR + "/quicksave.sav", SaveGame.capture(battle))
+				battle.hud.flash_message("Quick save written (F9 loads it)" if ok else "Quick save failed")
+		KEY_F9:
+			var qs := SaveGame.read(SaveGame.DIR + "/quicksave.sav")
+			if qs.is_empty(): battle.hud.flash_message("No quick save yet (F5 saves)")
+			else: SaveGame.load_into_new_match(qs)
 		KEY_ESCAPE:
 			if mode != "": set_mode("")
 			elif not live_selection().is_empty(): _set_selection([])
@@ -327,6 +335,15 @@ func _left_release(mb: InputEventMouseButton) -> void:
 		return
 	var u := unit_at(p)
 	var own := u != null and u.team == team
+	# infantry + civilian building (empty, or held by us): occupy it
+	if u is Building and (u as Building).is_civic() and not u.dead and (u.team == team or u.team < 0) and scheme == "classic" and not mb.shift_pressed:
+		var inf := live_selection().filter(func(x): return x.def.get("visual", "") == "infantry" and x.team == team)
+		if not inf.is_empty():
+			var room: int = maxi(u.capacity_left(), 0)
+			battle.issue({"type": "board", "team": team, "ids": inf.slice(0, room).map(func(x): return x.uid), "target": u.uid})
+			FX.order_marker(battle, u.position, Color(0.5, 0.9, 1.0, 0.9))
+			if inf.size() > room and battle.hud: battle.hud.flash_message("%s has room for %d" % [u.def.name, room])
+			return
 	# infantry + own transport: board it
 	if own and not (u is Building) and u.is_transport() and scheme == "classic" and not mb.shift_pressed:
 		var inf := live_selection().filter(func(x): return u.accepts(x))
@@ -441,6 +458,14 @@ func _apply_mode(p: Vector2, mb: InputEventMouseButton) -> void:
 func _command_at(p: Vector2, force := false, waypoint := false) -> void:
 	if live_selection().is_empty(): return
 	var u := unit_at(p)
+	# civilian building that is empty or ours: infantry go in (alternate mouse scheme), others are not ordered to attack it
+	if u is Building and (u as Building).is_civic() and (u.team == team or u.team < 0) and not force:
+		var inf := live_selection().filter(func(x): return x.def.get("visual", "") == "infantry")
+		if not inf.is_empty():
+			battle.issue({"type": "board", "team": team, "ids": inf.slice(0, maxi(u.capacity_left(), 0)).map(func(x): return x.uid), "target": u.uid})
+			FX.order_marker(battle, u.position, Color(0.5, 0.9, 1.0, 0.9))
+			return
+		u = null
 	if u and (u.team != team or force):
 		battle.issue({"type": "attack", "ids": _ids(), "target": u.uid})
 		FX.order_marker(battle, u.global_position, Color(1, 0.25, 0.2, 0.9))
@@ -541,6 +566,8 @@ func cmd_scatter() -> void:
 
 func cmd_unload() -> void:
 	var trs := live_selection().filter(func(x): return x.is_transport() and not x.passengers.is_empty())
+	if sel_building and is_instance_valid(sel_building) and sel_building.is_transport() and not sel_building.passengers.is_empty() and sel_building.team == team:
+		trs.append(sel_building)
 	if not trs.is_empty(): battle.issue({"type": "unload", "team": team, "ids": trs.map(func(x): return x.uid)})
 
 
