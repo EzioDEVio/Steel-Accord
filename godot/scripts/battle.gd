@@ -178,6 +178,10 @@ func _ready() -> void:
 		var bs: Node = load("res://scripts/baseshots.gd").new()
 		bs.battle = self
 		add_child(bs)
+	elif "closeshots" in args:
+		var cs: Node = load("res://scripts/closeshots.gd").new()
+		cs.battle = self
+		add_child(cs)
 	elif "mapshots" in args:
 		var ms: Node = load("res://scripts/mapshots.gd").new()
 		ms.battle = self

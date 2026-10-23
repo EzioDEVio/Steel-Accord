@@ -1,12 +1,18 @@
 # Steel Accord - RTS camera rig: pivot on the ground, camera on a pitched boom.
 # Right-drag (via Commander) / arrow keys / screen edge pan, mouse wheel zoom, middle-drag rotate,
 # comma/period rotate, Home resets.
+# Close-up: below the normal RTS range (CLOSE_START) the wheel keeps zooming down to ground level; the camera
+# flattens toward the horizon, aims at chest height and never dips below the terrain.
 class_name RTSCamera
 extends Node3D
 
 var cam: Camera3D
 var zoom := 70.0
-var zoom_min := 44.0   # camera height >= ~35 m keeps every aircraft below the camera
+var zoom_min := 9.0    # close-up limit (see CLOSE_START)
+const CLOSE_START := 44.0   # above this the classic RTS view; below it the close-up blend
+const CLOSE_PITCH := 14.0   # pitch at the closest zoom
+var zoom_goal := 70.0   # the wheel moves the goal; zoom eases toward it
+var _zoom_seen := 70.0
 var zoom_max := 230.0
 var pitch_deg := 52.0
 var yaw := 0.0
@@ -20,6 +26,7 @@ var terrain: TerrainMap = null   # heightfield maps: the pivot follows the groun
 func _ready() -> void:
 	cam = Camera3D.new()
 	cam.fov = 40.0
+	cam.near = 0.1
 	cam.far = 1500.0
 	cam.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
@@ -28,11 +35,31 @@ func _ready() -> void:
 	_apply()
 
 
+## 0 in the classic RTS range, rising to 1 at the closest zoom.
+func closeness() -> float:
+	return clampf((CLOSE_START - zoom) / (CLOSE_START - zoom_min), 0.0, 1.0)
+
+
 func _apply() -> void:
 	rotation.y = yaw
-	var p := deg_to_rad(pitch_deg)
-	cam.position = Vector3(0, sin(p) * zoom, cos(p) * zoom)
+	var c := closeness()
+	var p := deg_to_rad(lerpf(pitch_deg, CLOSE_PITCH, smoothstep(0.0, 1.0, c)))
+	var aim_h := 1.6 * c   # look at chest height instead of the ground when close
+	cam.position = Vector3(0, sin(p) * zoom + aim_h, cos(p) * zoom)
 	cam.rotation = Vector3(-p, 0, 0)
+	_zoom_seen = zoom
+	_keep_above_ground()
+
+
+## The camera must never go into a hillside: lift it (and tilt down to keep the same aim point) when needed.
+func _keep_above_ground() -> void:
+	if terrain == null or not is_inside_tree(): return
+	var g := cam.global_position
+	var floor_h := terrain.height_at(g.x, g.z) + 1.2
+	if g.y < floor_h:
+		var aim := global_position + Vector3(0, 1.6 * closeness(), 0)
+		cam.global_position = Vector3(g.x, floor_h, g.z)
+		cam.look_at(aim, Vector3.UP)
 
 
 func focus(p: Vector3, instant := true) -> void:
@@ -71,8 +98,16 @@ func _process(dt: float) -> void:
 		var right := Vector3(cos(yaw), 0, -sin(yaw))
 		var fwd := Vector3(-sin(yaw), 0, -cos(yaw))
 		focus(position + (right * mv.x - fwd * mv.y).normalized() * spd, false)
+	if zoom != _zoom_seen: zoom_goal = zoom   # set directly by code (tests, save load): adopt it
+	if absf(zoom_goal - zoom) > 0.01:
+		zoom = lerpf(zoom, zoom_goal, minf(1.0, dt * 10.0))
+		if absf(zoom_goal - zoom) < 0.05: zoom = zoom_goal
+		_apply()
 	if terrain:
-		position.y = lerpf(position.y, _pivot_h(position.x, position.z), minf(1.0, dt * 6.0))
+		var c := closeness()
+		var ph := _pivot_h(position.x, position.z) if c < 0.5 else terrain.height_at(position.x, position.z)
+		position.y = lerpf(position.y, ph, minf(1.0, dt * 6.0))
+		if c > 0.0: _keep_above_ground()
 	if Input.is_key_pressed(KEY_COMMA): yaw += dt * 1.5; _apply()
 	if Input.is_key_pressed(KEY_PERIOD): yaw -= dt * 1.5; _apply()
 
@@ -81,9 +116,9 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventMouseButton:
 		var mb := e as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
-			zoom = maxf(zoom_min, zoom * 0.9); _apply()
+			zoom_goal = maxf(zoom_min, zoom_goal * (0.84 if zoom_goal < CLOSE_START else 0.9))
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
-			zoom = minf(zoom_max, zoom * 1.1); _apply()
+			zoom_goal = minf(zoom_max, zoom_goal * (1.19 if zoom_goal < CLOSE_START else 1.1))
 		elif mb.button_index == MOUSE_BUTTON_MIDDLE:
 			_mid_drag = mb.pressed
 	elif e is InputEventMouseMotion and _mid_drag:
@@ -92,7 +127,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		pitch_deg = clampf(pitch_deg + mm.relative.y * 0.15, 35.0, 75.0)
 		_apply()
 	elif e is InputEventKey and e.pressed and (e as InputEventKey).keycode == KEY_HOME:
-		yaw = 0.0; zoom = 70.0; pitch_deg = 52.0; _apply()
+		yaw = 0.0; zoom = 70.0; zoom_goal = 70.0; pitch_deg = 52.0; _apply()
 
 
 ## Grab-and-drag scrolling: the map follows the mouse (used for right-drag).
