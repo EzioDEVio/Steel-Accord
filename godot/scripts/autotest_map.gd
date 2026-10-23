@@ -200,7 +200,8 @@ func _run() -> void:
 			await _until(func(): return battle.drones.is_empty() and battle.drone_hits > h0, 60.0)
 			var dmg_done: bool = victims.any(func(v): return v.dead or v.hp < v.def.hp)
 			_log("iran_shahed_strike", battle.drone_hits - h0 == int(UnitDefs.POWERS.shahed.drones) and dmg_done,
-				"drones hit %d, targets damaged=%s; US-only powers refused for Iran: '%s'" % [battle.drone_hits - h0, str(dmg_done), battle.power_problem(1, "carpet")])
+				"drones hit %d, targets damaged=%s; impacts %s vs target %s; US-only powers refused for Iran: '%s'" % [battle.drone_hits - h0, str(dmg_done),
+				str(battle.bomb_log.slice(-4).map(func(q): return Vector2i(int(q.x), int(q.z)))), str(Vector2i(int(tgt.x), int(tgt.z))), battle.power_problem(1, "carpet")])
 			for v in victims:
 				if not v.dead: v.take_damage(99999.0, null)
 			var air_ir: Array = Nations.produces("iran", "airfield", [])
