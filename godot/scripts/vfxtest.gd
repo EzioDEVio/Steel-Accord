@@ -78,9 +78,10 @@ func _run() -> void:
 		"medium": ["flash", "fireball", "smoke", "sparks", "debris", "dust_ring", "dust", "scorch", "light"],
 		"large": ["flash", "fireball", "smoke", "sparks", "embers", "debris", "dust_ring", "dust", "scorch", "light"],
 		"huge": ["flash", "fireball", "smoke", "sparks", "embers", "debris", "dust_ring", "dust", "scorch", "light", "shock"]}
-	# warm-up round: fills the emitter / light pools; baseline taken after it has finished
-	for sz in want:
-		FX.explosion(battle, battle.grounded(P) + Vector3(0, 0.2, 0), 1.0, sz)
+	# warm-up: the same 3-round barrage as the repeat check below fills the emitter / light pools; baseline after it
+	for r in 3:
+		for sz in want: FX.explosion(battle, battle.grounded(P) + Vector3(r * 5, 0.2, 0), 1.0, sz)
+		await _wait_sim(0.5)
 	await _wait_sim(14.0)
 	var base_nodes := _nodes()
 	var base_decals := d.decals.size()
@@ -109,7 +110,7 @@ func _run() -> void:
 	for g in ["Low", "High"]:
 		Game.settings["graphics"] = g
 		d.tag_log.clear()
-		var before := d.stats.spawned
+		var before: int = d.stats.spawned
 		var p0 := d.live_particles
 		FX.explosion(battle, battle.grounded(P) + Vector3(0, 0.2, 0), 1.0, "large")
 		await _wait_sim(0.4)
@@ -235,7 +236,7 @@ func _run() -> void:
 	d.stats.peak_particles = 0
 	for k in 40:
 		for j in 8:
-			var p := battle.grounded(P + Vector3(randf_range(-40, 40), 0, randf_range(-30, 30))) + Vector3(0, 0.3, 0)
+			var p: Vector3 = battle.grounded(P + Vector3(randf_range(-40, 40), 0, randf_range(-30, 30))) + Vector3(0, 0.3, 0)
 			FX.explosion(battle, p, 1.0, ["medium", "large", "huge"][j % 3])
 			FX.impact_kind(battle, p, "bullet", "ground")
 		await _frames(1)

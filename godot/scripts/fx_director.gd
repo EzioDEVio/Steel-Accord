@@ -77,7 +77,7 @@ func _process(dt: float) -> void:
 	i = active.size() - 1
 	while i >= 0:
 		var a: Dictionary = active[i]
-		var n: Node = a.n
+		var n: Variant = a.n
 		if not is_instance_valid(n):
 			live_particles -= int(a.cost)
 			active.remove_at(i)
@@ -93,7 +93,7 @@ func _process(dt: float) -> void:
 	i = lights.size() - 1
 	while i >= 0:
 		var L: Dictionary = lights[i]
-		var l: OmniLight3D = L.l
+		var l: Variant = L.l
 		if not is_instance_valid(l):
 			lights.remove_at(i)
 		else:
@@ -112,7 +112,7 @@ func _process(dt: float) -> void:
 		i = decals.size() - 1
 		while i >= 0:
 			var D: Dictionary = decals[i]
-			var dn: Decal = D.d
+			var dn: Variant = D.d
 			var age := t - float(D.t0)
 			if not is_instance_valid(dn):
 				decals.remove_at(i)

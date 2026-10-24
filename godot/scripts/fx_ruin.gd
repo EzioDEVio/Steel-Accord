@@ -39,7 +39,7 @@ static func palette(bkind: String) -> Dictionary:
 			for si in m.mesh.get_surface_count():
 				var mt: Material = m.get_surface_override_material(si)
 				if mt == null: mt = m.mesh.surface_get_material(si)
-				_sample(mt, float(m.mesh.surface_get_array_len(si)), samples)
+				_sample(mt, m.mesh, si, samples)
 		inst.free()
 		if top > 0.5: res.h = top
 		if samples.size() >= 8:
@@ -59,27 +59,33 @@ static func palette(bkind: String) -> Dictionary:
 	return res
 
 
-static func _sample(mt: Material, weight: float, out: Array) -> void:
+## Albedo seen on a mesh surface: the texture is read at the surface's own UVs (atlases have unused regions), up to
+## ~300 vertices per surface, each weighted equally (so larger surfaces with more vertices count more).
+static func _sample(mt: Material, mesh: Mesh, si: int, out: Array) -> void:
 	if not (mt is BaseMaterial3D): return
 	var bm := mt as BaseMaterial3D
 	var base := bm.albedo_color
+	var arr := mesh.surface_get_arrays(si)
+	var uvs: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if arr[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+	var nv := maxi(1, (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
 	var tx := bm.albedo_texture
 	var img: Image = tx.get_image() if tx else null
-	if img == null or img.is_empty():
-		out.append([base.get_luminance(), base, weight])
+	if img != null and not img.is_empty():
+		img = img.duplicate()
+		if img.is_compressed() and img.decompress() != OK: img = null
+	if img == null or img.is_empty() or uvs.is_empty():
+		out.append([base.get_luminance(), base, float(nv)])
 		return
-	img = img.duplicate()
-	if img.is_compressed() and img.decompress() != OK:
-		out.append([base.get_luminance(), base, weight])
-		return
-	img.resize(24, 24, Image.INTERPOLATE_BILINEAR)
-	var w := weight / 576.0
-	for y in 24:
-		for x in 24:
-			var c := img.get_pixel(x, y)
-			if c.a < 0.5: continue
-			c = Color(c.r * base.r, c.g * base.g, c.b * base.b)
-			out.append([c.get_luminance(), c, w])
+	var step := maxi(1, uvs.size() / 300)
+	var w := float(nv) / float(uvs.size() / step + 1)
+	var sz := img.get_size()
+	for k in range(0, uvs.size(), step):
+		var uv := uvs[k]
+		var x := clampi(int(fposmod(uv.x, 1.0) * sz.x), 0, sz.x - 1)
+		var y := clampi(int(fposmod(uv.y, 1.0) * sz.y), 0, sz.y - 1)
+		var c := img.get_pixel(x, y)
+		c = Color(c.r * base.r, c.g * base.g, c.b * base.b)
+		out.append([c.get_luminance(), c, w])
 
 
 ## Weighted mean colour of the samples between two cumulative-weight fractions (samples sorted by luminance).
