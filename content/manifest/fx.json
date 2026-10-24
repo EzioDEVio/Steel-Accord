@@ -1,0 +1,62 @@
+{
+ "pack": "Combat VFX textures and ruin kit (B3)",
+ "generator": "tools/art/fx_textures.py (textures), tools/art/fx_ruin_kit.py (ruin kit)",
+ "command": "python3 -I tools/art/fx_textures.py godot/assets/fx && python3 tools/art/fx_ruin_kit.py godot/assets/fx/ruin_kit.glb",
+ "method": "textures: seeded numpy value-noise / fbm, gaussian blobs and analytic shapes (seed 20261023), PNG RGBA; ruin kit: code-built meshes with the Blender 5.2 Python module (bpy + bmesh): jagged wall-stub profiles, extruded fractured slabs, swept I-beam, displaced icosphere mounds, convex-hull blocks, cylinder rebar; GLB export, no embedded textures",
+ "tools": "numpy, Pillow, Blender 5.2 (bpy module) - no AI image generation, no external textures, scans or photos",
+ "license": "original work, project-owned",
+ "status": "shippable",
+ "runtime": "godot/scripts/fx.gd, fx_director.gd, fx_ruin.gd; textures imported lossless with mipmaps",
+ "items": [
+  {
+   "id": "smoke_atlas",
+   "path": "res://assets/fx/smoke_atlas.png",
+   "description": "4x4 atlas of 16 grey smoke puffs with baked top light; random cell per particle, tinted by the colour ramp"
+  },
+  {
+   "id": "dust_atlas",
+   "path": "res://assets/fx/dust_atlas.png",
+   "description": "4x4 atlas of 16 wispy dust puffs (ground dust, dust rings, collapse cloud)"
+  },
+  {
+   "id": "fire_atlas",
+   "path": "res://assets/fx/fire_atlas.png",
+   "description": "4x4 flipbook: fireball breaking up into flame tongues over 16 frames (additive)"
+  },
+  {
+   "id": "scorch",
+   "path": "res://assets/fx/scorch.png",
+   "description": "blast scorch decal: soot centre, radial streaks, ragged edge"
+  },
+  {
+   "id": "ruin_ash",
+   "path": "res://assets/fx/ruin_ash.png",
+   "description": "ground decal under a ruin: ash, soot and grit, ragged rectangular edge"
+  },
+  {
+   "id": "concrete_detail",
+   "path": "res://assets/fx/concrete_detail.png",
+   "description": "tileable greyscale concrete / plaster detail, tri-planar on ruin pieces and debris (tinted per building)"
+  },
+  {
+   "id": "ring",
+   "path": "res://assets/fx/ring.png",
+   "description": "noisy dust / shock ring for huge blasts"
+  },
+  {
+   "id": "flash",
+   "path": "res://assets/fx/flash.png",
+   "description": "muzzle-flash / blast-flash star"
+  },
+  {
+   "id": "spark",
+   "path": "res://assets/fx/spark.png",
+   "description": "hot spark / ember dot"
+  },
+  {
+   "id": "ruin_kit",
+   "path": "res://assets/fx/ruin_kit.glb",
+   "description": "ruin pieces: wall_a/b/c (4 m jagged wall stubs with rebar), corner_a, slab_a/b (fallen roof slabs with fractured edge and rebar grid), beam_a (bent I-beam), column_a (snapped column), mound_a/b (rubble heaps), chunk_a-d (blocks); materials RuinConcrete (tinted in game) and RuinRebar"
+  }
+ ]
+}

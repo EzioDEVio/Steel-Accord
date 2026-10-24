@@ -138,8 +138,11 @@ static func options_box(on_change: Callable = Callable()) -> VBoxContainer:
 		Game.apply_graphics()
 		notify.call()))
 	v.add_child(row5)
-	v.add_child(label("Low: smaller shadows, no ambient occlusion or glow, 3D drawn at 77% and upscaled (FSR).\nHigh: largest soft shadows and 2x anti-aliasing (needs a strong graphics card).", 12, Color(0.6, 0.66, 0.63)))
+	v.add_child(label("Low: smaller shadows, no ambient occlusion or glow, 3D drawn at 77% and upscaled (FSR).\nHigh: largest soft shadows and 2x anti-aliasing (needs a strong graphics card).\nEffects: Low draws the fewest particle layers, lights and scorch marks; High the full set.", 12, Color(0.6, 0.66, 0.63)))
 	v.add_child(check("Show frame rate (FPS)", bool(Game.settings.get("show_fps", false)), func(on):
 		Game.settings["show_fps"] = on
+		notify.call()))
+	v.add_child(check("Camera shake on large explosions", bool(Game.settings.get("camera_shake", true)), func(on):
+		Game.settings["camera_shake"] = on
 		notify.call()))
 	return v
