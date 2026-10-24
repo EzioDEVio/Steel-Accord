@@ -64,6 +64,7 @@ var income := [0, 0]            # total cash delivered by haulers (stats / tests
 var piles: Array = []           # {"pos": Vector3, "cash": int, "node": Node3D}
 var start_pos := [Vector3(0, 0, 225), Vector3(0, 0, -225)]
 var base_ai: RefCounted = null
+var base_ai0: RefCounted = null   # optional second computer player on team 0 (AI-vs-AI test matches: "ai0")
 
 var camera: RTSCamera
 var commander: Commander
@@ -126,8 +127,9 @@ func _ready() -> void:
 	var diff: Dictionary = Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"])
 	if scenario == "army":
 		ai = EnemyAI.new(self, 1, 30.0 if _automated() else float(diff.attack_after))
-	elif not "noai" in args:
-		base_ai = BaseAI.new(self, 1, Game.settings.difficulty)
+	elif not "noai" in args and not ("basetest" in args and "qa" in args):   # the QA run checks player systems without a live AI
+		base_ai = BaseAI.new(self, 1, str(args.get("diff", Game.settings.difficulty)))
+		if "ai0" in args: base_ai0 = BaseAI.new(self, 0, str(args.get("diff0", args.get("diff", Game.settings.difficulty))))
 	pause_menu = PauseMenu.new()
 	pause_menu.battle = self
 	add_child(pause_menu)
@@ -194,6 +196,10 @@ func _ready() -> void:
 		var mt: Node = load("res://scripts/autotest_map.gd").new()
 		mt.battle = self
 		add_child(mt)
+	elif "aitest" in args:
+		var at: Node = load("res://scripts/autotest_ai.gd").new()
+		at.battle = self
+		add_child(at)
 	elif "basetest" in args:
 		var bt: Node = load("res://scripts/autotest_base.gd").new()
 		bt.battle = self
@@ -257,7 +263,7 @@ func grounded(p: Vector3) -> Vector3:
 
 
 func _automated() -> bool:
-	return "test" in args or "maptest" in args or "mapshots" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "movetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
+	return "test" in args or "maptest" in args or "mapshots" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "movetest" in args or "aitest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).
@@ -548,6 +554,7 @@ func sim_tick(dt: float) -> void:
 	pending.clear()
 	if ai and not game_over: ai.tick(dt)
 	if base_ai and not game_over: base_ai.tick(dt)
+	if base_ai0 and not game_over: base_ai0.tick(dt)
 	if p: _pmark("ai+cmds")
 	_build_nbr()
 	for u in units:
