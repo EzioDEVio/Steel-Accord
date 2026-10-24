@@ -46,13 +46,13 @@ var run_out_t := 0.0
 var ret_phase := 0
 var site: Node = null          # dozer: structure under construction
 var has_runway := false        # jets: airfield with a runway (taxi out, roll along it, land on it, taxi back)
-var taxi_out: Array = []       # jets: waypoints pad -> taxiway -> runway take-off end (from the airfield)
-var taxi_in: Array = []        # jets: runway -> taxiway -> pad
+var taxi_out: Array = []       # jets: lane abeam pad -> hold-short -> runway at the lane -> RunwayEnd ('27')
+var taxi_in: Array = []        # jets: runway at the lane -> hold-short -> lane abeam pad -> pad
 var taxi_i := 0
 var rw_start := Vector3.ZERO
 var rw_end := Vector3.ZERO
 var park_heading := 0.0
-var taxi_phase := 0            # ground: 0 taxi to runway start, 1 take-off roll | landing: 2 rollout, 3 taxi to pad
+var taxi_phase := 0            # runway jets: 0 taxi out / hold short, 4 backtrack, 5 line up, 1 roll | 2 rollout, 3 taxi in
 var haul_depot: Node = null    # hauler: supply depot it delivers to
 var haul_phase := 0            # 0 fly to pile, 1 loading, 2 fly to depot, 3 unloading
 var haul_t := 0.0
@@ -1469,6 +1469,7 @@ func cruise_alt() -> float:
 ## landed and rearming. Attack runs: fly in, fire while the target is inside the weapon window, overfly,
 ## extend straight for a moment, then turn back for another pass (no endless circling inside the turn radius).
 func _jet_tick(dt: float) -> void:
+	if def.get("scripted", false): return   # support-power aircraft (AC-130): flown by Battle, see battle._update_gunships
 	if state == S.LANDED:
 		airborne = false
 		speed_cur = 0.0
@@ -1486,27 +1487,11 @@ func _jet_tick(dt: float) -> void:
 				if full > 0 and w_ammo[i] < full: w_ammo[i] += 1; break
 		vel = Vector3.ZERO
 		return
-	if not airborne and has_runway and taxi_phase >= 2:
-		_runway_landing_ground(dt)
-		return
-	if not airborne and has_runway and taxi_phase == 0:
-		# taxi from the parking spot to the runway threshold, then line up on the runway heading
-		bank = 0.0
-		altitude = ground_alt()
-		while taxi_i < taxi_out.size() - 1 and flat_dist(taxi_out[taxi_i]) < 3.0: taxi_i += 1
-		var tgt: Vector3 = taxi_out[taxi_i] if taxi_i < taxi_out.size() else rw_start
-		if taxi_i < taxi_out.size() - 1 or flat_dist(rw_start) > 2.0:
-			_taxi_to(tgt, dt)
-		else:
-			position = Vector3(rw_start.x, 0, rw_start.z)
-			heading = _runway_heading()
-			speed_cur = 0.0
-			taxi_phase = 1
-			taxi_i = 0
-		vel = forward() * speed_cur
+	if not airborne and has_runway:
+		_runway_ground(dt)
 		return
 	if not airborne:
-		# take-off roll straight down the pad heading, lift off at 80 % of minimum flying speed
+		# no runway (pad-only airstrip): short roll straight down the pad heading, lift off at 80 % of minimum flying speed
 		bank = 0.0
 		speed_cur = move_toward(speed_cur, def.speed, def.accel * 1.4 * dt)
 		position += forward() * speed_cur * dt
@@ -1542,26 +1527,33 @@ func _jet_tick(dt: float) -> void:
 			if target == null: target = battle.find_enemy_near_point(self, guard_pos, sight_r())
 			steer = _run_steer(target.position, dt) if target else _orbit_point(guard_pos, 60.0)
 		S.RETURN when has_runway:
-			# land on the runway: long final aligned with it, touch down at the threshold, roll out, taxi back
-			var rdir := (rw_end - rw_start).normalized()
-			var approach := rw_start - rdir * 120.0
+			# land in the take-off direction ('27' end -> '09' end): long final from beyond the 27 end, touch down past the
+			# threshold, roll out, taxi back. Final approach needs the runway (no jet on it, none taxiing out, no C-5).
+			var tdir := _takeoff_dir()
+			var approach := rw_end - tdir * 120.0
+			var td := rw_end + tdir * 8.0
 			if ret_phase == 0:
 				steer = approach
-				if flat_dist(approach) < 35.0: ret_phase = 1
+				if flat_dist(approach) < 35.0 or (flat_dist(approach) < 90.0 and _holding):
+					if _landing_clear():
+						ret_phase = 1; _holding = false
+					else:
+						_holding = true                                # runway busy: hold in a left-hand orbit
+						steer = _orbit_point(approach - tdir * 40.0, 70.0)
 			else:
-				steer = rw_start + rdir * 6.0
-				var d := flat_dist(rw_start)
-				var to_thr := Vector3(rw_start.x - position.x, 0, rw_start.z - position.z)
-				var err := absf(wrapf(atan2(-to_thr.x, -to_thr.z) - heading, -PI, PI))
+				steer = td + tdir * 6.0
+				var d := flat_dist(td)
+				var to_td := Vector3(td.x - position.x, 0, td.z - position.z)
+				var err := absf(wrapf(atan2(-to_td.x, -to_td.z) - heading, -PI, PI))
 				if d > 25.0 and err > deg_to_rad(60.0):
 					ret_phase = 0                                 # badly aligned: go around
 				altitude = move_toward(altitude, def.altitude * clampf((d - 2.0) / 120.0, 0.0, 1.0) + ground_alt(), dt * 12.0)
 				throttle = clampf(d * 0.3, def.min_speed * 0.5, def.speed * 0.75)
 				min_v = 4.0
-				if d < 6.0 or (to_thr.dot(rdir) < 0.0 and d < 20.0):
-					airborne = false; taxi_phase = 2; altitude = ground_alt()
+				if d < 6.0 or (to_td.dot(tdir) < 0.0 and d < 20.0):
+					airborne = false; taxi_phase = 2; taxi_i = 0; altitude = ground_alt()
 					position = Vector3(position.x, 0, position.z)
-					heading = _runway_heading()
+					heading = _takeoff_heading()
 					return
 		S.RETURN:
 			var approach := home + Vector3(0, 0, 110.0)       # line up south of the pad, land heading north
@@ -1604,6 +1596,18 @@ func _runway_heading() -> float:
 	return atan2(-d.x, -d.z)
 
 
+## Jets take off and land from the '27' end (RunwayEnd) toward the '09' end (RunwayStart).
+func _takeoff_dir() -> Vector3:
+	var d := rw_start - rw_end
+	d.y = 0.0
+	return d.normalized()
+
+
+func _takeoff_heading() -> float:
+	var d := _takeoff_dir()
+	return atan2(-d.x, -d.z)
+
+
 ## Ground movement for jets: slow taxi with tight turns.
 func _taxi_to(p: Vector3, dt: float) -> void:
 	var to := Vector3(p.x - position.x, 0, p.z - position.z)
@@ -1616,30 +1620,198 @@ func _taxi_to(p: Vector3, dt: float) -> void:
 	position += forward() * speed_cur * dt
 
 
-## After touchdown: brake along the runway, then taxi to the parking spot and park.
-func _runway_landing_ground(dt: float) -> void:
+# ------------------------------------------------------------------ airfield ground operations (jets with a runway)
+# taxi_phase: 0 taxi out pad -> taxiway -> hold-short (waits there for the runway) | 4 enter the runway and backtrack
+# to the '27' end | 5 turn round and line up | 1 take-off roll toward '09' | 2 landing rollout | 3 taxi in -> pad.
+# taxi_out = [lane abeam pad, hold-short, runway at the lane, RunwayEnd]; taxi_in = [runway at the lane, hold-short,
+# lane abeam pad, pad]. One aircraft at a time owns the runway (derived from the phases, so it survives save/load);
+# the single-lane taxiway is one-way at a time: departures do not leave their pads while a jet is landing or taxiing
+# in, and a jet is not cleared to land while departures are taxiing out. Jets keep TAXI_GAP between them on the lane.
+const TAXI_GAP := 13.0
+var _holding := false     # presentation of the holding pattern only (recomputed, not saved)
+
+
+func _same_field(o: Unit) -> bool:
+	return o != self and not o.dead and o.domain == "jet" and o.has_runway and o.rw_start.is_equal_approx(rw_start)
+
+
+## Owns the runway: on it (backtrack, line-up, roll, rollout, taxiing off it) or cleared on final approach.
+func uses_runway() -> bool:
+	if airborne: return state == S.RETURN and ret_phase == 1 and has_runway
+	return has_runway and (taxi_phase in [4, 5, 1, 2] or (taxi_phase == 3 and taxi_i <= 1))
+
+
+## Taxiing out on the lane (has left its pad).
+func taxiing_out() -> bool:
+	return not airborne and has_runway and state != S.LANDED and taxi_phase == 0 and (taxi_i > 0 or flat_dist(home) > 1.5)
+
+
+func taxiing_in() -> bool:
+	return not airborne and has_runway and taxi_phase in [2, 3]
+
+
+func _runway_busy() -> bool:
+	if battle.has_method("runway_reserved") and battle.runway_reserved(rw_start): return true
+	for o in battle.units:
+		if _same_field(o) and o.uses_runway(): return true
+	return false
+
+
+func _landing_clear() -> bool:
+	if _runway_busy(): return false
+	for o in battle.units:
+		if _same_field(o) and o.taxiing_out(): return false
+	return true
+
+
+func _may_leave_pad() -> bool:
+	if battle.has_method("runway_reserved") and battle.runway_reserved(rw_start): return false
+	for o in battle.units:
+		if not _same_field(o): continue
+		if o.taxiing_in() or (o.airborne and o.state == S.RETURN and o.ret_phase == 1): return false
+	return true
+
+
+## Remaining distance along the taxi-out route to the hold-short point.
+func _dist_to_hold() -> float:
+	if taxi_out.size() < 2: return 0.0
+	if taxi_i == 0: return flat_dist(taxi_out[0]) + (taxi_out[0] as Vector3).distance_to(taxi_out[1])
+	return flat_dist(taxi_out[1]) if taxi_i == 1 else -1.0
+
+
+## Distance taxied since leaving the runway on the way in.
+func _taxi_in_progress() -> float:
+	if taxi_in.size() < 4: return 0.0
+	var acc := 0.0
+	for k in range(1, mini(taxi_i, 3) + 1): acc += (taxi_in[k - 1] as Vector3).distance_to(taxi_in[k])
+	if taxi_i >= 1 and taxi_i <= 3: acc -= flat_dist(taxi_in[taxi_i])
+	return acc
+
+
+## Another jet is ahead of this one on the taxi route, too close: stop and wait. Departures are ordered by the
+## remaining distance to the hold-short line (ties: lower unit id); a jet still on its pad never pulls out in front
+## of one already taxiing, and two jets leaving pads that share a lane entry go one after the other.
+func _taxi_blocked() -> bool:
+	var me_pad := taxi_i == 0 and flat_dist(home) < 1.5
+	for o in battle.units:
+		if not _same_field(o) or o.airborne or o.state == S.LANDED: continue
+		var d := flat_dist(o.position)
+		if d > 30.0: continue
+		# any heading: half diagonals + margin, plus this jet's braking distance (8 m/s2)
+		var gap: float = maxf(TAXI_GAP, 0.5 * (taxi_size() + o.taxi_size()) + 1.0) + speed_cur * speed_cur / 16.0
+		if taxi_phase == 0:
+			if o.taxi_phase in [4, 5, 1]:
+				if d <= gap: return true
+				continue
+			if o.taxi_phase != 0: continue
+			var o_pad: bool = o.taxi_i == 0 and o.flat_dist(o.home) < 1.5
+			var a: float = _dist_to_hold(); var b: float = o._dist_to_hold()
+			var first: bool = b < a or (b == a and o.uid < uid)
+			if me_pad and o_pad:
+				if first: return true                    # both about to leave: the one nearer the runway goes first
+			elif me_pad:
+				if d <= gap: return true                 # do not pull out in front of a taxiing jet
+			elif not o_pad and first and d <= gap:
+				return true
+		elif taxi_phase == 3 and o.taxi_phase == 3 and d <= gap:
+			var a: float = _taxi_in_progress(); var b: float = o._taxi_in_progress()
+			if b > a or (b == a and o.uid < uid): return true
+	return false
+
+
+## Drawn plan-view diagonal (length x span at the aircraft scale): the spacing two jets need at any relative heading.
+func taxi_size() -> float:
+	var l := float(def.get("length", 15.0))
+	return sqrt(l * l + pow(float(def.get("span", l * 0.75)), 2.0)) * UnitDefs.SCALE.aircraft
+
+
+func _brake(dt: float) -> void:
+	speed_cur = move_toward(speed_cur, 0.0, 8.0 * dt)
+	position += forward() * speed_cur * dt
+
+
+## Point where lift-off should happen, as a fraction of the runway from the '27' end: heavier / faster-landing jets
+## use more of it (A-10 ~72 %, F-22 ~80 %). The roll acceleration is solved from it each tick (stateless).
+func liftoff_frac() -> float:
+	return clampf(0.70 + (float(def.min_speed) - 22.0) / 12.0 * 0.10, 0.72, 0.82)
+
+
+func _runway_ground(dt: float) -> void:
 	bank = 0.0
-	if state != S.RETURN and taxi_phase == 3:
-		taxi_phase = 0          # new orders while taxiing in: turn round and take off again
-		taxi_i = 0
-		return
 	altitude = ground_alt()
-	if taxi_phase == 2:
-		speed_cur = move_toward(speed_cur, 7.0, def.accel * 1.2 * dt)
-		position += forward() * speed_cur * dt
-		var along := (position - rw_start).dot((rw_end - rw_start).normalized())
-		if speed_cur <= 7.5 or along > (rw_end - rw_start).length() * 0.8:
-			taxi_phase = 3
-			taxi_i = 0
-	else:
-		while taxi_i < taxi_in.size() - 1 and flat_dist(taxi_in[taxi_i]) < 3.0: taxi_i += 1
-		if taxi_i < taxi_in.size() - 1:
-			_taxi_to(taxi_in[taxi_i], dt)
-		elif flat_dist(home) > 1.5:
-			_taxi_to(home, dt)
-		else:
-			position = Vector3(home.x, 0, home.z)
-			state = S.LANDED; rearm_t = 1.5; speed_cur = 0.0; taxi_phase = 0
+	var tdir := _takeoff_dir()
+	var rw_len := rw_start.distance_to(rw_end)
+	match taxi_phase:
+		0:
+			if state == S.LANDED: return
+			var at_pad := taxi_i == 0 and flat_dist(home) < 1.5
+			if at_pad and not _may_leave_pad():
+				speed_cur = 0.0
+			elif _taxi_blocked():
+				_brake(dt)
+			else:
+				while taxi_i < 1 and flat_dist(taxi_out[taxi_i]) < 3.0: taxi_i += 1
+				if taxi_i == 1 and flat_dist(taxi_out[1]) < 1.2:
+					speed_cur = 0.0                              # holding short
+					if not _runway_busy():
+						taxi_phase = 4; taxi_i = 2
+				else:
+					_taxi_to(taxi_out[taxi_i], dt)
+		4:
+			if taxi_i == 2 and flat_dist(taxi_out[2]) < 3.0: taxi_i = 3
+			if taxi_i >= 3 and flat_dist(rw_end) < 2.0:
+				taxi_phase = 5
+			else:
+				_taxi_to(taxi_out[mini(taxi_i, 3)], dt)
+		5:
+			# turn round at the '27' end (a tight left-hand arc on the runway) and line up toward '09'
+			var want := _takeoff_heading()
+			var diff := wrapf(want - heading, -PI, PI)
+			if absf(diff) < deg_to_rad(2.0):
+				heading = want
+				speed_cur = 0.0
+				taxi_phase = 1
+				if battle.has_method("on_takeoff_roll"): battle.on_takeoff_roll(self)
+			else:
+				var turn := deg_to_rad(80.0) * dt * (1.0 if diff > 0.0 or absf(diff) > PI - 0.05 else -1.0)
+				heading = wrapf(heading + turn, -PI, PI)
+				speed_cur = move_toward(speed_cur, 1.5, 4.0 * dt)
+				position += forward() * speed_cur * dt
+		1:
+			# take-off roll: accelerate so that rotation speed is reached at liftoff_frac() of the runway
+			heading = _takeoff_heading()
+			var s := (position - rw_end).dot(tdir)
+			var v_lo: float = def.min_speed * 0.8
+			var acc := maxf(2.0, (v_lo * v_lo - speed_cur * speed_cur) / (2.0 * maxf(liftoff_frac() * rw_len - s, 1.0)))
+			speed_cur = minf(speed_cur + acc * dt, def.speed)
+			position += forward() * speed_cur * dt
+			var lat := (position - rw_end) - tdir * (position - rw_end).dot(tdir)
+			lat.y = 0.0
+			position -= lat * minf(1.0, dt * 1.5)               # settle onto the centreline after the turn
+			if speed_cur >= v_lo or s > rw_len * 0.97:
+				airborne = true
+				if battle.has_method("on_liftoff"): battle.on_liftoff(self, s / maxf(rw_len, 1.0))
+		2:
+			# rollout toward '09', braking to taxi speed
+			speed_cur = move_toward(speed_cur, 6.0, def.accel * 1.2 * dt)
+			position += forward() * speed_cur * dt
+			var along := (position - rw_end).dot(tdir)
+			if speed_cur <= 6.5 or along > rw_len * 0.85:
+				taxi_phase = 3
+				taxi_i = 0
+		3:
+			while taxi_i < taxi_in.size() - 1 and flat_dist(taxi_in[taxi_i]) < 3.0: taxi_i += 1
+			if _taxi_blocked():
+				_brake(dt)
+			elif taxi_i < taxi_in.size() - 1:
+				_taxi_to(taxi_in[taxi_i], dt)
+			elif flat_dist(home) > 1.5:
+				_taxi_to(home, dt)
+			else:
+				position = Vector3(home.x, 0, home.z)
+				speed_cur = 0.0; taxi_phase = 0; taxi_i = 0
+				if state == S.RETURN:
+					state = S.LANDED; rearm_t = 1.5
 	vel = forward() * speed_cur
 
 

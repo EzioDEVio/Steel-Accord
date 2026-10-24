@@ -31,6 +31,15 @@ const W_RWS := {"id": "rws_mg", "range": 45.0, "reload": 0.3, "damage": 9.0, "sp
 const TRACKED := ["dozer", "vanguard", "abrams", "bradley", "m113", "paladin"]
 
 const DEFS := {
+	# B3 support-power gunship: a real, targetable temporary aircraft flown by Battle (scripted) and removed after
+	# its orbit; its guns are Battle.GUNSHIP_WEAPONS. Not producible, not saved. PROVISIONAL values.
+	"ac130_gunship": {
+		"name": "AC-130 Gunship", "role": "Support-power gunship - orbits the target firing its side guns; anti-air can shoot it down",
+		"domain": "jet", "model3d": "res://assets/units3d/ac130/ac130.glb", "icon": "res://assets/ui/powers/gunship.png", "length": 29.8,
+		"hp": 1400.0, "speed": 40.0, "min_speed": 38.0, "accel": 5.0, "turn_deg": 20.0, "altitude": 48.0,
+		"radius": 9.0, "height": 3.0, "sight": 110.0, "cost": 0, "provisional": true, "scripted": true, "transient": true,
+		"weapons": [],
+	},
 	"vanguard": {
 		"name": "Vanguard MBT", "role": "Main battle tank - anti-armour", "domain": "ground",
 		"model": "res://assets/units/vanguard.glb", "ao_prefix": "res://assets/units/vanguard_",
@@ -41,7 +50,7 @@ const DEFS := {
 	# ---------------- aircraft (sprite-based; PROVISIONAL values) ----------------
 	"f16": {
 		"name": "F-16 (multirole fighter)", "role": "Multirole jet - missile strikes; rearms at its pad", "domain": "jet",
-		"sprite": "res://assets/aircraft/f16/f16_top.png", "model3d": "res://assets/units3d/f16/f16.glb", "icon": "res://assets/aircraft/f16/f16_icon.png", "length": 15.1,
+		"sprite": "res://assets/aircraft/f16/f16_top.png", "model3d": "res://assets/units3d/f16/f16.glb", "icon": "res://assets/aircraft/f16/f16_icon.png", "length": 15.1, "span": 9.96,
 		"hp": 320.0, "speed": 52.0, "min_speed": 30.0, "accel": 20.0, "turn_deg": 72.0, "altitude": 16.0,
 		"radius": 4.0, "height": 1.0, "sight": 95.0, "cost": 1400, "provisional": true,
 		"weapons": [{"id": "agm", "range": 115.0, "reload": 1.2, "damage": 240.0, "splash": 4.0, "proj": "missile",
@@ -49,7 +58,7 @@ const DEFS := {
 	},
 	"fa18": {
 		"name": "F/A-18 (strike fighter)", "role": "Strike jet - heavier missile load, slower", "domain": "jet",
-		"sprite": "res://assets/aircraft/fa18/fa18_top.png", "model3d": "res://assets/units3d/fa18/fa18.glb", "icon": "res://assets/aircraft/fa18/fa18_icon.png", "length": 17.1,
+		"sprite": "res://assets/aircraft/fa18/fa18_top.png", "model3d": "res://assets/units3d/fa18/fa18.glb", "icon": "res://assets/aircraft/fa18/fa18_icon.png", "length": 17.1, "span": 12.3,
 		"hp": 380.0, "speed": 48.0, "min_speed": 28.0, "accel": 18.0, "turn_deg": 66.0, "altitude": 16.0,
 		"radius": 4.4, "height": 1.0, "sight": 95.0, "cost": 1600, "provisional": true,
 		"weapons": [{"id": "agm_heavy", "range": 110.0, "reload": 1.0, "damage": 220.0, "splash": 5.0, "proj": "missile",
@@ -58,7 +67,7 @@ const DEFS := {
 	"f35": {
 		"name": "F-35 (stealth multirole)", "role": "Stealth multirole jet - precision strikes, hard to intercept", "domain": "jet",
 		"sprite": "res://assets/aircraft/f16/f16_top.png", "model3d": "res://assets/units3d/f35/f35.glb",
-		"icon": "res://assets/aircraft/f16/f16_icon.png", "length": 15.7,
+		"icon": "res://assets/aircraft/f16/f16_icon.png", "length": 15.7, "span": 10.7,
 		"hp": 360.0, "speed": 55.0, "min_speed": 30.0, "accel": 22.0, "turn_deg": 75.0, "altitude": 17.0,
 		"radius": 4.2, "height": 1.0, "sight": 110.0, "cost": 2000, "provisional": true,
 		"weapons": [{"id": "jdam", "range": 120.0, "reload": 1.4, "damage": 280.0, "splash": 5.0, "proj": "missile",
@@ -68,7 +77,7 @@ const DEFS := {
 	},
 	"f22": {
 		"name": "F-22 (air superiority)", "role": "Air-superiority jet - hunts aircraft, weak vs ground", "domain": "jet",
-		"sprite": "res://assets/aircraft/f22/f22_top.png", "model3d": "res://assets/units3d/f22/f22.glb", "icon": "res://assets/aircraft/f22/f22_icon.png", "length": 18.9,
+		"sprite": "res://assets/aircraft/f22/f22_top.png", "model3d": "res://assets/units3d/f22/f22.glb", "icon": "res://assets/aircraft/f22/f22_icon.png", "length": 18.9, "span": 13.6,
 		"hp": 420.0, "speed": 60.0, "min_speed": 34.0, "accel": 24.0, "turn_deg": 85.0, "altitude": 18.0,
 		"radius": 4.6, "height": 1.0, "sight": 120.0, "cost": 2200, "provisional": true,
 		"weapons": [{"id": "aam", "range": 130.0, "reload": 0.9, "damage": 260.0, "splash": 2.0, "proj": "missile",
@@ -78,7 +87,7 @@ const DEFS := {
 	},
 	"a10": {
 		"name": "A-10 (ground attack)", "role": "Close air support - cannon strafing runs, tough airframe", "domain": "jet",
-		"sprite": "res://assets/aircraft/a10/a10_top.png", "model3d": "res://assets/units3d/a10/a10.glb", "icon": "res://assets/aircraft/a10/a10_icon.png", "length": 16.3,
+		"sprite": "res://assets/aircraft/a10/a10_top.png", "model3d": "res://assets/units3d/a10/a10.glb", "icon": "res://assets/aircraft/a10/a10_icon.png", "length": 16.3, "span": 17.5,
 		"hp": 650.0, "speed": 38.0, "min_speed": 22.0, "accel": 14.0, "turn_deg": 60.0, "altitude": 12.0,
 		"radius": 4.6, "height": 1.0, "sight": 85.0, "cost": 1700, "provisional": true,
 		"weapons": [{"id": "gau_cannon", "range": 90.0, "reload": 0.1, "damage": 20.0, "splash": 1.5, "proj": "bullet",
@@ -151,9 +160,9 @@ const IRAN_DERIVED := {
 		"hp": 190.0, "sight": 72.0, "weapon_id": "irgc_rifle", "damage_mult": 1.1}],
 	"ir_paratrooper": ["paratrooper", {"name": "Airborne Rifleman", "role": "Airborne rifleman - arrives by parachute"}],
 	# Iranian aircraft (wave 1): own 3D models with Iranian roundels / fin flash; mechanics follow the base type
-	"ir_f14": ["f22", {"name": "F-14 (interceptor)", "role": "Long-range interceptor - hunts aircraft, light ground strike", "length": 19.1, "hp": 400.0, "speed": 54.0}],
-	"ir_f4": ["f16", {"name": "F-4 (fighter-bomber)", "role": "Fighter-bomber - missile strikes on ground targets; rearms at its pad", "length": 19.2, "hp": 380.0, "speed": 48.0}],
-	"ir_su24": ["fa18", {"name": "Su-24 (strike aircraft)", "role": "Strike jet - heavy ground-attack missile load", "length": 22.6, "hp": 450.0, "speed": 46.0}],
+	"ir_f14": ["f22", {"name": "F-14 (interceptor)", "role": "Long-range interceptor - hunts aircraft, light ground strike", "length": 19.1, "span": 19.5, "hp": 400.0, "speed": 54.0}],
+	"ir_f4": ["f16", {"name": "F-4 (fighter-bomber)", "role": "Fighter-bomber - missile strikes on ground targets; rearms at its pad", "length": 19.2, "span": 11.7, "hp": 380.0, "speed": 48.0}],
+	"ir_su24": ["fa18", {"name": "Su-24 (strike aircraft)", "role": "Strike jet - heavy ground-attack missile load", "length": 22.6, "span": 17.6, "hp": 450.0, "speed": 46.0}],
 	"ir_ah1j": ["ah64", {"name": "AH-1J (attack helicopter)", "role": "Attack helicopter - rockets and guided missiles vs armour", "length": 14.3, "hp": 440.0, "rotor": 6.7}],
 	# Iranian ground vehicles (wave 1)
 	"ir_karrar": ["abrams", {"name": "Karrar (main battle tank)", "role": "Main battle tank - anti-armour", "track_m_per_v": 0.8956, "length": 9.5}],
@@ -383,6 +392,19 @@ const POWERS := {
 	"shahed": {"name": "Shahed Drone Strike", "model3d": "res://assets/units3d/ir_shahed/ir_shahed.glb", "aircraft": "ir_shahed",
 		"icon": "res://assets/iran/icons/ir_shahed_icon.png", "length": 3.3, "cooldown": 100.0, "speed": 45.0, "altitude": 22.0,
 		"drones": 4, "damage": 240.0, "splash": 7.0},
+	# B3 airlift powers (battle.gd "B3 air operations"); icons rendered from the game's own 3D models
+	"gunship": {"name": "AC-130 Gunship", "model3d": "res://assets/units3d/ac130/ac130.glb", "aircraft": "ac130",
+		"icon": "res://assets/ui/powers/gunship.png", "length": 29.8, "cooldown": 240.0, "speed": 40.0, "altitude": 48.0,
+		"gunship": true, "unit": "ac130_gunship", "orbit_r": 70.0, "orbit_time": 30.0, "area": 42.0, "requires": "airfield"},
+	"airborne_armor": {"name": "C-17 Airborne Armor", "model3d": "res://assets/units3d/c17/c17.glb", "aircraft": "c17",
+		"icon": "res://assets/ui/powers/airborne_armor.png", "length": 53.0, "cooldown": 200.0, "speed": 55.0, "altitude": 45.0,
+		"airdrop": ["hmmwv_50cal", "hmmwv_50cal", "stryker"], "requires": "airfield"},
+	"airlift": {"name": "C-5 Strategic Airlift", "model3d": "res://assets/units3d/c5/c5.glb", "aircraft": "c5",
+		"icon": "res://assets/ui/powers/airlift.png", "length": 75.3, "cooldown": 300.0,
+		"airlift": ["abrams", "abrams", "bradley", "bradley"], "requires": "airfield"},
+	"ir_airborne_armor": {"name": "Airborne Armour Drop", "model3d": "res://assets/units3d/c130/c130.glb", "aircraft": "ir_c130",
+		"icon": "res://assets/ui/powers/ir_airborne_armor.png", "length": 29.8, "cooldown": 200.0, "speed": 55.0, "altitude": 42.0,
+		"airdrop": ["hmmwv_50cal", "stryker"], "requires": "airfield"},
 	"recon": {"name": "Recon Overflight", "model3d": "res://assets/units3d/sr71/sr71.glb", "aircraft": "sr71", "sprite": "res://assets/aircraft/sr71/sr71_top.png",
 		"icon": "res://assets/aircraft/sr71/sr71_icon.png", "length": 32.7, "cooldown": 60.0, "speed": 160.0, "altitude": 36.0,
 		"reveal_width": 70.0, "reveal_time": 25.0},

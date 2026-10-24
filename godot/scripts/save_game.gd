@@ -5,7 +5,8 @@
 #               fog explored mask, derricks, supply piles, rubble, terrain edits made by construction, counters
 #   units     - every living unit and structure (passengers nested inside their transport) with its simulation state
 #   ai        - the computer player's state; commander control groups; camera
-# Not saved: projectiles, bombs and support aircraft that are in the air at that moment (they simply do not arrive).
+# Not saved: projectiles, bombs and support aircraft that are in the air at that moment (they simply do not arrive),
+# including the AC-130 gunship unit and vehicles still under canopy / being unloaded from a C-5.
 # Loading starts a normal match on the same map with the same settings, wipes the fresh start, then rebuilds
 # everything from the save with the original unit ids so all references (targets, pads, groups, AI orders) hold.
 class_name SaveGame
@@ -81,6 +82,7 @@ static func capture(b: Node) -> Dictionary:
 	var us: Array = []
 	for u in b.units:
 		if u.dead or not is_instance_valid(u): continue
+		if u.def.get("transient", false): continue      # support-power aircraft (AC-130) are not saved, like other flights
 		us.append(_unit_rec(b, u))
 	var ai := {}
 	if b.base_ai:
@@ -181,6 +183,7 @@ static func _wipe(b: Node) -> void:
 			elif e is Node and is_instance_valid(e): e.queue_free()
 		arr.clear()
 	b.reveal_zones.clear()
+	if b.has_method("clear_air_ops"): b.clear_air_ops()
 	if b.commander:
 		b.commander._set_selection([])
 		b.commander.sel_building = null
@@ -295,7 +298,7 @@ static func restore(b: Node, data: Dictionary) -> void:
 static func signature(b: Node) -> Dictionary:
 	var hp := [0.0, 0.0]; var n := [0, 0]; var bl := [0, 0]; var q := []; var vet := 0.0
 	for u in b.units:
-		if u.dead or u.team < 0 or u.team > 1: continue
+		if u.dead or u.team < 0 or u.team > 1 or u.def.get("transient", false): continue
 		hp[u.team] += u.hp; n[u.team] += 1
 		if u is Building:
 			bl[u.team] += 1

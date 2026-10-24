@@ -134,6 +134,15 @@ func icon_button(id: String, tip: String, cb: Callable, sz: Vector2) -> Button:
 	return b
 
 
+## Extra tooltip lines for powers whose behaviour is not obvious from the name.
+const POWER_HINTS := {
+	"gunship": "Orbits the target for 30 s firing 105 mm, 40 mm and 25 mm guns at enemies in the area. Anti-air can shoot it down. Requires an Airfield.\n",
+	"airborne_armor": "Drops 2 HMMWV .50 and a Stryker on pallets under canopies at the target. Requires an Airfield.\n",
+	"airlift": "A C-5 lands on your Airfield runway, opens its nose and unloads 2 Abrams and 2 Bradleys, which drive to the target. Jets hold while it uses the runway.\n",
+	"ir_airborne_armor": "Drops 2 Boragh APCs on pallets under canopies at the target. Requires an Air Base.\n",
+}
+
+
 func _build_powers() -> void:
 	power_box = Control.new()
 	power_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -144,7 +153,8 @@ func _build_powers() -> void:
 		var p: Dictionary = UnitDefs.POWERS[id]
 		var b := _button("", func(): commander.set_mode("power:" + id), Vector2(186, 62))
 		b.add_theme_stylebox_override("normal", _style(Color(0.07, 0.1, 0.11, 0.95), Color(0.86, 0.66, 0.22).darkened(0.25)))
-		b.tooltip_text = "%s - click the button, then click the target on the map.\nCooldown %d s (PROVISIONAL)" % [battle.lbl(commander.team, id, p.name), int(p.cooldown)]
+		b.tooltip_text = "%s - click the button (or press Alt+%d), then click the target on the map.\n%sCooldown %d s (PROVISIONAL)" % [
+			battle.lbl(commander.team, id, p.name), i + 1, POWER_HINTS.get(id, ""), int(p.cooldown)]
 		var icon := TextureRect.new()
 		icon.texture = load(Nations.power_icon(nat, id))
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -231,6 +241,14 @@ func _layout() -> void:
 	cash_rect = Rect2(grid_rect.get_center().x - 120, o.y - 30, 240, 32)
 	power_rect = Rect2(grid_rect.position.x, o.y + 6, bar_rect.end.x - 14 - grid_rect.position.x, 8)
 	power_box.position = Vector2(size.x - 198, 56)
+	# support powers: one column while they fit above the control bar, otherwise two (extra column to the left)
+	var npw := power_buttons.size()
+	var cols := 1 if npw * 66.0 <= size.y - BAR_H - 66.0 else 2
+	var rows := int(ceil(float(npw) / cols))
+	var k := 0
+	for pid in power_buttons:
+		(power_buttons[pid] as Button).position = Vector2(-float(cols - 1 - k / rows) * 192.0, (k % rows) * 66.0)
+		k += 1
 	if inspector:
 		var ih: float = inspector.get_combined_minimum_size().y
 		inspector.position = Vector2(bar_rect.end.x - inspector.W - 12, bar_rect.position.y - 40 - ih)

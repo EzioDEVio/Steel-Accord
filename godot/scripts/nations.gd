@@ -8,7 +8,7 @@ class_name Nations
 
 const DEFS := {
 	"usa": {"name": "United States", "short": "USA", "flag": "res://assets/units3d/props/flag_usa.glb", "produces": {},
-		"powers": ["carpet", "supersonic", "stealth", "paradrop", "recon"]},
+		"powers": ["carpet", "supersonic", "stealth", "paradrop", "recon", "gunship", "airborne_armor", "airlift"]},
 	"iran": {
 		"name": "Iran", "short": "IRN", "flag": "res://assets/units3d/props/flag_iran.glb",
 		"produces": {
@@ -23,7 +23,7 @@ const DEFS := {
 			"ranger": "irgc_sf", "ch47": "ir_ch47", "dozer": "ir_engineer_dozer", "abrams": "ir_karrar", "bradley": "ir_bmp2", "stryker": "ir_boragh",
 			"m113": "ir_bmp2", "hmmwv_50cal": "ir_boragh", "f16": "ir_f4", "a10": "ir_su24", "ah64": "ir_ah1j", "f22": "ir_f14", "fa18": "ir_su24"},
 		"c130_model": "res://assets/units3d/ir_c130/ir_c130.glb",
-		"powers": ["shahed", "paradrop"],
+		"powers": ["shahed", "paradrop", "ir_airborne_armor"],
 		"power_icons": {"paradrop": "res://assets/iran/icons/ir_c130_icon.png"},
 		# Iran's own terminology for shared structures, research and battle plans (same mechanics, own names)
 		"labels": {

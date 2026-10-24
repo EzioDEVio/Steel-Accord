@@ -569,6 +569,7 @@ func sim_tick(dt: float) -> void:
 	_update_bombs(dt)
 	_update_drones(dt)
 	_update_supply_drops(dt)
+	_update_air_ops(dt)
 	if p: _pmark("shots/air")
 	_ground_units(dt)
 	if p: _pmark("ground")
@@ -1160,6 +1161,9 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 	if p.has("drones"):
 		_launch_drones(team, id, target)
 		return
+	if p.has("gunship"): _launch_gunship(team, id, target); return       # B3 air operations (see the end of this file)
+	if p.has("airdrop"): _launch_airdrop(team, id, target); return
+	if p.has("airlift"): _launch_airlift(team, id, target); return
 	var edge_z := map_bounds.end.y + 120.0 if team == 0 else map_bounds.position.y - 120.0
 	var start := Vector3(target.x * 0.7, ground_h(target.x, target.z), edge_z)
 	var dir := Vector3(target.x - start.x, 0, target.z - start.z).normalized()
@@ -1212,7 +1216,7 @@ func _update_flights(dt: float) -> void:
 			var nt := int(p.troops)
 			while int(f.dropped) < nt and along >= -14.0 + int(f.dropped) * 5.0:
 				var u := _spawn(Nations.swap_unit(nation_of(f.team), str(p.unit)), f.team, f.pos + Vector3(0, 0, 0), atan2(-f.dir.x, -f.dir.z))
-				u.start_parachute(float(p.altitude) - 4.0)
+				u.start_parachute(maxf(4.0, f.pos.y + float(p.altitude) - 4.0 - ground_h(f.pos.x, f.pos.z)))   # from the aircraft's real height
 				u.reset_physics_interpolation()
 				f.dropped += 1
 		if not f.has("snd") and along > -float(p.speed) * 3.5:
@@ -1448,7 +1452,7 @@ func is_visible_to(team: int, u: Unit) -> bool:
 func alive_count(team: int) -> int:
 	var n := 0
 	for u in units:
-		if u.team == team and not u.dead and not (u is Building and (u as Building).is_civic()): n += 1
+		if u.team == team and not u.dead and not (u is Building and (u as Building).is_civic()) and not u.def.get("transient", false): n += 1
 	return n
 
 
@@ -2001,19 +2005,30 @@ func c130_model(team: int) -> String:
 const CRATE_MODEL := "res://assets/units3d/props/supply_crate_chute.glb"
 
 
+## Supply Drop Zone delivery. The C-130 picks, among a fan of approach headings from its own side of the map, the
+## one whose track crosses the lowest terrain, flies it with terrain look-ahead (climbing early enough to keep
+## DROP_CLEAR over every ridge on its path, wingtips included), and releases the crates from its real height.
+const DROP_CLEAR := 30.0        # minimum height of the transport above the terrain under it and its wingtips
+const DROP_SPEED := 55.0
+var drop_min_clear := INF       # lowest clearance any drop aircraft had over the terrain (tests / diagnostics)
+
+
 func launch_supply_drop(b: Building) -> void:
-	var d: Dictionary = b.bdef.drop
-	var target: Vector3 = b.drop_point_world()
-	var edge_z: float = map_bounds.end.y + 140.0 if b.team == 0 else map_bounds.position.y - 140.0
-	var start := Vector3(target.x + 60.0, ground_h(target.x, target.z), edge_z)
-	var dir := (target - start); dir.y = 0.0; dir = dir.normalized()
+	launch_drop_at(b.team, b.drop_point_world(), b.bdef.drop)
+
+
+func launch_drop_at(team: int, target: Vector3, d: Dictionary) -> Dictionary:
+	var edge_z: float = map_bounds.end.y + 140.0 if team == 0 else map_bounds.position.y - 140.0
+	var dir0 := Vector3(target.x - (target.x + 60.0), 0, target.z - edge_z).normalized()
+	var dir := best_approach(target, dir0, 12.0)
+	var start: Vector3 = target - dir * (_edge_exit(target, -dir) + 140.0)
+	start.y = terrain_ramp_y(start, dir, DROP_SPEED, DROP_CLEAR, 12.0, 12.0) + 10.0
 	var node := Node3D.new()
 	add_child(node)
-	var c130: String = c130_model(b.team)
+	var c130: String = c130_model(team)
 	if ResourceLoader.exists(c130):
 		var m: Node3D = (load(c130) as PackedScene).instantiate()
 		m.scale = Vector3.ONE * UnitDefs.SCALE.aircraft
-		m.position.y = 34.0
 		node.add_child(m)
 	else:
 		var s := Sprite3D.new()
@@ -2021,34 +2036,39 @@ func launch_supply_drop(b: Building) -> void:
 		s.texture = tex; s.axis = Vector3.AXIS_Y; s.shaded = true; s.double_sided = true
 		s.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 		s.pixel_size = 40.4 * UnitDefs.SCALE.aircraft / float(tex.get_width()) * 1.05   # C-130 span 40.4 m
-		s.position.y = 34.0
 		s.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		node.add_child(s)
 	node.position = start
 	node.rotation.y = atan2(-dir.x, -dir.z)
 	node.reset_physics_interpolation()
 	SFX.play(node, "jet_flyby", start, 2.0, 0.7, true)
-	drop_flights.append({"node": node, "pos": start, "dir": dir, "target": target, "team": b.team,
-		"crates": int(d.crates), "value": int(d.value), "released": 0})
-	if b.team == 0 and hud: hud.flash_message("Supply drop inbound")
+	var f := {"node": node, "pos": start, "dir": dir, "target": target, "team": team,
+		"crates": int(d.crates), "value": int(d.value), "released": 0, "min_clear": INF, "turn": last_approach.get("angle", 0.0)}
+	drop_flights.append(f)
+	if team == 0 and hud: hud.flash_message("Supply drop inbound")
+	return f
 
 
 func _update_supply_drops(dt: float) -> void:
 	for f in drop_flights.duplicate():
 		for pr in f.node.find_children("Prop*", "Node3D", true, false): (pr as Node3D).rotate_object_local(Vector3.BACK, dt * 30.0)
-		f.pos += f.dir * 55.0 * dt
+		f.pos += f.dir * DROP_SPEED * dt
+		f.pos.y = fly_terrain_y(f.pos, f.dir, DROP_SPEED, DROP_CLEAR, f.pos.y, dt, 12.0)
+		var cl := clearance(f.pos, f.dir, 12.0)
+		f.min_clear = minf(f.min_clear, cl)
+		if absf(f.pos.x) < MAP_HALF and absf(f.pos.z) < MAP_HALF: drop_min_clear = minf(drop_min_clear, cl)
 		f.node.position = f.pos
 		var along: float = (f.pos - f.target).dot(f.dir)
-		# release the crates in a short stick centred on the drop point
+		# release the crates in a short stick centred on the drop point, from the aircraft's own height
 		while f.released < f.crates and along >= -12.0 + f.released * 8.0 - 20.0:
 			var c := _make_crate()
-			var p: Vector3 = f.pos + Vector3(0, 32.0, 0)
+			var p: Vector3 = f.pos - f.dir * 6.0 + Vector3(0, -1.5, 0)
 			c.node.position = p
 			c.node.reset_physics_interpolation()
 			drop_crates.append({"node": c.node, "canopy": c.canopy, "pos": p, "vy": -2.0, "team": f.team, "value": f.value,
 				"drift": f.dir * 12.0})
 			f.released += 1
-		if along > 500.0:
+		if along > 500.0 or (along > 0.0 and _edge_exit(f.pos, f.dir) < -120.0):
 			f.node.queue_free()
 			drop_flights.erase(f)
 	for c in drop_crates.duplicate():
@@ -2843,7 +2863,13 @@ func _update_drones(dt: float) -> void:
 			v = to.normalized() * d.speed * 1.6
 		else:
 			v = Vector3(to.x, 0, to.z).normalized() * d.speed
-			v.y = (gy + d.alt - d.pos.y) * 2.0       # hold altitude over the terrain
+			# hold altitude over the terrain, climbing early for ridges up to 2.5 s ahead (look-ahead, as for aircraft)
+			var hd := Vector3(to.x, 0, to.z).normalized()
+			var ahead := gy
+			for k in range(1, 6):
+				var q: Vector3 = d.pos + hd * d.speed * 0.5 * k
+				ahead = maxf(ahead, ground_h(q.x, q.z) - 4.0 * k)
+			v.y = (maxf(gy, ahead) + d.alt - d.pos.y) * 2.0
 		d.pos += v * dt
 		if not d.diving: d.pos.y = maxf(d.pos.y, ground_h(d.pos.x, d.pos.z) + 8.0)   # terrain-following: clear ridges
 		n.position = d.pos
@@ -2869,3 +2895,623 @@ func lbl(team: int, id: String, fallback: String) -> String:
 
 func bname(team: int, k: String) -> String:
 	return lbl(team, k, str(BuildingDefs.DEFS[k].name))
+
+
+# ================================================================== B3 air operations
+# Terrain-safe scripted flight, runway bookkeeping for jets, and the airlift support powers: AC-130 gunship orbit,
+# C-17 (Iran: C-130) airborne armour drop, C-5 strategic airlift that lands on the player's own runway.
+# In-flight support aircraft and vehicles still being unloaded / under canopy are not saved (as other powers).
+
+## Height a scripted aircraft must be at now so that, climbing at `climb` m/s from here on, it stays `clear` m above
+## the terrain along its track for the next `horizon` seconds (centre line and both wingtips at +-half_w).
+func terrain_ramp_y(p: Vector3, dir: Vector3, speed: float, clear: float, half_w: float, climb := 12.0, horizon := 10.0) -> float:
+	var side := Vector3(-dir.z, 0, dir.x)
+	var want := -INF
+	var n := 20
+	for i in n + 1:
+		var t := horizon * float(i) / n
+		var q := p + dir * speed * t
+		var h := maxf(ground_h(q.x, q.z), maxf(ground_h(q.x + side.x * half_w, q.z + side.z * half_w), ground_h(q.x - side.x * half_w, q.z - side.z * half_w)))
+		want = maxf(want, h + clear - climb * t)
+	return want
+
+
+## Next height for a scripted aircraft at cur_y: climb early (up to 18 m/s) to the terrain ramp, descend gently, and
+## never below the clearance over the ground right under it.
+func fly_terrain_y(p: Vector3, dir: Vector3, speed: float, clear: float, cur_y: float, dt: float, half_w: float) -> float:
+	var want := terrain_ramp_y(p, dir, speed, clear, half_w)
+	var y := move_toward(cur_y, want, dt * (18.0 if want > cur_y else 6.0))
+	return maxf(y, terrain_ramp_y(p, dir, speed, clear, half_w, 0.0, 0.0))
+
+
+## Height of p above the highest of the terrain under it and under its wingtips.
+func clearance(p: Vector3, dir: Vector3, half_w: float) -> float:
+	var side := Vector3(-dir.z, 0, dir.x)
+	var h := maxf(ground_h(p.x, p.z), maxf(ground_h(p.x + side.x * half_w, p.z + side.z * half_w), ground_h(p.x - side.x * half_w, p.z - side.z * half_w)))
+	return p.y - h
+
+
+## Distance from p along d to the edge of the map rectangle (negative when p is already outside).
+func _edge_exit(p: Vector3, d: Vector3) -> float:
+	var t := INF
+	if absf(d.x) > 1e-4: t = minf(t, ((map_bounds.end.x if d.x > 0.0 else map_bounds.position.x) - p.x) / d.x)
+	if absf(d.z) > 1e-4: t = minf(t, ((map_bounds.end.y if d.z > 0.0 else map_bounds.position.y) - p.z) / d.z)
+	return t if t != INF else 0.0
+
+
+## Approach heading through `target`: the base direction turned by up to +-60 deg, whichever track (in from the map
+## edge, out past it) crosses the lowest maximum terrain height. Ties keep the smaller turn. Deterministic.
+var last_approach := {}         # diagnostics: {"angle", "score", "scores"}
+
+func best_approach(target: Vector3, dir0: Vector3, half_w: float) -> Vector3:
+	if terrain == null: return dir0
+	var best := dir0
+	var best_s := INF
+	var scores := {}
+	for a in [0.0, -20.0, 20.0, -40.0, 40.0, -60.0, 60.0]:
+		var d := dir0.rotated(Vector3.UP, deg_to_rad(a))
+		var side := Vector3(-d.z, 0, d.x)
+		var d_in := _edge_exit(target, -d)
+		var d_out := minf(_edge_exit(target, d), 300.0)
+		var top := -INF
+		var x := -d_in
+		while x <= d_out:
+			var q := target + d * x
+			for o in [-half_w, 0.0, half_w]:
+				top = maxf(top, ground_h(q.x + side.x * o, q.z + side.z * o))
+			x += 10.0
+		var sc := top + absf(a) * 0.05
+		scores[a] = snappedf(top, 0.1)
+		if sc < best_s: best_s = sc; best = d
+	last_approach = {"angle": rad_to_deg(dir0.signed_angle_to(best, Vector3.UP)), "score": best_s, "scores": scores}
+	return best
+
+
+# ------------------------------------------------------------------ runway bookkeeping
+var takeoff_log: Array = []     # {"kind", "uid", "start_from_end", "heading_err", "frac"} (tests / diagnostics)
+
+
+## True while a scripted aircraft (C-5) has reserved the runway of the airfield whose RunwayStart is rw_start.
+func runway_reserved(rw_start: Vector3) -> bool:
+	for f in airlifts:
+		if f.reserved and is_instance_valid(f.af) and (f.af as Building).runway.size() == 2 and (f.af as Building).runway[0].is_equal_approx(rw_start):
+			return true
+	return false
+
+
+func on_takeoff_roll(u: Unit) -> void:
+	var tdir := u._takeoff_dir()
+	takeoff_log.append({"kind": u.kind, "uid": u.uid, "start_from_end": u.flat_dist(u.rw_end),
+		"heading_err": rad_to_deg(absf(wrapf(u.heading - atan2(-tdir.x, -tdir.z), -PI, PI))), "frac": -1.0, "t": sim_time})
+
+
+func on_liftoff(u: Unit, frac: float) -> void:
+	for i in range(takeoff_log.size() - 1, -1, -1):
+		if takeoff_log[i].uid == u.uid and takeoff_log[i].frac < 0.0:
+			takeoff_log[i].frac = frac
+			return
+
+
+func _update_air_ops(dt: float) -> void:
+	_update_gunships(dt)
+	_update_airdrops(dt)
+	_update_airlifts(dt)
+	for g in gun_fx.duplicate():
+		if sim_time >= g.t:
+			FX.explosion(self, g.p, g.k)
+			gun_fx.erase(g)
+
+
+func _remove_transient(u: Unit) -> void:
+	if commander and u in commander.selected:
+		commander.selected.erase(u)
+		commander.selection_changed.emit()
+	units.erase(u)
+	by_id.erase(u.uid)
+	u.queue_free()
+
+
+func _team_edge_point(team: int, x: float, margin: float) -> Vector3:
+	return Vector3(x, 0, map_bounds.end.y + margin if team == 0 else map_bounds.position.y - margin)
+
+
+static func _fwd(h: float) -> Vector3:
+	return Vector3(-sin(h), 0, -cos(h))
+
+
+# ------------------------------------------------------------------ AC-130 gunship
+# A real temporary unit (domain "jet": anti-air weapons and fighters engage it, it can be shot down). It flies in
+# from its side's map edge, orbits the target in a left-hand pylon turn (guns on the left side toward the centre)
+# for orbit_time seconds firing its 105 mm howitzer, 40 mm and 25 mm guns at enemies in the area, then leaves.
+var gunships: Array = []        # {"u", "c", "r", "h", "phase", "t", "reload", "guns", "dmg0"}
+var gun_fx: Array = []          # delayed howitzer / 40 mm impact flashes {"t", "p", "k"}
+var gunship_shots := {}         # weapon id -> rounds fired
+
+const GUNSHIP_WEAPONS := [
+	{"id": "gunship_25", "gun": 0, "range": 220.0, "reload": 0.15, "damage": 6.0, "splash": 1.2, "proj": "bullet", "speed": 520.0,
+		"spread": 2.6, "targets": ["ground"], "prefer": "infantry"},
+	{"id": "gunship_40", "gun": 1, "range": 220.0, "reload": 1.0, "damage": 45.0, "splash": 3.0, "proj": "shell", "speed": 320.0,
+		"spread": 2.2, "targets": ["ground"], "prefer": "vehicle", "fx": 0.7},
+	{"id": "gunship_105", "gun": 2, "range": 220.0, "reload": 3.0, "damage": 180.0, "splash": 6.5, "proj": "shell", "speed": 280.0,
+		"spread": 2.4, "targets": ["ground"], "prefer": "vehicle", "fx": 1.4},
+]
+
+
+func _launch_gunship(team: int, id: String, target: Vector3) -> void:
+	var p: Dictionary = UnitDefs.POWERS[id]
+	var r := float(p.orbit_r)
+	var edge := _team_edge_point(team, target.x * 0.6, 0.0)
+	var d0 := Vector3(target.x - edge.x, 0, target.z - edge.z).normalized()
+	var h0 := atan2(-d0.x, -d0.z)
+	var entry := target + Vector3(cos(h0), 0, -sin(h0)) * r          # tangent point: left wing toward the centre
+	var start := entry - _fwd(h0) * (_edge_exit(entry, -_fwd(h0)) + 160.0)
+	var u := _spawn(str(p.unit), team, start, h0)
+	u.heading = h0; u.rotation.y = h0
+	u.state = Unit.S.MOVE; u.goal = target                           # never "idle": it does not return fire on its own
+	u.speed_cur = float(p.speed); u.airborne = true
+	u.vel = _fwd(h0) * float(p.speed)
+	u.position.y = terrain_ramp_y(start, _fwd(h0), float(p.speed), float(u.def.altitude) * 0.5, 15.0)
+	u.reset_physics_interpolation()
+	var guns: Array = []
+	for i in 3: guns.append(u.model.find_child("Gun%d" % i, true, false) if u.model else null)
+	gunships.append({"u": u, "pos": Vector3(start.x, 0, start.z), "c": grounded(target), "r": r, "h": h0, "entry": entry, "phase": "in", "t": 0.0,
+		"reload": [0.0, 0.0, 0.0], "guns": guns, "speed": float(p.speed), "orbit_time": float(p.orbit_time), "area": float(p.area)})
+	FX.target_marker(self, target, float(p.area))
+	SFX.play(u.body, "jet_flyby", start, 2.0, 0.6, true)
+	if hud and team == 0: hud.flash_message("%s inbound" % lbl(team, id, p.name))
+
+
+func _update_gunships(dt: float) -> void:
+	for g in gunships.duplicate():
+		var u: Unit = g.u
+		if not is_instance_valid(u) or u.dead:
+			gunships.erase(g)
+			continue
+		g.t += dt
+		var spd: float = g.speed
+		match g.phase:
+			"in":
+				# own track position (the unit's position may be clamped to the map edge while it is still outside)
+				g.pos += _fwd(g.h) * spd * dt
+				if (g.entry - g.pos).dot(_fwd(g.h)) <= 0.0:
+					g.phase = "orbit"; g.t = 0.0
+				u.bank = move_toward(u.bank, 0.0, dt)
+			"orbit":
+				g.h = wrapf(g.h + spd / float(g.r) * dt, -PI, PI)
+				var c: Vector3 = g.c
+				var px: float = c.x + cos(g.h) * g.r
+				var pz: float = c.z - sin(g.h) * g.r
+				g.pos = Vector3(px, 0, pz)
+				u.bank = move_toward(u.bank, 0.42, dt * 0.6)
+				_gunship_fire(g, dt)
+				if g.t >= g.orbit_time: g.phase = "out"; g.t = 0.0
+			"out":
+				g.pos += _fwd(g.h) * spd * dt
+				u.bank = move_toward(u.bank, 0.0, dt * 0.5)
+				if _edge_exit(g.pos, _fwd(g.h)) < -150.0 or g.t > 30.0:
+					gunships.erase(g)
+					_remove_transient(u)
+					continue
+		u.position.x = g.pos.x; u.position.z = g.pos.z
+		u.heading = g.h
+		u.rotation.y = g.h
+		u.vel = _fwd(g.h) * spd
+		u.speed_cur = spd
+
+
+func _gunship_fire(g: Dictionary, dt: float) -> void:
+	var u: Unit = g.u
+	for i in GUNSHIP_WEAPONS.size():
+		g.reload[i] -= dt
+		if g.reload[i] > 0.0: continue
+		var w: Dictionary = GUNSHIP_WEAPONS[i]
+		var t := _gunship_target(u, g.c, float(g.area), str(w.prefer), i)
+		if t == null: continue
+		g.reload[i] = float(w.reload)
+		var gun: Node3D = g.guns[w.gun]
+		u.muzzle = gun
+		gunship_shots[w.id] = int(gunship_shots.get(w.id, 0)) + 1
+		fire(u, w, t, t.position)
+		u.muzzle = null
+		if w.has("fx"):
+			var s: Dictionary = shots[shots.size() - 1]
+			gun_fx.append({"t": sim_time + float(s.left) / float(s.speed), "p": s.aim, "k": float(w.fx)})
+
+
+## Enemy in the orbit area the gun prefers (infantry for the 25 mm, vehicles / structures for the cannons), spread
+## over several targets so the guns do not all fire at one; visible to the gunship's side only.
+func _gunship_target(u: Unit, c: Vector3, area: float, prefer: String, salt: int) -> Unit:
+	var cand: Array = []
+	var other: Array = []
+	for o in units:
+		if o.dead or o.team == u.team or o.team < 0 or o.domain != "ground": continue
+		if Vector2(o.position.x - c.x, o.position.z - c.z).length() > area: continue
+		if u.team == 0 and not is_visible_to(0, o) and not (o is Building): continue   # fog applies to the player
+		if o is Building and (o as Building).is_civic(): continue
+		var inf: bool = o.def.get("visual", "") == "infantry"
+		if (prefer == "infantry") == inf: cand.append(o)
+		else: other.append(o)
+	var pool: Array = cand if not cand.is_empty() else other
+	if pool.is_empty(): return null
+	pool.sort_custom(func(a, b): return a.uid < b.uid)
+	return pool[(tick_n / 15 + salt * 7) % pool.size()]
+
+
+# ------------------------------------------------------------------ C-17 airborne armour drop
+# The transport flies over the target (terrain look-ahead as the supply drop), and drops vehicles on pallets under
+# three canopies. On touchdown the canopies detach, the pallet stays as debris and the vehicle becomes a normal unit.
+var airdrops: Array = []        # flights {"node", "pos", "dir", "team", "target", "cargo", "dropped", "speed", "alt"}
+var pallets: Array = []         # {"u", "rig", "chutes", "y", "vy", "t"}
+var airdrop_delivered := [0, 0]
+
+
+func _launch_airdrop(team: int, id: String, target: Vector3) -> void:
+	var p: Dictionary = UnitDefs.POWERS[id]
+	var edge := _team_edge_point(team, target.x * 0.6 + 40.0, 0.0)
+	var dir := best_approach(target, Vector3(target.x - edge.x, 0, target.z - edge.z).normalized(), 16.0)
+	var start: Vector3 = target - dir * (_edge_exit(target, -dir) + 160.0)
+	start.y = terrain_ramp_y(start, dir, float(p.speed), float(p.altitude), 16.0) + 10.0
+	var node := Node3D.new()
+	add_child(node)
+	var path := str(p.model3d)
+	if path == C130_MODEL: path = c130_model(team)
+	if ResourceLoader.exists(path):
+		var m: Node3D = (load(path) as PackedScene).instantiate()
+		m.scale = Vector3.ONE * UnitDefs.SCALE.aircraft
+		node.add_child(m)
+	node.position = start
+	node.rotation.y = atan2(-dir.x, -dir.z)
+	node.reset_physics_interpolation()
+	node.set_meta("model", path)
+	var cargo: Array = (p.airdrop as Array).map(func(k): return Nations.swap_unit(nation_of(team), str(k)))
+	airdrops.append({"node": node, "pos": start, "dir": dir, "team": team, "target": grounded(target), "cargo": cargo, "dropped": 0,
+		"speed": float(p.speed), "alt": float(p.altitude), "len": float(p.length) * UnitDefs.SCALE.aircraft, "min_clear": INF})
+	FX.target_marker(self, target, 12.0)
+	SFX.play(node, "jet_flyby", start, 3.0, 0.65, true)
+	if hud and team == 0: hud.flash_message("%s inbound" % lbl(team, id, p.name))
+
+
+func _update_airdrops(dt: float) -> void:
+	for f in airdrops.duplicate():
+		for pr in f.node.find_children("Prop*", "Node3D", true, false): (pr as Node3D).rotate_object_local(Vector3.BACK, dt * 30.0)
+		f.pos += f.dir * f.speed * dt
+		f.pos.y = fly_terrain_y(f.pos, f.dir, f.speed, f.alt, f.pos.y, dt, 16.0)
+		f.min_clear = minf(f.min_clear, clearance(f.pos, f.dir, 16.0))
+		f.node.position = f.pos
+		var along: float = (f.pos - f.target).dot(f.dir)
+		var n: int = f.cargo.size()
+		while f.dropped < n and along >= -(n - 1) * 5.0 + f.dropped * 10.0:
+			var at: Vector3 = f.pos - f.dir * f.len * 0.42 + Vector3(0, -1.0, 0)
+			var u := _spawn(f.cargo[f.dropped], f.team, at, atan2(-f.dir.x, -f.dir.z))
+			units.erase(u)                                   # under canopy: not yet a unit in play
+			u.position = at
+			var rig := _pallet_rig(u)
+			pallets.append({"u": u, "rig": rig, "y": at.y, "vy": -6.0, "t": 0.0, "drift": f.dir * 8.0, "team": f.team})
+			f.dropped += 1
+		if along > 200.0 and _edge_exit(f.pos, f.dir) < -150.0:
+			f.node.queue_free()
+			airdrops.erase(f)
+	for pl in pallets.duplicate():
+		var u: Unit = pl.u
+		if not is_instance_valid(u): pallets.erase(pl); continue
+		pl.t += dt
+		var term := -5.5 if pl.t > 1.2 else -14.0        # canopies open after ~1 s of free fall
+		pl.vy = move_toward(pl.vy, term, dt * (14.0 if pl.vy < term else 6.0))
+		pl.drift = pl.drift.move_toward(Vector3.ZERO, 3.0 * dt)
+		pl.y += pl.vy * dt
+		u.position = Vector3(u.position.x + pl.drift.x * dt, pl.y, u.position.z + pl.drift.z * dt)
+		var chutes: Node3D = pl.rig.get_node("Chutes")
+		chutes.scale = Vector3.ONE * clampf(pl.t / 1.2, 0.15, 1.0)
+		pl.rig.position = u.position
+		var gy := ground_h(u.position.x, u.position.z)
+		if pl.y <= gy:
+			u.position.y = gy
+			u.reset_physics_interpolation()
+			# touchdown: canopies detach and collapse, the pallet stays, the vehicle drives off as a normal unit
+			var keep: Node3D = pl.rig
+			chutes.reparent(self)
+			_collapse(chutes)
+			keep.position = u.position
+			_fade_node(keep, 25.0)
+			units.append(u)
+			u.order_stop()
+			FX.impact(self, u.position, false)
+			airdrop_delivered[u.team] += 1
+			pallets.erase(pl)
+			if u.team == 0 and hud: hud.flash_message("%s landed" % u.def.name)
+
+
+## Pallet under the vehicle and a cluster of three canopies with rigging (procedural, original geometry).
+func _pallet_rig(u: Unit) -> Node3D:
+	var rig := Node3D.new()
+	add_child(rig)
+	rig.position = u.position
+	var plen := float(u.def.get("length", 6.0)) * UnitDefs.SCALE.vehicle
+	var pal := MeshInstance3D.new()
+	var bm := BoxMesh.new(); bm.size = Vector3(plen * 0.5, 0.35, plen * 1.05)
+	var pm := StandardMaterial3D.new(); pm.albedo_color = Color(0.38, 0.33, 0.24); pm.roughness = 0.9
+	bm.material = pm; pal.mesh = bm; pal.position.y = -0.18
+	pal.rotation.y = u.heading
+	rig.add_child(pal)
+	var chutes := Node3D.new(); chutes.name = "Chutes"
+	rig.add_child(chutes)
+	var cm := StandardMaterial3D.new(); cm.albedo_color = Color(0.44, 0.46, 0.34); cm.roughness = 0.95
+	cm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var lm := StandardMaterial3D.new(); lm.albedo_color = Color(0.2, 0.2, 0.18)
+	var top := 16.0
+	for k in 3:
+		var a := TAU * k / 3.0 + 0.4
+		var c := Vector3(cos(a) * 4.2, top + (0.6 if k == 1 else 0.0), sin(a) * 4.2)
+		var can := MeshInstance3D.new()
+		var sm := SphereMesh.new(); sm.radius = 4.4; sm.height = 3.2; sm.is_hemisphere = true; sm.radial_segments = 20; sm.rings = 6
+		sm.material = cm
+		can.mesh = sm; can.position = c
+		chutes.add_child(can)
+		var line := MeshInstance3D.new()
+		var cyl := CylinderMesh.new(); cyl.top_radius = 0.05; cyl.bottom_radius = 0.05
+		var l := c.length()
+		cyl.height = l; cyl.material = lm
+		line.mesh = cyl
+		line.position = c * 0.5
+		line.look_at_from_position(c * 0.5, c, Vector3.RIGHT if absf(c.normalized().y) > 0.99 else Vector3.UP)
+		line.rotate_object_local(Vector3.RIGHT, PI / 2)
+		chutes.add_child(line)
+	return rig
+
+
+func _collapse(n: Node3D) -> void:
+	var tw := create_tween()
+	tw.tween_property(n, "scale", Vector3(1.4, 0.05, 1.4), 2.5)
+	tw.parallel().tween_property(n, "position", n.position + Vector3(4.0, -12.0, 2.0), 2.5)
+	tw.tween_callback(n.queue_free)
+
+
+# ------------------------------------------------------------------ C-5 strategic airlift
+# Lands on the caller's own airfield runway in the jets' landing direction ('27' -> '09'), rolls out, opens its nose
+# visor and unloads a platoon that drives off the runway's far side, closes up, turns round and takes off toward '27'.
+# The runway is reserved from final approach until it has climbed out: jets hold short / hold in orbit, and the
+# C-5 itself holds in orbit until no jet is on the runway or taxiing out.
+const C5_MODEL := "res://assets/units3d/c5/c5.glb"
+const C5_SCALE := 0.45                 # drawn smaller than the other aircraft (0.6) so it fits the stylised runway
+var airlifts: Array = []
+var airlift_delivered := [0, 0]
+var airlift_log: Array = []            # phase changes (tests / diagnostics): [sim_time, phase]
+
+
+func _launch_airlift(team: int, id: String, target: Vector3) -> void:
+	var p: Dictionary = UnitDefs.POWERS[id]
+	var af: Building = null
+	var bd := INF
+	for b in structures(team, "airfield"):
+		if (b as Building).runway.size() == 2 and b.position.distance_to(target) < bd:
+			bd = b.position.distance_to(target); af = b
+	if af == null:
+		power_ready[team][id] = sim_time       # nothing to land on: refund the cooldown
+		if hud and team == 0: hud.flash_message("%s needs an airfield with a runway" % lbl(team, id, p.name))
+		return
+	var rs: Vector3 = af.runway[0]; var re: Vector3 = af.runway[1]
+	var tdir := Vector3(rs.x - re.x, 0, rs.z - re.z).normalized()
+	var hold_c := Vector3(re.x, 0, re.z) - tdir * 300.0
+	var edge := _team_edge_point(team, af.position.x, 0.0)
+	var d0 := Vector3(hold_c.x - edge.x, 0, hold_c.z - edge.z).normalized()
+	var start := hold_c - d0 * (_edge_exit(hold_c, -d0) + 200.0)
+	start.y = terrain_ramp_y(start, d0, 50.0, 55.0, 15.0) + 10.0
+	var node := Node3D.new()
+	add_child(node)
+	var m: Node3D = (load(C5_MODEL) as PackedScene).instantiate()
+	m.scale = Vector3.ONE * C5_SCALE
+	node.add_child(m)
+	node.position = start
+	node.rotation.y = atan2(-d0.x, -d0.z)
+	node.reset_physics_interpolation()
+	var cargo: Array = (p.airlift as Array).map(func(k): return Nations.swap_unit(nation_of(team), str(k)))
+	airlifts.append({"node": node, "model": m, "nose": m.find_child("NoseDoor", true, false), "exit": m.find_child("CargoExit", true, false),
+		"team": team, "af": af, "target": target, "phase": "inbound", "pos": start, "h": atan2(-d0.x, -d0.z), "speed": 50.0, "t": 0.0,
+		"cargo": cargo, "spawned": 0, "drivers": [], "reserved": false, "hold_c": hold_c, "door": 0.0, "pivot": 0.0, "id": id})
+	airlift_log.append([sim_time, "inbound"])
+	SFX.play(node, "jet_flyby", start, 4.0, 0.55, true)
+	if hud and team == 0: hud.flash_message("%s inbound to %s" % [lbl(team, id, p.name), bname(team, "airfield")])
+
+
+## Clearance for the C-5 to start its approach: no jet of this airfield on (or cleared for) the runway or taxiing out.
+func _airlift_clear(af: Building) -> bool:
+	var rs: Vector3 = af.runway[0]
+	for o in units:
+		if o.dead or o.domain != "jet" or not o.has_runway or not o.rw_start.is_equal_approx(rs): continue
+		if o.uses_runway() or o.taxiing_out(): return false
+	return true
+
+
+func _set_phase(f: Dictionary, ph: String) -> void:
+	f.phase = ph; f.t = 0.0
+	airlift_log.append([sim_time, ph])
+
+
+## Turn toward p at up to turn_deg/s and fly forward (horizontal only).
+func _c5_steer(f: Dictionary, p: Vector3, turn_deg: float, dt: float) -> void:
+	var to := Vector3(p.x - f.pos.x, 0, p.z - f.pos.z)
+	var diff := wrapf(atan2(-to.x, -to.z) - f.h, -PI, PI)
+	f.h = wrapf(f.h + clampf(diff, -deg_to_rad(turn_deg) * dt, deg_to_rad(turn_deg) * dt), -PI, PI)
+	f.pos += _fwd(f.h) * f.speed * dt
+
+
+func _update_airlifts(dt: float) -> void:
+	for f in airlifts.duplicate():
+		f.t += dt
+		var af: Building = f.af if is_instance_valid(f.af) else null
+		var lost := af == null or af.dead
+		var re: Vector3 = Vector3.ZERO; var rs := Vector3.ZERO; var tdir := Vector3.FORWARD; var rw_len := 1.0
+		if not lost:
+			rs = af.runway[0]; re = af.runway[1]
+			tdir = Vector3(rs.x - re.x, 0, rs.z - re.z).normalized()
+			rw_len = rs.distance_to(re)
+		var gy := ground_h(f.pos.x, f.pos.z)
+		match f.phase:
+			"inbound", "hold":
+				if lost: _set_phase(f, "leave"); continue
+				f.speed = move_toward(f.speed, 42.0 if f.phase == "inbound" else 36.0, dt * 3.0)
+				if f.phase == "inbound":
+					_c5_steer(f, f.hold_c, 14.0, dt)
+					if Vector2(f.pos.x - f.hold_c.x, f.pos.z - f.hold_c.z).length() < 60.0: _set_phase(f, "hold")
+				else:
+					if not f.reserved and _airlift_clear(af): f.reserved = true
+					if f.reserved:
+						# intercept the extended centreline from far enough out (pattern: 36 m/s, 24 deg/s -> turn radius ~86 m)
+						var rel := Vector3(f.pos.x - re.x, 0, f.pos.z - re.z)
+						var out := -rel.dot(tdir)                              # metres out from the '27' end on the approach side
+						var lat := (rel + tdir * out).length()
+						var err := absf(wrapf(f.h - atan2(-tdir.x, -tdir.z), -PI, PI))
+						if f.get("repos", false) or (out < 120.0 and not (lat < 25.0 and err < deg_to_rad(20.0) and out > 60.0)):
+							f["repos"] = out < 650.0                                   # reposition far out on the centreline
+							_c5_steer(f, Vector3(re.x, 0, re.z) - tdir * 700.0, 24.0, dt)
+						else:
+							_c5_steer(f, Vector3(re.x, 0, re.z) - tdir * maxf(out - 220.0, 0.0), 24.0, dt)
+						if out < 260.0 and out > 60.0 and lat < 12.0 and err < deg_to_rad(10.0): _set_phase(f, "final")
+					else:
+						# holding pattern: left-hand circle round the holding point
+						var rel := Vector3(f.pos.x - f.hold_c.x, 0, f.pos.z - f.hold_c.z)
+						var ang := atan2(rel.z, rel.x) + 0.6
+						_c5_steer(f, f.hold_c + Vector3(cos(ang), 0, sin(ang)) * 130.0, 14.0, dt)
+				f.pos.y = fly_terrain_y(f.pos, _fwd(f.h), f.speed, 55.0, f.pos.y, dt, 15.0)
+			"final":
+				var td := Vector3(re.x, 0, re.z) + tdir * 4.0
+				var to_td := Vector3(td.x - f.pos.x, 0, td.z - f.pos.z)
+				var d := to_td.dot(tdir)
+				# glide down the centreline; any lateral error is steered out
+				var aim := td - tdir * maxf(d - maxf(d * 0.5, 40.0), 0.0)
+				_c5_steer(f, aim if d > 45.0 else td + tdir * 30.0, 10.0, dt)
+				f.speed = move_toward(f.speed, clampf(d * 0.25, 22.0, 42.0), dt * 4.0)
+				var glide := ground_h(td.x, td.z) + 55.0 * clampf(d / 170.0, 0.0, 1.0)
+				var floor_y := terrain_ramp_y(f.pos, _fwd(f.h), f.speed, 10.0, 15.0, 0.0, 0.0) if d > 40.0 else gy
+				f.pos.y = maxf(move_toward(f.pos.y, glide, dt * 14.0), floor_y)
+				if d <= 1.0:
+					f.pos = Vector3(f.pos.x, ground_h(f.pos.x, f.pos.z), f.pos.z)
+					f.h = atan2(-tdir.x, -tdir.z)
+					_set_phase(f, "rollout")
+			"rollout":
+				var stop_s := rw_len * 0.45
+				var s: float = (f.pos - re).dot(tdir)
+				var rem: float = stop_s - s
+				f.speed = minf(move_toward(f.speed, 0.0, dt * 11.0), sqrt(2.0 * 11.0 * maxf(rem, 0.0)))
+				f.pos += tdir * f.speed * dt
+				var lat: Vector3 = (f.pos - re) - tdir * (f.pos - re).dot(tdir); lat.y = 0.0
+				f.pos -= lat * minf(1.0, dt * 2.0)
+				f.pos.y = ground_h(f.pos.x, f.pos.z)
+				if rem < 0.3 or f.speed < 0.05:
+					f.speed = 0.0
+					_set_phase(f, "open")
+			"open":
+				f.door = minf(1.0, f.door + dt / 3.0)
+				if f.door >= 1.0: _set_phase(f, "unload")
+			"unload":
+				if lost:
+					_set_phase(f, "close")
+				elif f.spawned < f.cargo.size() and f.t >= 0.6 + f.spawned * 3.2:
+					_c5_unload_one(f, af, tdir)
+				_c5_drive(f, dt)
+				if f.spawned >= f.cargo.size() and f.drivers.is_empty() and f.t > 2.0: _set_phase(f, "close")
+			"close":
+				_c5_drive(f, dt)
+				f.door = maxf(0.0, f.door - dt / 2.5)
+				if f.door <= 0.0 and f.drivers.is_empty(): _set_phase(f, "pivot")
+			"pivot":
+				# turn round on the runway, nose swinging away from the apron, to take off toward the '27' end
+				var want := atan2(tdir.x, tdir.z)                      # heading of -tdir
+				var sgn: float = f.get("pivot_sign", 0.0)
+				if sgn == 0.0:
+					var away := Vector3(0, 0, -1)
+					if not lost: away = (af.to_global(Vector3(0, 0, -1)) - af.to_global(Vector3.ZERO)); away.y = 0.0
+					sgn = 1.0 if _fwd(f.h + PI / 2).dot(away) > 0.0 else -1.0
+					f["pivot_sign"] = sgn
+				var diff := wrapf(want - f.h, -PI, PI)
+				if absf(diff) < deg_to_rad(1.0):
+					f.h = want
+					_set_phase(f, "takeoff")
+				else:
+					f.h = wrapf(f.h + sgn * deg_to_rad(24.0) * dt, -PI, PI)
+			"takeoff":
+				var dir := _fwd(f.h)
+				var s_left := maxf((Vector3(re.x, 0, re.z) - Vector3(f.pos.x, 0, f.pos.z)).dot(dir), 2.0)
+				var v_lo := 26.0
+				var acc := maxf(3.0, (v_lo * v_lo - f.speed * f.speed) / (2.0 * s_left))
+				f.speed = minf(f.speed + acc * dt, v_lo + 1.0)
+				f.pos += dir * f.speed * dt
+				f.pos.y = ground_h(f.pos.x, f.pos.z)
+				if f.speed >= v_lo: _set_phase(f, "climb")
+			"climb", "leave":
+				var dir := _fwd(f.h)
+				f.speed = move_toward(f.speed, 50.0, dt * 4.0)
+				f.pos += dir * f.speed * dt
+				var want_y := terrain_ramp_y(f.pos, dir, f.speed, 55.0, 15.0)
+				f.pos.y = maxf(move_toward(f.pos.y, want_y, dt * (7.0 if want_y > f.pos.y else 3.0)), terrain_ramp_y(f.pos, dir, f.speed, 3.0, 15.0, 0.0, 0.0))
+				if f.reserved and (lost or (f.pos - Vector3(re.x, f.pos.y, re.z)).dot(dir) > 40.0):
+					f.reserved = false
+					airlift_log.append([sim_time, "runway_released"])
+				if not f.reserved and _edge_exit(f.pos, dir) < -200.0:
+					f.node.queue_free()
+					for dv in f.drivers: units.append(dv.u)
+					airlifts.erase(f)
+					continue
+		f.node.position = f.pos
+		f.node.rotation.y = f.h
+		if f.nose: (f.nose as Node3D).rotation.x = f.door * deg_to_rad(62.0)
+		if f.phase in ["rollout", "takeoff"] and f.speed > 8.0 and tick_n % 20 == 0:
+			FX.impact(self, f.pos - _fwd(f.h) * 4.0, false)     # tyre smoke / dust
+
+
+## Next vehicle rolls out of the nose: from the cargo exit, ahead along the runway, then off its far edge (away from
+## the apron) and clear of the airfield, where it becomes a normal unit and drives toward the clicked target.
+func _c5_unload_one(f: Dictionary, af: Building, tdir: Vector3) -> void:
+	var i: int = f.spawned
+	var ex: Vector3 = (f.exit as Node3D).global_position if f.exit else f.pos + _fwd(f.h) * 15.0
+	ex.y = ground_h(ex.x, ex.z)
+	var u := _spawn(f.cargo[i], f.team, ex, f.h)
+	units.erase(u)
+	u.position = ex
+	u.reset_physics_interpolation()
+	var away := af.to_global(Vector3(0, 0, -1)) - af.to_global(Vector3.ZERO); away.y = 0.0; away = away.normalized()
+	var rl: Vector3 = af.to_local(af.runway[0])
+	var edge_off := af.half.y + rl.z + 7.0                       # local z of the runway centreline is -(distance to the back edge)
+	var p1 := ex + tdir * (7.0 + 2.0 * i)
+	var p2 := p1 + away * (edge_off + 2.0 * (i % 2))
+	if gnav and gnav.blocked_at(p2): p2 = gnav.center_of(gnav.nearest_free(gnav.cell_of(p2)))
+	f.drivers.append({"u": u, "wps": [p1, p2], "i": 0, "n": i})
+	f.spawned += 1
+
+
+func _c5_drive(f: Dictionary, dt: float) -> void:
+	for dv in f.drivers.duplicate():
+		var u: Unit = dv.u
+		if not is_instance_valid(u): f.drivers.erase(dv); continue
+		var wp: Vector3 = dv.wps[dv.i]
+		var to := Vector3(wp.x - u.position.x, 0, wp.z - u.position.z)
+		var diff := wrapf(atan2(-to.x, -to.z) - u.heading, -PI, PI)
+		u.heading = wrapf(u.heading + clampf(diff, -deg_to_rad(100.0) * dt, deg_to_rad(100.0) * dt), -PI, PI)
+		u.rotation.y = u.heading
+		u.speed_cur = 5.0 * clampf(cos(diff), 0.2, 1.0)
+		u.position += _fwd(u.heading) * u.speed_cur * dt
+		u.position.y = ground_h(u.position.x, u.position.z)
+		if to.length() < 1.2:
+			dv.i += 1
+			if dv.i >= dv.wps.size():
+				f.drivers.erase(dv)
+				units.append(u)
+				u.speed_cur = 0.0
+				var dest: Vector3 = f.target
+				if Vector2(dest.x - u.position.x, dest.z - u.position.z).length() > 25.0:
+					u.order_move(dest + Vector3((dv.n % 2) * 7.0 - 3.5, 0, (dv.n / 2) * 7.0 - 3.5))
+				else:
+					u.order_stop()
+				airlift_delivered[u.team] += 1
+
+
+## Loading a save: drop airlift flights, pallets under canopy and vehicles still being unloaded (not saved).
+func clear_air_ops() -> void:
+	for f in airdrops + airlifts:
+		if is_instance_valid(f.node): f.node.queue_free()
+		for dv in f.get("drivers", []):
+			if is_instance_valid(dv.u): dv.u.queue_free()
+	for pl in pallets:
+		if is_instance_valid(pl.rig): pl.rig.queue_free()
+		if is_instance_valid(pl.u): pl.u.queue_free()
+	airdrops.clear(); airlifts.clear(); pallets.clear(); gunships.clear(); gun_fx.clear()

@@ -1,0 +1,156 @@
+{
+ "pack": "B3 airlift and gunship aircraft, support-power icons",
+ "generators": [
+  "tools/art/air_c5_3d.py",
+  "tools/art/air_c17_3d.py",
+  "tools/art/air_ac130_3d.py",
+  "tools/art/render_power_icons.py"
+ ],
+ "regenerate": "SA_ASSET_HOME=/home/claude python3 -I tools/art/air_c5_3d.py ; python3 -I tools/art/render_power_icons.py ; godot --headless --path godot --import",
+ "aircraft_models": [
+  {
+   "id": "c5",
+   "source_name": "C-5 Galaxy (C-5-class strategic airlifter)",
+   "intended_use": "support power: C-5 Strategic Airlift (USA)",
+   "representation": "3D model (glTF binary, embedded 2048 px albedo atlas)",
+   "game_files": {
+    "model": "res://assets/units3d/c5/c5.glb",
+    "albedo_preview": "res://assets/units3d/c5/c5_albedo.png"
+   },
+   "sha256": "5a47e7aec4d6444587d6e16a4a95a26457e12dbc9871773cd97fc48d983698fd",
+   "generator": "tools/art/air_c5_3d.py",
+   "toolchain": "Blender bpy 5.x module (Python), tools/art/airkit.py (project-owned kit)",
+   "method": "Original geometry lofted from pixel measurements on the client's concept turnaround (side + top views); albedo by depth-tested projection of those views plus baked AO (see docs/M3_AIRCRAFT.md method).",
+   "reference": {
+    "file": "incoming_airlift/aircraft_image_assets/c5_galaxy_turnaround.png",
+    "sha256": "0685f523f93924fb06492a58a8814a86e454767900ccac00f54b6a8f22b2ab80",
+    "provenance": "client-supplied generated 2D turnaround sheet (U.S. Airlift Aircraft Image Pack, Oct 2026)"
+   },
+   "nodes": [
+    "Body",
+    "NoseDoor (visor, pivot on its hinge; rotate +X to lift)",
+    "CargoExit",
+    "Exhaust0..3"
+   ],
+   "notes": "New in B3. Drawn at 0.45 scale in game (Battle.C5_SCALE). Preview sheet docs/screens/b3_c5_sheet.png.",
+   "license_status": "geometry project-owned; texture derived from client-supplied generated concept art - confirm generator terms before release",
+   "shipping_status": "DEV ONLY - release review required: depicts a real aircraft design and uses its real designation (trademark review); no national insignia on the model (team-colour panels only)"
+  },
+  {
+   "id": "c17",
+   "source_name": "C-17 Globemaster III (C-17-style airlifter)",
+   "intended_use": "support power: C-17 Airborne Armor (USA)",
+   "representation": "3D model (glTF binary, embedded 2048 px albedo atlas)",
+   "game_files": {
+    "model": "res://assets/units3d/c17/c17.glb",
+    "albedo_preview": "res://assets/units3d/c17/c17_albedo.png"
+   },
+   "sha256": "c1f931e318aced22b781871bff663941a60455f2ac2a4098f50a466c69f7312a",
+   "generator": "tools/art/air_c17_3d.py",
+   "toolchain": "Blender bpy 5.x module (Python), tools/art/airkit.py (project-owned kit)",
+   "method": "Original geometry lofted from pixel measurements on the client's concept turnaround (side + top views); albedo by depth-tested projection of those views plus baked AO (see docs/M3_AIRCRAFT.md method).",
+   "reference": {
+    "file": "incoming_airlift/aircraft_image_assets/c17_globemaster_turnaround.png",
+    "sha256": "18a5ba988af8483e82629ebd0082fde96a79fd03ca327d784f56f1f4b69a13ad",
+    "provenance": "client-supplied generated 2D turnaround sheet (U.S. Airlift Aircraft Image Pack, Oct 2026)"
+   },
+   "nodes": [
+    "Body",
+    "Exhaust0..3"
+   ],
+   "notes": "Generated in M3; first used in game in B3.",
+   "license_status": "geometry project-owned; texture derived from client-supplied generated concept art - confirm generator terms before release",
+   "shipping_status": "DEV ONLY - release review required: depicts a real aircraft design and uses its real designation (trademark review); no national insignia on the model (team-colour panels only)"
+  },
+  {
+   "id": "ac130",
+   "source_name": "AC-130 Spooky / Spectre (side-firing gunship)",
+   "intended_use": "support power: AC-130 Gunship (USA); unit ac130_gunship",
+   "representation": "3D model (glTF binary, embedded 2048 px albedo atlas)",
+   "game_files": {
+    "model": "res://assets/units3d/ac130/ac130.glb",
+    "albedo_preview": "res://assets/units3d/ac130/ac130_albedo.png"
+   },
+   "sha256": "51526543961da7d8d9dc40727635d603a591868e5e8150d81156cf9c83569502",
+   "generator": "tools/art/air_ac130_3d.py",
+   "toolchain": "Blender bpy 5.x module (Python), tools/art/airkit.py (project-owned kit)",
+   "method": "Original geometry lofted from pixel measurements on the client's concept turnaround (side + top views); albedo by depth-tested projection of those views plus baked AO (see docs/M3_AIRCRAFT.md method).",
+   "reference": {
+    "file": "incoming_airlift/aircraft_image_assets/ac130_spooky_turnaround.png",
+    "sha256": "06a15cb439586c067e2f332c084249be5beda94c2530b984576c79f52de7a2ff",
+    "provenance": "client-supplied generated 2D turnaround sheet (U.S. Airlift Aircraft Image Pack, Oct 2026)"
+   },
+   "nodes": [
+    "Body",
+    "Prop0..3",
+    "Gun0..2"
+   ],
+   "notes": "Generated in M3; first used in game in B3. Gun0..2 are the muzzles the gunship fires from (25 mm, 40 mm, 105 mm).",
+   "license_status": "geometry project-owned; texture derived from client-supplied generated concept art - confirm generator terms before release",
+   "shipping_status": "DEV ONLY - release review required: depicts a real aircraft design and uses its real designation (trademark review); no national insignia on the model (team-colour panels only)"
+  }
+ ],
+ "power_icons": [
+  {
+   "id": "gunship",
+   "path": "res://assets/ui/powers/gunship.png",
+   "sha256": "4c633adafb4b174cd368922345e2930cd96492a4e96e08f7558b817ee6bed151",
+   "size": [
+    256,
+    160
+   ],
+   "description": "AC-130 3/4 view + gun tracers",
+   "source_model": "res://assets/units3d/ac130/ac130.glb",
+   "license_status": "rendered from the project's own 3D model (Cycles CPU) + Pillow glyph; inherits the model's review status",
+   "shipping_status": "DEV ONLY (inherits the aircraft model's release review)"
+  },
+  {
+   "id": "airborne_armor",
+   "path": "res://assets/ui/powers/airborne_armor.png",
+   "sha256": "694bfb701f8b14fd325c57d1714eb5263a8b51a36f607799619fc8f0d15a1c27",
+   "size": [
+    256,
+    160
+   ],
+   "description": "C-17 3/4 view + three canopies over a pallet",
+   "source_model": "res://assets/units3d/c17/c17.glb",
+   "license_status": "rendered from the project's own 3D model (Cycles CPU) + Pillow glyph; inherits the model's review status",
+   "shipping_status": "DEV ONLY (inherits the aircraft model's release review)"
+  },
+  {
+   "id": "airlift",
+   "path": "res://assets/ui/powers/airlift.png",
+   "sha256": "a1428df60f2e5bde65856351ea032ec5532fcd11c4b43649efc308bd4a9436d5",
+   "size": [
+    256,
+    160
+   ],
+   "description": "C-5 3/4 view (nose visor raised) + tank silhouette",
+   "source_model": "res://assets/units3d/c5/c5.glb",
+   "license_status": "rendered from the project's own 3D model (Cycles CPU) + Pillow glyph; inherits the model's review status",
+   "shipping_status": "DEV ONLY (inherits the aircraft model's release review)"
+  },
+  {
+   "id": "ir_airborne_armor",
+   "path": "res://assets/ui/powers/ir_airborne_armor.png",
+   "sha256": "828d60b5ba593f654bae088c4da44bf954e2acd55e92eaa3f1586caf4172e43f",
+   "size": [
+    256,
+    160
+   ],
+   "description": "Iranian C-130 3/4 view + three canopies over a pallet",
+   "source_model": "res://assets/units3d/ir_c130/ir_c130.glb",
+   "license_status": "rendered from the project's own 3D model (Cycles CPU) + Pillow glyph; inherits the model's review status",
+   "shipping_status": "DEV ONLY (inherits the aircraft model's release review)"
+  }
+ ],
+ "procedural_in_code": [
+  {
+   "id": "airdrop_pallet_rig",
+   "where": "godot/scripts/battle.gd _pallet_rig()",
+   "description": "Vehicle pallet box, three hemispherical canopies and rigging lines built from Godot primitive meshes at runtime",
+   "license_status": "original, project-owned",
+   "shipping_status": "shippable"
+  }
+ ]
+}

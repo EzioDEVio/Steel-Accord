@@ -35,7 +35,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 PI = math.pi
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
-HOME = os.path.abspath(os.path.join(REPO, ".."))
+HOME = os.environ.get("SA_ASSET_HOME", os.path.abspath(os.path.join(REPO, "..")))   # git worktrees: set SA_ASSET_HOME
 INC_A = os.path.join(HOME, "incoming", "a", "individual_views")
 INC_AIR = os.path.join(HOME, "incoming_air")
 INC_X = os.path.join(INC_AIR, "US_Aircraft_Game_Assets_Expanded_1")
