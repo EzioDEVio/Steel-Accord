@@ -57,6 +57,9 @@ func _until(cond: Callable, max_t: float) -> bool:
 
 
 func _run() -> void:
+	if "buildshots" in battle.args:
+		await _run_build_shots()
+		return
 	if "build" in battle.args:
 		await _run_build()
 		return
@@ -952,3 +955,58 @@ func _run_build() -> void:
 	battle.camera.zoom = 120.0; battle.camera._apply(); battle.camera.focus(af.position)
 	await _shot("rotated_airfield")
 	_finish()
+
+
+## Evidence screenshots for B3 construction (rendered run): the scenes are set up through the same commands the player
+## issues (place_wall / board), then construction is completed directly so the run stays short on a software renderer.
+## Run: godot --path godot --fixed-fps 30 --resolution 1920x1080 -- basetest buildshots noai nation1=iran out=/dir
+func _run_build_shots() -> void:
+	await _wait_sim(0.3)
+	var ccp: Vector3 = battle.structures(0, "command_center")[0].position
+	battle.cash[0] += 60000
+	battle.add_structure("power_plant", 0, ccp + Vector3(-40, 0, -6), true)
+	battle.add_structure("barracks", 0, ccp + Vector3(40, 0, -16), true)
+	var wc := Vector3(-55, 0, 112)
+	var ta: Building = battle.add_structure("defense_tower", 0, wc + Vector3(-20, 0, 0), true)
+	var tb: Building = battle.add_structure("defense_tower", 0, wc + Vector3(20, 0, 0), true)
+	var dz := _dozer()
+	battle.issue({"type": "place_wall", "team": 0, "id": "concrete_wall", "a": ta.position, "b": tb.position, "builder": dz.uid})
+	var hend := ta.position + Vector3(-30, 0, 20)
+	for cand in [Vector3(-28, 0, -24), Vector3(-30, 0, 20), Vector3(-24, 0, -30), Vector3(-36, 0, 0)]:
+		if str(battle.wall_plan(0, "hesco", ta.position, ta.position + cand).problem) == "": hend = ta.position + cand; break
+	battle.issue({"type": "place_wall", "team": 0, "id": "hesco", "a": ta.position, "b": hend, "builder": dz.uid})
+	await _wait_sim(0.3)
+	var n := 0
+	for b in battle.structures(0, "", false):
+		if b.is_wall() and not b.built:
+			b.progress = 1.0; b.hp = b.bdef.hp; b.built = true; b._set_reveal(false); n += 1
+	print("SHOTDBG walls completed directly: %d" % n)
+	battle.issue({"type": "move", "ids": [dz.uid], "points": [ccp + Vector3(-20, 0, -30)]})
+	var cam: RTSCamera = battle.camera
+	cam.zoom = 70.0; cam.pitch_deg = 48.0; cam._apply(); cam.focus(wc + Vector3(-12, 0, 4))
+	if not "skipwall" in battle.args:
+		await _wait_sim(1.0)
+		await _shot("b3_wall_towers_hesco")
+	# occupied house flying the player's flag, then captured by the other side
+	var house: Building = battle.add_civic("civ_house_a", Vector3(60, 0, 150), false)
+	var sq: Array = []
+	for i in 3: sq.append(battle._spawn("rifleman", 0, house.position + Vector3(-3 + i * 2.0, 0, 8), 0.0))
+	await _wait_sim(0.2)
+	battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
+	await _until(func(): return house.passengers.size() == 3, 20.0)
+	await _wait_sim(0.5)
+	cam.zoom = 46.0; cam._apply(); cam.focus(house.position + Vector3(0, 0, 2))
+	await _wait_sim(0.3)
+	await _shot("b3_garrison_flag_usa")
+	battle._lose_passengers(house); battle._set_owner(house, -1)
+	var obs: Unit = battle._spawn("rifleman", 0, house.position + Vector3(0, 0, 50), PI)
+	obs.order_stop()
+	var red: Array = []
+	for i in 2: red.append(battle._spawn("rifleman", 1, house.position + Vector3(-3 + i * 2.0, 0, 8), 0.0))
+	await _wait_sim(0.2)
+	battle.issue({"type": "board", "team": 1, "ids": red.map(func(u): return u.uid), "target": house.uid})
+	await _until(func(): return house.passengers.size() == 2, 20.0)
+	await _wait_sim(0.5)
+	await _shot("b3_garrison_flag_captured_iran")
+	print("RESULT shots flag_team=%d" % house.flag_team)
+	get_tree().quit()
