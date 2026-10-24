@@ -56,6 +56,7 @@ var last_recon_t := -999.0
 var tf_best := INF             # closest the task force has been to its objective (progress watchdog)
 var tf_prog_t := 0.0           # sim time of the last progress
 var tf_stuck := 0
+var air_danger := {}           # "cell" -> [position, sim time] where we lost aircraft
 var place_fail := {}           # structure kind -> sim time until which placement is not retried
 
 # Diagnostics for tests and the match timeline (not saved; they never feed back into decisions).
@@ -491,6 +492,10 @@ func _aa_at(p: Vector3, r: float) -> int:
 	for id in known:
 		var b: Unit = _u(id)
 		if b and not b.dead and (known[id] as Vector3).distance_to(p) <= r and _is_aa_threat(b): n += 1
+	# places where we lost aircraft recently count as defended even if we never saw what shot them down
+	for k in air_danger:
+		var dp: Array = air_danger[k]
+		if battle.sim_time - float(dp[1]) < 300.0 and (dp[0] as Vector3).distance_to(p) < r + 40.0: n += 2
 	return n
 
 
@@ -804,22 +809,32 @@ func _bombard(us: Array, c: Vector3) -> void:
 	for u in arty: rng_m = minf(rng_m, u.max_range_any())
 	var tgt: Unit = null
 	var bd := INF
+	var ac := _centroid(arty)       # the guns trail the group: measure range from them
 	for id in known:
 		var b: Unit = _u(id)
 		if b == null or b.dead: continue
-		var d := c.distance_to(known[id])
+		var d := ac.distance_to(known[id])
 		if d > rng_m * 0.95 or d < 50.0: continue
 		var pri: float = d * (0.5 if _is_aa_threat(b) or not (b as Building).bdef.get("weapons", []).is_empty() else 1.0)
 		if (known[id] as Vector3).distance_to(tf_obj) > 160.0: pri *= 2.0
 		if pri < bd: bd = pri; tgt = b
+	if tgt == null:
+		# no structure in range: shell the most valuable enemy ground unit in sight within range
+		var bv := 600.0
+		for e in _in_sight:
+			if e.dead or e is Building or e.is_air(): continue
+			var d2 := ac.distance_to(e.position)
+			if d2 > rng_m * 0.95 or d2 < 45.0: continue
+			var v := value_of(e)
+			if v > bv: bv = v; tgt = e
 	if tgt == null: return
-	var ids: Array = arty.filter(func(u): return u.target != tgt).map(func(u): return u.uid)
+	var ids: Array = arty.filter(func(u): return u.target != tgt and u.can_target(tgt)).map(func(u): return u.uid)
 	if ids.is_empty(): return
 	battle.issue({"type": "attack", "team": team, "ids": ids, "target": tgt.uid})
 	if not bombarded:
 		bombarded = true
 		stats.bombard += 1
-		_ev("artillery bombards %s at (%d, %d)" % [(tgt as Building).bkind, int(tgt.position.x), int(tgt.position.z)])
+		_ev("artillery bombards %s at (%d, %d)" % [(tgt as Building).bkind if tgt is Building else tgt.kind, int(tgt.position.x), int(tgt.position.z)])
 
 
 ## Focus fire: armour, anti-tank and light vehicles near the fight all shoot the same visible enemy (the one whose
@@ -951,6 +966,11 @@ func _air() -> void:
 		var a: Unit = _u(id)
 		var t: Unit = _u(air_tasks[id])
 		if a == null or a.dead:
+			# lost on the sortie: remember the target area as defended
+			var tp: Vector3 = t.position if t else (a.position if a else Vector3.INF)
+			if tp != Vector3.INF:
+				air_danger["%d,%d" % [int(tp.x / 50.0), int(tp.z / 50.0)]] = [tp, battle.sim_time]
+				_ev("lost an aircraft near (%d, %d); area marked as defended" % [int(tp.x), int(tp.z)])
 			air_tasks.erase(id); continue
 		if t == null or t.dead or a.state in [Unit.S.IDLE, Unit.S.RETURN, Unit.S.LANDED]:
 			air_tasks.erase(id)
@@ -1000,8 +1020,10 @@ func _air_target(a: Unit) -> Unit:
 		var b: Unit = _u(id)
 		if b and not b.dead: cands.append(b)
 	var max_aa := int(P.aa_avoid) - (1 if a.domain == "heli" else 0)
+	var ground: Array = _mine(func(u): return u.domain == "ground" and not (u is Building) and role_of(u) != "")
 	for e in cands:
 		if not a.can_target(e): continue
+		if a.domain == "heli" and not (e in _in_sight) and not ground.any(func(g): return g.flat_dist(e.position) < 220.0): continue
 		if e is Building and (e as Building).bkind == "hesco": continue
 		var aa := _aa_at(e.position, 110.0)
 		if aa > max_aa: continue

@@ -178,7 +178,7 @@ func _check_ai(ai, tag: String, need_later_waves := true) -> void:
 		_log("%s_later_waves_have_vehicles" % tag, not later.is_empty() and share >= 0.30,
 			"%d waves after 5:00, vehicle share of value %.0f%% (lowest single wave %.0f%%); all waves: %s" % [later.size(), share * 100.0, min_share * 100.0,
 			", ".join(wave_rec.filter(func(w): return w[0] == t).map(func(w): return "%s %.0f%%" % [_clock(w[1]), 100.0 * w[2] / maxf(1.0, w[3])]))])
-	_log("%s_air_strike" % tag, ai.stats.air_strikes >= 1, "sorties %d, sorties that fired %d" % [ai.stats.air_sorties, ai.stats.air_strikes])
+	if need_later_waves: _log("%s_air_strike" % tag, ai.stats.air_strikes >= 1, "sorties %d, sorties that fired %d" % [ai.stats.air_sorties, ai.stats.air_strikes])
 	var pw := power_rec.filter(func(p): return p[0] == t)
 	var valid := pw.filter(func(p): return p[3] == "reveal" or p[5] >= 400.0)
 	_log("%s_support_power_valid_target" % tag, not pw.is_empty() and valid.size() == pw.size(),
