@@ -21,7 +21,8 @@ var mat: ShaderMaterial
 var chunks := {}                   # Vector2i -> MeshInstance3D
 var slope_grid := PackedFloat32Array()   # per sample: steepest slope (deg) to any neighbour (conservative for nav)
 var splat_bytes := PackedByteArray()     # RGBA8, n x n (resampled to the height grid)
-var road_bytes := PackedByteArray()      # L8, n x n
+var road_bytes := PackedByteArray()      # L8, n x n: paved road (surface R)
+var surf_bytes := PackedByteArray()      # RGBA8, n x n: R paved, G dirt track, B rail ballast, A hardstand
 
 
 static func exists(id: String) -> bool:
@@ -49,8 +50,19 @@ func load_map(id: String) -> bool:
 		var sc := splat.duplicate() as Image
 		if sc.get_width() != n: sc.resize(n, n, Image.INTERPOLATE_BILINEAR)
 		splat_bytes = sc.get_data()
-	_bake_roads()
-	road_bytes = road_mask.get_data()
+	# surface.png (B3, written by the map generator at 1 m/px): R paved road, G dirt track, B rail ballast, A concrete
+	# hardstand. Maps without it get the paved roads rasterised from map.json (R only).
+	var sf: Image = _load_image(map_dir + "/" + str(data.get("surface_file", "surface.png"))) if data.has("surface_file") else null
+	if sf:
+		if sf.get_format() != Image.FORMAT_RGBA8: sf.convert(Image.FORMAT_RGBA8)
+		road_mask = sf
+	else:
+		_bake_roads()
+	var sg := road_mask.duplicate() as Image
+	if sg.get_width() != n: sg.resize(n, n, Image.INTERPOLATE_BILINEAR)
+	surf_bytes = sg.get_data()
+	road_bytes.resize(n * n)
+	for i in n * n: road_bytes[i] = surf_bytes[i * 4]
 	_bake_slopes()
 	return true
 
@@ -344,14 +356,39 @@ func _bake_roads() -> void:
 					var row: int = (z + dz) * n
 					acc += src[row + x - 1] + src[row + x] + src[row + x + 1]
 				buf[z * n + x] = acc / 9
-	road_mask = Image.create_from_data(n, n, false, Image.FORMAT_L8, buf)
+	var rgba := PackedByteArray(); rgba.resize(n * n * 4)
+	for i in n * n: rgba[i * 4] = buf[i]
+	road_mask = Image.create_from_data(n, n, false, Image.FORMAT_RGBA8, rgba)
 
 
-## Fraction of road at a world point (pathfinding cost / wheeled speed).
+## Fraction of paved road at a world point (pathfinding cost / road speed).
 func road_at(x: float, z: float) -> float:
 	var ix := clampi(int(round((x - origin.x) / step)), 0, n - 1)
 	var iz := clampi(int(round((z - origin.y) / step)), 0, n - 1)
 	return road_bytes[iz * n + ix] / 255.0
+
+
+## Surface layers at a world point: r paved road, g dirt track, b rail ballast, a concrete hardstand (0..1).
+func surface_at(x: float, z: float) -> Color:
+	if surf_bytes.is_empty(): return Color(road_at(x, z), 0, 0, 0)
+	var ix := clampi(int(round((x - origin.x) / step)), 0, n - 1)
+	var iz := clampi(int(round((z - origin.y) / step)), 0, n - 1)
+	var i := (iz * n + ix) * 4
+	return Color(surf_bytes[i] / 255.0, surf_bytes[i + 1] / 255.0, surf_bytes[i + 2] / 255.0, surf_bytes[i + 3] / 255.0)
+
+
+## Largest road / track / rail weight inside a footprint (x = paved, y = dirt, z = ballast): building placement keeps
+## clear of carriageways and the track bed.
+func infra_in(center: Vector3, half: Vector2) -> Vector3:
+	var out := Vector3.ZERO
+	if surf_bytes.is_empty(): return out
+	var x0 := clampi(int(floor((center.x - half.x - origin.x) / step)), 0, n - 1); var x1 := clampi(int(ceil((center.x + half.x - origin.x) / step)), 0, n - 1)
+	var z0 := clampi(int(floor((center.z - half.y - origin.y) / step)), 0, n - 1); var z1 := clampi(int(ceil((center.z + half.y - origin.y) / step)), 0, n - 1)
+	for iz in range(z0, z1 + 1):
+		for ix in range(x0, x1 + 1):
+			var i := (iz * n + ix) * 4
+			out = Vector3(maxf(out.x, surf_bytes[i]), maxf(out.y, surf_bytes[i + 1]), maxf(out.z, surf_bytes[i + 2]))
+	return out / 255.0
 
 
 ## Splat weights at a world point: x rock, y gravel, z scrub, w riverbed (sand = rest).
@@ -371,4 +408,14 @@ func material_cost(x: float, z: float, cost: Dictionary) -> float:
 	var w := sand * float(cost.get("sand", 1.0)) + sp.r * float(cost.get("rock", 1.0)) + sp.g * float(cost.get("gravel", 1.0)) \
 		+ sp.b * float(cost.get("scrub", 1.0)) + sp.a * float(cost.get("riverbed", 1.0))
 	w /= maxf(sand + sp.r + sp.g + sp.b + sp.a, 0.001)
-	return lerpf(w, float(cost.get("road", 1.0)), clampf(road_at(x, z) * 1.5, 0.0, 1.0))
+	var sf := surface_at(x, z)                    # dirt tracks count half a road (as the generator's fairness check)
+	return lerpf(w, float(cost.get("road", 1.0)), clampf(maxf(sf.r, 0.5 * sf.g) * 1.5, 0.0, 1.0))
+
+
+## Ground material cost without any road benefit (for the road speed bonus, which battle.gd applies separately).
+func ground_cost(x: float, z: float, cost: Dictionary) -> float:
+	var sp := splat_at(x, z)
+	var sand := clampf(1.0 - sp.r - sp.g - sp.b - sp.a, 0.0, 1.0)
+	var w := sand * float(cost.get("sand", 1.0)) + sp.r * float(cost.get("rock", 1.0)) + sp.g * float(cost.get("gravel", 1.0)) \
+		+ sp.b * float(cost.get("scrub", 1.0)) + sp.a * float(cost.get("riverbed", 1.0))
+	return w / maxf(sand + sp.r + sp.g + sp.b + sp.a, 0.001)

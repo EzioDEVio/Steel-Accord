@@ -55,6 +55,10 @@ func _run() -> void:
 		await _b2_shots()
 		get_tree().quit()
 		return
+	if "b3shots" in battle.args:
+		await _b3_shots()
+		get_tree().quit()
+		return
 	for t in 2:
 		battle.cash[t] = 90000
 		var c: Vector3 = battle.start_pos[t]
@@ -219,6 +223,54 @@ func _ui_iran() -> void:
 	await _shot("ui_%s_warfactory_details" % tag)
 	battle.hud.details_open = false
 	foe.take_damage(9999.0, null)
+
+
+## B3 world evidence + frame-time measurement (run with res=1920x1080; "perfonly" skips the PNGs): basin overview,
+## town with roads, industrial zone, tunnel portal with the train, minimap. Each view: mean / p95 frame time over 12
+## rendered frames, draw calls and primitives, printed as "PERF <view> ...". Camera views are fixed so a run on the
+## B2 map data (map=<old copy>) is directly comparable. (12 frames per view: Xvfb renders in software on a shared CPU.)
+func _b3_shots() -> void:
+	var rs: PackedStringArray = str(battle.args.get("res", "1920x1080")).split("x")
+	var want := Vector2i(int(rs[0]), int(rs[1]))
+	DisplayServer.window_set_size(want)
+	get_tree().root.size = want
+	Engine.max_fps = 0
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	battle.hud.visible = false
+	var shots_on: bool = not ("perfonly" in battle.args)
+	var z: Dictionary = battle.terrain.data.get("zones", {})
+	var portal: Vector3 = battle.map_point(z.get("portal_a_east", [166.0, 294.0]))
+	var views := [["b3_overview", Vector3(40, 0, 80), 300.0, 0.0, 70.0], ["b3_town", Vector3(-275, 0, 305), 125.0, 0.0, 50.0],
+		["b3_industry_portal_train", portal + Vector3(30, 0, -40), 110.0, 200.0, 45.0]]
+	await _wait(1.0)
+	for v in views:
+		_cam(battle.grounded(v[1]), v[2], v[3], v[4])
+		await _wait(0.4)
+		printerr("VIEW ", v[0])
+		for i in 2: await get_tree().process_frame
+		var ft: Array = []
+		var t_prev := Time.get_ticks_usec()
+		for i in 12:
+			await get_tree().process_frame
+			var t := Time.get_ticks_usec()
+			ft.append((t - t_prev) / 1000.0); t_prev = t
+		ft.sort()
+		var mean := 0.0
+		for f in ft: mean += f
+		mean /= ft.size()
+		printerr("PERF %s mean_ms %.2f p95_ms %.2f fps %.1f draw_calls %d objects %d primitives %d" % [v[0], mean, ft[int(ft.size() * 0.95)], 1000.0 / mean,
+			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+			Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)])
+		if shots_on: await _shot(v[0])
+	if shots_on:
+		# minimap: the generated texture (upscaled for review) and an in-game frame with the HUD
+		var img: Image = battle.make_minimap_texture().get_image()
+		img.resize(768, 768, Image.INTERPOLATE_NEAREST)
+		img.save_png("%s/b3_minimap.png" % out)
+		battle.hud.visible = true
+		_cam(battle.grounded(Vector3(-275, 0, 305)), 125.0, 0.0, 50.0)
+		await _wait(0.5)
+		await _shot("b3_hud_minimap")
 
 
 ## B2 evidence (run with res=WxH): the village with civilian buildings, an occupied house (badge + command grid),

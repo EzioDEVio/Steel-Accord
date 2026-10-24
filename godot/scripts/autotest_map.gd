@@ -20,6 +20,12 @@ func _run() -> void:
 		_finish(); return
 	var a: Vector3 = battle.start_pos[0]; var b: Vector3 = battle.start_pos[1]
 	_log("starts_from_map", a.distance_to(b) > 300.0, "A=%s B=%s" % [str(a), str(b)])
+	if "b3only" in battle.args and tm.data.has("rail"):   # quick iteration on the B3 infrastructure checks only
+		await _b3_checks(tm, a, b)
+		_finish(); return
+	if "civonly" in battle.args:                 # quick iteration on the civic-building checks only
+		await _civic_checks(tm)
+		_finish(); return
 
 	# ---- grounding: everything stands on the terrain
 	var worst := 0.0; var worst_name := ""
@@ -74,6 +80,8 @@ func _run() -> void:
 	_log("cliffs_block", steep_found > 20 and steep_open == 0, "%d sampled cliff points steeper than %.0f°, open for vehicles: %d" % [steep_found, r_t + 4.0, steep_open])
 	var w_s: int = battle.navs.wheeled.slope_cells; var t_s: int = battle.navs.tracked.slope_cells; var i_s: int = battle.navs.infantry.slope_cells
 	_log("class_slope_rules", w_s > t_s and t_s > i_s, "impassable cells: wheeled %d > tracked %d > infantry %d" % [w_s, t_s, i_s])
+	if tm.data.has("rail"):
+		await _b3_checks(tm, a, b)
 
 	# ---- fairness: resources per start (path cost to own sites, equal amounts)
 	var own := [[], []]
@@ -197,74 +205,7 @@ func _run() -> void:
 	_log("aircraft_clear_terrain", min_clear.ah64 > 4.0 and min_clear.f16 > 4.0 and peak > 20.0,
 		"lowest clearance above the ground: AH-64 %.1f m, F-16 %.1f m (highest ground overflown %.0f m)" % [min_clear.ah64, min_clear.f16, peak])
 	heli.take_damage(99999.0, null); jet.take_damage(99999.0, null)
-	# ---- civilian buildings: placed, grounded, neutral; infantry occupy them, fire from inside, heal in the hospital,
-	# get out when the building falls; an occupied building survives save / load
-	var civ: Array = battle.units.filter(func(u): return u is Building and (u as Building).is_civic() and not u.dead)
-	var civ_bad := 0
-	for c in civ:
-		var cst: Vector3 = tm.footprint_stats(c.position, (c as Building).half)
-		if absf(c.position.y - cst.z) > 0.3 or c.team != -1: civ_bad += 1
-	var hosp: Array = civ.filter(func(u): return u.bkind == "civ_hospital")
-	_log("civic_buildings_placed", civ.size() >= 18 and civ_bad == 0 and not hosp.is_empty(),
-		"%d civilian buildings (%s), off-ground or not neutral: %d" % [civ.size(), ", ".join(_kinds(civ)), civ_bad])
-	if not civ.is_empty():
-		var near: Array = civ.filter(func(u): return u.bkind.begins_with("civ_house"))
-		near.sort_custom(func(a1, b1): return a1.position.distance_to(battle.start_pos[0]) < b1.position.distance_to(battle.start_pos[0]))
-		var house: Building = near[0] if not near.is_empty() else civ[0]
-		var front := (house as Building).door_pos if (house as Building).door_pos != Vector3.INF else house.position + Vector3(0, 0, house.half.y + 4.0)
-		var sq: Array = []
-		for i in 3: sq.append(battle._spawn("rifleman", 0, front + Vector3(-4 + i * 4, 0, 6), 0.0))
-		await _wait_sim(0.2)
-		battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
-		var inside := await _until(func(): return house.passengers.size() == 3, 45.0)
-		_log("garrison_enter", inside and house.team == 0 and battle.alive_count(0) > 0, "occupants %d/%d, building side %d" % [house.passengers.size(), int(house.def.transport.capacity), house.team])
-		await _wait_sim(0.4)
-		var fl: Node3D = house.flag_node
-		var nf: Node = fl.get_node_or_null("NationFlag") if fl else null
-		var want := str(Nations.DEFS.get(battle.nation_of(0), {}).get("flag", ""))
-		var fy: float = fl.position.y if fl else -1.0
-		_log("garrison_flag_on_roof", nf != null and nf.scene_file_path == want and fy > 2.0 and fy <= house.model_h + 0.05 and fl.is_visible_in_tree()
-			and (fl.get_meta("team_color") as Color).is_equal_approx(UnitDefs.team_color(0)),
-			"%s: flag %s (want %s), pole base %.2f m (model top %.2f m)%s" % [house.bkind, nf.scene_file_path if nf else "none", want, fy, house.model_h,
-				", FlagPole empty" if house.model3d and house.model3d.find_child("FlagPole", true, false) else ", roof from mesh"])
-		var foe: Unit = battle._spawn("rifleman", 1, house.position + Vector3(38, 0, 20), 0.0)
-		foe.order_stop()
-		var f_hp0: float = foe.hp
-		var shots0 := 0
-		for p in house.passengers: shots0 += int(battle.shots_by.get(p.uid, 0))
-		await _wait_sim(12.0)
-		var shots1 := 0
-		for p in house.passengers: shots1 += int(battle.shots_by.get(p.uid, 0))
-		var occ_ok: bool = house.passengers.all(func(p): return not p.dead)
-		_log("garrison_fires_from_inside", shots1 > shots0 and (foe.dead or foe.hp < f_hp0) and occ_ok, "rounds fired from the windows %d, enemy %s, occupants unharmed %s" % [
-			shots1 - shots0, "killed" if foe.dead else "hp %.0f -> %.0f" % [f_hp0, foe.hp], str(occ_ok)])
-		if not hosp.is_empty():
-			var hs: Building = hosp[0]
-			var pat: Unit = battle._spawn("rifleman", 0, (hs.door_pos if hs.door_pos != Vector3.INF else hs.position + Vector3(0, 0, hs.half.y + 4)) + Vector3(0, 0, 4), 0.0)
-			pat.hp = pat.def.hp * 0.3
-			var h0: float = pat.hp
-			battle.issue({"type": "board", "team": 0, "ids": [pat.uid], "target": hs.uid})
-			await _until(func(): return pat in hs.passengers, 40.0)
-			await _wait_sim(10.0)
-			_log("hospital_heals", pat in hs.passengers and pat.hp >= h0 + pat.def.hp * 0.25, "health %.0f -> %.0f of %.0f in 10 s" % [h0, pat.hp, pat.def.hp])
-			# save / load with the hospital occupied
-			var data: Dictionary = SaveGame.capture(battle)
-			var hs_id: int = hs.uid
-			var pat_id: int = pat.uid
-			var house_id: int = house.uid
-			SaveGame.restore(battle, data)
-			var hs2: Building = battle.by_id.get(hs_id)
-			var ok_load: bool = hs2 != null and hs2.team == 0 and hs2.passengers.size() == 1 and hs2.passengers[0].uid == pat_id
-			_log("garrison_survives_save_load", ok_load, "hospital side %s, occupants %s" % [str(hs2.team if hs2 else "-"), str(hs2.passengers.size() if hs2 else -1)])
-			await _frames(3)
-			house = battle.by_id.get(house_id)
-		var n_in: int = house.passengers.size()
-		var alive0: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
-		house.take_damage(999999.0, null)
-		await _wait_sim(0.5)
-		var alive1: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
-		_log("garrison_ejected_when_destroyed", house.dead and house.passengers.is_empty() and alive1 >= alive0 + 1 and house.team == -1,
-			"%d inside; outside afterwards %d -> %d, building side %d" % [n_in, alive0, alive1, house.team])
+	await _civic_checks(tm)
 	# ---- the computer opponent plays the map: builds on flat ground, earns, captures a derrick, trains its nation's units
 	if battle.base_ai:
 		await _until(func(): return battle.sim_time > 420.0, 600.0)
@@ -325,6 +266,283 @@ func _run() -> void:
 	if DisplayServer.get_name() != "headless":
 		await _shots()
 	_finish()
+
+
+# ------------------------------------------------------------------ B3 infrastructure checks (maps with a railway)
+func _samples(pts: Array, spacing: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in pts.size() - 1:
+		var p := Vector2(float(pts[i][0]), float(pts[i][1])); var q := Vector2(float(pts[i + 1][0]), float(pts[i + 1][1]))
+		var n := maxi(1, int(ceil(p.distance_to(q) / spacing)))
+		for k in n: out.append(p.lerp(q, float(k) / n))
+	if not pts.is_empty(): out.append(Vector2(float(pts[-1][0]), float(pts[-1][1])))
+	return out
+
+
+func _seg_dist_rect(P: PackedVector2Array, c: Vector2, h: Vector2) -> float:
+	var best := INF
+	for p in P:
+		best = minf(best, Vector2(maxf(0.0, absf(p.x - c.x) - h.x), maxf(0.0, absf(p.y - c.y) - h.y)).length())
+	return best
+
+
+func _b3_checks(tm: TerrainMap, a: Vector3, b: Vector3) -> void:
+	var d: Dictionary = tm.data
+	# ---- the road network (paved + dirt) connects both starts, both towns, the hospital and both industrial zones
+	var roads: Array = d.get("roads", [])
+	var S: Array = []
+	for r in roads: S.append(_samples(r.points, 3.0))
+	var grid := {}
+	for i in S.size():
+		for p: Vector2 in S[i]:
+			var key := Vector2i(floori(p.x / 12.0), floori(p.y / 12.0))
+			if not grid.has(key): grid[key] = {}
+			grid[key][i] = true
+	var adj := {}
+	for i in S.size():
+		adj[i] = {}
+		var wi := float(roads[i].width_m)
+		for p: Vector2 in S[i]:
+			var key := Vector2i(floori(p.x / 12.0), floori(p.y / 12.0))
+			for dx in [-1, 0, 1]:
+				for dz in [-1, 0, 1]:
+					for j in grid.get(key + Vector2i(dx, dz), {}):
+						if j == i or adj[i].has(j): continue
+						var wj := float(roads[j].width_m)
+						for q: Vector2 in S[j]:
+							if p.distance_to(q) < (wi + wj) * 0.5 + 2.0: adj[i][j] = true; break
+	var near_road := func(pt: Vector2, r: float) -> Array:
+		var out: Array = []
+		for i in S.size():
+			for p: Vector2 in S[i]:
+				if p.distance_to(pt) < r: out.append(i); break
+		return out
+	var hosp := Vector2.ZERO
+	for u in battle.units:
+		if u is Building and u.bkind == "civ_hospital": hosp = Vector2(u.position.x, u.position.z)
+	var z: Dictionary = d.get("zones", {})
+	var targets := {"start_B": [Vector2(b.x, b.z), 30.0], "town_A": [_v2(z.town_a), 40.0], "town_B": [_v2(z.town_b), 40.0],
+		"hospital": [hosp, 45.0], "industry_A": [_v2(z.industry_a), 45.0], "industry_B": [_v2(z.industry_b), 45.0]}
+	var seen := {}
+	var stack: Array = near_road.call(Vector2(a.x, a.z), 30.0)
+	for s0 in stack: seen[s0] = true
+	while not stack.is_empty():
+		var i: int = stack.pop_back()
+		for j in adj[i]:
+			if not seen.has(j): seen[j] = true; stack.append(j)
+	var reached := []; var missed := []
+	for k in targets:
+		var hit: Array = near_road.call(targets[k][0], targets[k][1]).filter(func(i): return seen.has(i))
+		(reached if not hit.is_empty() else missed).append(k)
+	_log("roads_connect", missed.is_empty() and seen.size() == roads.size(), "from start A the network (%d roads, %d reached) reaches %s%s" % [
+		roads.size(), seen.size(), ", ".join(reached), "" if missed.is_empty() else "; NOT reached: " + ", ".join(missed)])
+	# ---- road grade: terrain slope on every carriageway centreline sample stays below the movement limits
+	var wmax: float = float(battle.move_rules.wheeled.max_slope_deg)
+	var worst := 0.0; var worst_at := Vector2.ZERO; var slopes := []; var along := 0.0
+	for i in S.size():
+		var P: PackedVector2Array = S[i]
+		for k in P.size():
+			var s := tm.slope_deg_at(P[k].x, P[k].y)
+			slopes.append(s)
+			if s > worst: worst = s; worst_at = P[k]
+			if k > 0:
+				var dh := absf(tm.height_at(P[k].x, P[k].y) - tm.height_at(P[k - 1].x, P[k - 1].y))
+				along = maxf(along, rad_to_deg(atan(dh / maxf(P[k].distance_to(P[k - 1]), 0.1))))
+	slopes.sort()
+	var p99: float = slopes[int(slopes.size() * 0.99)]
+	_log("road_grade", worst < wmax and p99 < 10.0, "centreline samples %d: max ground slope %.1f° at %s (wheeled limit %.0f°), p99 %.1f°, steepest along-road grade %.1f°" % [
+		slopes.size(), worst, str(worst_at.round()), wmax, p99, along])
+	# ---- railway: track built, formation grade, ballast under it, portals grounded and covered, train grounded + blocking
+	var inf: MapInfra = battle.infra
+	var rail: Dictionary = d.rail
+	var gmax := 0.0; var ball_bad := 0; var nb := 0; var gat := Vector2.ZERO
+	for ln in rail.lines:
+		var P := _samples(ln.points, 3.0)
+		for k in range(1, P.size()):
+			var inside := false                  # samples within 3 m of a portal face are in the recess / slot end
+			for pt in ln.portals:
+				if P[k].distance_to(_v2(pt.pos)) < 3.0 or P[k - 1].distance_to(_v2(pt.pos)) < 3.0: inside = true
+			if inside: continue
+			var g := absf(tm.height_at(P[k].x, P[k].y) - tm.height_at(P[k - 1].x, P[k - 1].y)) / maxf(P[k].distance_to(P[k - 1]), 0.1)
+			if g > gmax: gmax = g; gat = P[k]
+			nb += 1
+			if tm.surface_at(P[k].x, P[k].y).b < 0.8: ball_bad += 1
+	var portal_txt := []; var portal_ok := true
+	for xf: Transform3D in battle.prop_kinds.get("tunnel_portal", []):
+		var o := xf.origin
+		var f := xf.basis.z.normalized()
+		var behind := tm.height_at(o.x - f.x * 6.0, o.z - f.z * 6.0) - o.y
+		var g_off := absf(o.y - battle.ground_h(o.x, o.z))
+		portal_ok = portal_ok and g_off < 0.1 and behind > 8.0
+		portal_txt.append("%.1f m cover" % behind)
+	var cars := 0; var car_off := 0.0
+	for k in ["loco", "tank_car", "boxcar", "flatcar"]:
+		for xf: Transform3D in battle.prop_kinds.get(k, []):
+			cars += 1
+			car_off = maxf(car_off, absf(xf.origin.y - battle.ground_h(xf.origin.x, xf.origin.z)))
+	var tp: Vector3 = battle.map_point(z.get("train_a", [0, 0]))
+	var tblock: bool = battle.navs.wheeled.blocked_at(tp) and battle.navs.infantry.blocked_at(tp)
+	var rail_ok: bool = inf != null and int(inf.stats.get("rail_lines", 0)) >= 4 and int(inf.stats.get("sleepers", 0)) > 2000 \
+		and gmax < 0.03 and ball_bad <= nb / 50 and portal_ok and battle.prop_kinds.get("tunnel_portal", []).size() == 4 and cars >= 10 and car_off < 0.05 and tblock
+	_log("rail_train_portals", rail_ok, "track %s; formation max grade %.1f %% at %s; ballast missing at %d/%d samples; portals %d (%s, grounded); rolling stock %d, max off-ground %.3f m; train blocks movement %s" % [
+		str(inf.stats if inf else {}), gmax * 100.0, str(gat.round()), ball_bad, nb, battle.prop_kinds.get("tunnel_portal", []).size(), ", ".join(portal_txt), cars, car_off, str(tblock)])
+	# ---- civic buildings and blocking landmarks: off roads / tracks / rail, clear of sites and pass corridors
+	var bad := []
+	var corr: Array = d.get("corridors", [])
+	var CS: Array = []
+	for c in corr: CS.append(_samples(c.points, 2.0))
+	var n_civ := 0
+	for u in battle.units:
+		if not (u is Building and (u as Building).is_civic()) or u.dead: continue
+		n_civ += 1
+		var bb := u as Building
+		var inf_v := tm.infra_in(bb.position, bb.half)
+		if inf_v.x > 0.6 or inf_v.y > 0.5 or inf_v.z > 0.45: bad.append("%s@%s on road/rail %s" % [bb.bkind, str(Vector2i(bb.position.x, bb.position.z)), str(inf_v)])
+		for s in d.supply_piles + d.oil_derricks:
+			var sp: Vector3 = battle.map_point(s)
+			if absf(sp.x - bb.position.x) < bb.half.x + 8.0 and absf(sp.z - bb.position.z) < bb.half.y + 8.0: bad.append("%s on site %s" % [bb.bkind, s.id])
+		for i in CS.size():
+			if _seg_dist_rect(CS[i], Vector2(bb.position.x, bb.position.z), bb.half) < float(corr[i].half_width_m): bad.append("%s in corridor %s" % [bb.bkind, corr[i].name])
+	var n_lm := 0
+	for k in ["water_tower", "fuel_station", "cell_tower", "radio_mast", "chimney", "silos", "fuel_tanks", "container_stack"]:
+		for xf: Transform3D in battle.prop_kinds.get(k, []):
+			n_lm += 1
+			var sf := tm.surface_at(xf.origin.x, xf.origin.z)
+			if sf.r > 0.6 or sf.b > 0.45: bad.append("%s@%s on road/rail" % [k, str(Vector2i(xf.origin.x, xf.origin.z))])
+	_log("buildings_clear_of_infra", bad.is_empty() and n_civ >= 40 and n_lm >= 16, "%d civic buildings, %d landmark props checked against roads, tracks, rail, piles, derricks and %d pass corridors: %s" % [
+		n_civ, n_lm, corr.size(), "clear" if bad.is_empty() else "; ".join(bad.slice(0, 6))])
+	# ---- road speed bonus: a wheeled vehicle is faster on a paved road than off it (same for both sides)
+	var on_seg := _straight(tm, true)
+	var off_seg := _straight(tm, false)
+	var v_on := await _drive_speed("hmmwv", on_seg)
+	var v_off := await _drive_speed("hmmwv", off_seg)
+	var base := float(UnitDefs.def_of("hmmwv").speed)
+	var rule: Dictionary = battle.move_rules.wheeled
+	_log("road_speed_bonus", v_on > v_off * 1.15 and absf(v_on / base - (1.0 + float(rule.get("road_speed_bonus", 0.0)))) < 0.08,
+		"HMMWV on paved road %.2f m/s (%.2fx base %.1f; rule +%d %%), off road %.2f m/s (%.2fx); road/off-road %.2f; segments on %s off %s" % [
+		v_on, v_on / base, base, int(float(rule.get("road_speed_bonus", 0.0)) * 100), v_off, v_off / base, v_on / maxf(v_off, 0.01),
+		str([Vector2i(on_seg[0].x, on_seg[0].z), Vector2i(on_seg[1].x, on_seg[1].z)]), str([Vector2i(off_seg[0].x, off_seg[0].z), Vector2i(off_seg[1].x, off_seg[1].z)])])
+
+
+func _v2(p: Variant) -> Vector2:
+	return Vector2(float(p[0]), float(p[1]))
+
+
+## A straight, level, unobstructed 100 m east-west run: on a paved road (on = true) or on bare ground with no road,
+## track or rail within 8 m (on = false). Searched on a fixed grid, so the same segments are found every run.
+func _straight(tm: TerrainMap, on: bool) -> Array:
+	var g: GridNav = battle.navs.wheeled
+	for zi in range(-560, 561, 4):
+		for xi in range(-560, 441, 10):
+			var ok := true
+			for k in 51:
+				var x := float(xi) + k * 2.0; var z := float(zi)
+				var sf := tm.surface_at(x, z)
+				var p := Vector3(x, 0, z)
+				if tm.slope_deg_at(x, z) > 3.0 or g.blocked_at(p) or absf(x) > 520.0: ok = false; break
+				if on and sf.r < 0.95: ok = false; break
+				if not on:
+					for dz in [-8.0, 0.0, 8.0]:
+						var s2 := tm.surface_at(x, z + dz)
+						if s2.r + s2.g + s2.b > 0.02: ok = false; break
+					if not ok: break
+					var sp := tm.splat_at(x, z)
+					if sp.r + sp.a > 0.1: ok = false; break     # open sand / gravel / scrub, no rock or riverbed
+			if ok:
+				return [battle.grounded(Vector3(xi, 0, zi)), battle.grounded(Vector3(xi + 100.0, 0, zi))]
+	push_warning("no straight %s segment found" % ("road" if on else "off-road"))
+	return [Vector3.ZERO, Vector3(100, 0, 0)]
+
+
+## Mean speed of a freshly spawned vehicle over metres 35-85 of a 100 m straight run (acceleration excluded).
+func _drive_speed(kind: String, seg: Array) -> float:
+	var u: Unit = battle._spawn(kind, 0, seg[0], 0.0)
+	await _wait_sim(0.3)
+	battle.issue({"type": "move", "team": 0, "ids": [u.uid], "points": [seg[1] + Vector3(6, 0, 0)]})
+	var dir: Vector3 = (seg[1] - seg[0]).normalized()
+	var t0 := -1.0; var t1 := -1.0
+	var tend: float = battle.sim_time + 60.0
+	while battle.sim_time < tend and t1 < 0.0:
+		await _wait_sim(0.05)
+		var s: float = (u.position - seg[0]).dot(dir)
+		if t0 < 0.0 and s >= 35.0: t0 = battle.sim_time
+		if t0 >= 0.0 and s >= 85.0: t1 = battle.sim_time
+	u.take_damage(99999.0, null)
+	return 50.0 / (t1 - t0) if t1 > t0 and t0 >= 0.0 else 0.0
+
+
+## Civilian buildings: placed, grounded, neutral; garrison, firing from inside, hospital healing, save / load, ejection.
+func _civic_checks(tm: TerrainMap) -> void:
+	# ---- civilian buildings: placed, grounded, neutral; infantry occupy them, fire from inside, heal in the hospital,
+	# get out when the building falls; an occupied building survives save / load
+	var civ: Array = battle.units.filter(func(u): return u is Building and (u as Building).is_civic() and not u.dead)
+	var civ_bad := 0
+	for c in civ:
+		var cst: Vector3 = tm.footprint_stats(c.position, (c as Building).half)
+		if absf(c.position.y - cst.z) > 0.3 or c.team != -1: civ_bad += 1
+	var hosp: Array = civ.filter(func(u): return u.bkind == "civ_hospital")
+	_log("civic_buildings_placed", civ.size() >= 18 and civ_bad == 0 and not hosp.is_empty(),
+		"%d civilian buildings (%s), off-ground or not neutral: %d" % [civ.size(), ", ".join(_kinds(civ)), civ_bad])
+	if not civ.is_empty():
+		var near: Array = civ.filter(func(u): return u.bkind.begins_with("civ_house"))
+		near.sort_custom(func(a1, b1): return a1.position.distance_to(battle.start_pos[0]) < b1.position.distance_to(battle.start_pos[0]))
+		var house: Building = near[0] if not near.is_empty() else civ[0]
+		var front := (house as Building).door_pos if (house as Building).door_pos != Vector3.INF else house.position + Vector3(0, 0, house.half.y + 4.0)
+		var sq: Array = []
+		for i in 3: sq.append(battle._spawn("rifleman", 0, front + Vector3(-4 + i * 4, 0, 6), 0.0))
+		await _wait_sim(0.2)
+		battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
+		var inside := await _until(func(): return house.passengers.size() == 3, 45.0)
+		_log("garrison_enter", inside and house.team == 0 and battle.alive_count(0) > 0, "%s at %s: occupants %d/%d, building side %d; squad at %s" % [house.bkind, str(Vector2i(house.position.x, house.position.z)),
+			house.passengers.size(), int(house.def.transport.capacity), house.team, str(sq.map(func(u): return Vector2i(u.position.x, u.position.z)))])
+		await _wait_sim(0.4)
+		var fl: Node3D = house.flag_node
+		var nf: Node = fl.get_node_or_null("NationFlag") if fl else null
+		var want := str(Nations.DEFS.get(battle.nation_of(0), {}).get("flag", ""))
+		var fy: float = fl.position.y if fl else -1.0
+		_log("garrison_flag_on_roof", nf != null and nf.scene_file_path == want and fy > 2.0 and fy <= house.model_h + 0.05 and fl.is_visible_in_tree()
+			and (fl.get_meta("team_color") as Color).is_equal_approx(UnitDefs.team_color(0)),
+			"%s: flag %s (want %s), pole base %.2f m (model top %.2f m)%s" % [house.bkind, nf.scene_file_path if nf else "none", want, fy, house.model_h,
+				", FlagPole empty" if house.model3d and house.model3d.find_child("FlagPole", true, false) else ", roof from mesh"])
+		# enemy ~25 m beyond the footprint corner (in rifle range of the side windows whichever house is nearest)
+		var foe: Unit = battle._spawn("rifleman", 1, house.position + Vector3(house.half.x + 28.0, 0, house.half.y + 10.0), 0.0)
+		foe.order_stop()
+		var f_hp0: float = foe.hp
+		var shots0 := 0
+		for p in house.passengers: shots0 += int(battle.shots_by.get(p.uid, 0))
+		await _wait_sim(12.0)
+		var shots1 := 0
+		for p in house.passengers: shots1 += int(battle.shots_by.get(p.uid, 0))
+		var occ_ok: bool = house.passengers.all(func(p): return not p.dead)
+		_log("garrison_fires_from_inside", shots1 > shots0 and (foe.dead or foe.hp < f_hp0) and occ_ok, "rounds fired from the windows %d, enemy %s, occupants unharmed %s" % [
+			shots1 - shots0, "killed" if foe.dead else "hp %.0f -> %.0f" % [f_hp0, foe.hp], str(occ_ok)])
+		if not hosp.is_empty():
+			var hs: Building = hosp[0]
+			var pat: Unit = battle._spawn("rifleman", 0, (hs.door_pos if hs.door_pos != Vector3.INF else hs.position + Vector3(0, 0, hs.half.y + 4)) + Vector3(0, 0, 4), 0.0)
+			pat.hp = pat.def.hp * 0.3
+			var h0: float = pat.hp
+			battle.issue({"type": "board", "team": 0, "ids": [pat.uid], "target": hs.uid})
+			await _until(func(): return pat in hs.passengers, 40.0)
+			await _wait_sim(10.0)
+			_log("hospital_heals", pat in hs.passengers and pat.hp >= h0 + pat.def.hp * 0.25, "health %.0f -> %.0f of %.0f in 10 s" % [h0, pat.hp, pat.def.hp])
+			# save / load with the hospital occupied
+			var data: Dictionary = SaveGame.capture(battle)
+			var hs_id: int = hs.uid
+			var pat_id: int = pat.uid
+			var house_id: int = house.uid
+			SaveGame.restore(battle, data)
+			var hs2: Building = battle.by_id.get(hs_id)
+			var ok_load: bool = hs2 != null and hs2.team == 0 and hs2.passengers.size() == 1 and hs2.passengers[0].uid == pat_id
+			_log("garrison_survives_save_load", ok_load, "hospital side %s, occupants %s" % [str(hs2.team if hs2 else "-"), str(hs2.passengers.size() if hs2 else -1)])
+			await _frames(3)
+			house = battle.by_id.get(house_id)
+		var n_in: int = house.passengers.size()
+		var alive0: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
+		house.take_damage(999999.0, null)
+		await _wait_sim(0.5)
+		var alive1: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
+		_log("garrison_ejected_when_destroyed", house.dead and house.passengers.is_empty() and alive1 >= alive0 + 1 and house.team == -1,
+			"%d inside; outside afterwards %d -> %d, building side %d" % [n_in, alive0, alive1, house.team])
 
 
 func _kinds(arr: Array) -> Array:

@@ -6,9 +6,11 @@ panel, and in a white circle on the rooftop helipad); no red cross / crescent / 
 
 Run:  python3 -I env_civic_3d.py <out_root> [--only id,id] [--sheet <contact_sheet.png>] [--icons <dir>] [--previews-only]
       --icons writes <dir>/<id>_icon.png: 256 x 192 RGB front-3/4 portrait for the selection panel (neutral grey bg).
-Out:  <out_root>/<id>/<id>.glb for id in civ_house_a, civ_house_b, civ_apartment, civ_center, civ_hospital
+Out:  <out_root>/<id>/<id>.glb for id in civ_house_a, civ_house_b, civ_apartment, civ_center, civ_hospital,
+      civ_factory, civ_warehouse, civ_school, civ_market, civ_station (B3)
       Each GLB: one mesh node `<id>` (atlas material CV_<Id>, 1024 px baked colour x AO; `<id>`_2S double-sided
-      variant only where dish shells need it) + empties `Door`, `Port1..PortN` (+ `Heal` on the hospital).
+      variant only where dish shells need it) + empties `Door`, `Port1..PortN` (+ `Heal` on the hospital) and
+      `FlagPole` (base of a flag pole on the roof, for the occupying side's flag).
 Conventions (same as bldkit_b / the existing structures and props): metres; origin = centre of the footprint at
 ground level; the main entrance faces Blender -Y = glTF/Godot +Z. Walls continue 0.5 m below the origin so the
 buildings sit on uneven terrain without gaps. Everything (incl. canopies) stays inside the stated footprint; only
@@ -27,9 +29,11 @@ from mathutils import Matrix, Euler, Vector as V
 PI = math.pi
 SUB = -0.5
 n_ = K.noise; col = K.col; shade = K.shade; lines = K.lines; frac = K.frac; UU = K.UU; VV = K.VV
-IDS = ["civ_house_a", "civ_house_b", "civ_apartment", "civ_center", "civ_hospital"]
+IDS = ["civ_house_a", "civ_house_b", "civ_apartment", "civ_center", "civ_hospital", "civ_factory", "civ_warehouse",
+       "civ_school", "civ_market", "civ_station"]
 FOOT = {"civ_house_a": (10, 9), "civ_house_b": (12, 10), "civ_apartment": (18, 12), "civ_center": (22, 16),
-        "civ_hospital": (24, 18)}
+        "civ_hospital": (24, 18), "civ_factory": (36, 24), "civ_warehouse": (24, 14), "civ_school": (26, 16),
+        "civ_market": (26, 12), "civ_station": (10, 20)}
 
 
 # ====================================================================== surfaces
@@ -754,9 +758,315 @@ def civ_hospital(kit, P):
     return D, ports, roof, heal
 
 
+# ====================================================================== B3 buildings (Zagros town + industrial zone)
+def t_corr(rgb, seed, ribs=8):
+    """Trapezoidal corrugated sheet cladding: ribs every 1/ribs of a tile along u (vertical on walls)."""
+    def f():
+        fr = frac(UU * ribs)
+        k = np.where(fr < 0.18, 1.14, np.where((fr > 0.5) & (fr < 0.66), 0.8, 1.0))
+        k = k * (1 + 0.025 * n_(60, 60, seed) + 0.02 * n_(2, 2, seed + 1) - 0.08 * np.clip(n_(2, 50, seed + 2), 0, None))
+        return shade(col(*rgb), k)
+    return f
+
+
+def t_brick():          # red-brown factory brick, 0.25 x 0.075 m courses (S = 2 m)
+    row = np.floor(VV * 26)
+    off = (row % 2) * 0.5 / 8
+    j = np.maximum(lines(VV, 26, 0.12), lines(UU + off, 8, 0.03))
+    tone = 1 + 0.07 * np.sin(row * 13.1 + np.floor((UU + off) * 8) * 71.3)
+    k = (1 + 0.04 * n_(20, 20, 941) + 0.03 * n_(2, 2, 942)) * tone * (1 - 0.3 * j)
+    return shade(col(150, 84, 62), k)
+
+
+K.SURF.update({
+    "corr_grey": (t_corr((168, 172, 170), 911), 2.0), "corr_sand": (t_corr((196, 182, 150), 913), 2.0),
+    "corr_blue": (t_corr((108, 132, 150), 915), 2.0), "roof_grey": (t_corr((150, 152, 150), 917, ribs=10), 2.0),
+    "brick": (t_brick, 2.0), "acc_ochre": (K.t_flat((196, 150, 70), 0.04, 921), 2.0),
+})
+
+
+def gable_end(P, m, x, y0, y1, z0, ridge, sg):
+    """Triangular gable wall at plane x (outward sign sg) under a ridge running along X."""
+    ym = (y0 + y1) / 2
+    pts = [(x, y0, z0), (x, y1, z0), (x, ym, ridge)] if sg > 0 else [(x, y1, z0), (x, y0, z0), (x, ym, ridge)]
+    P.quad(m, pts)
+
+
+def civ_factory(kit, P):
+    """36 x 24 m light-industry works: sawtooth north-light hall (concrete plinth, grey sheet cladding, two roller
+    doors, loading dock) and a two-storey office at the front-right corner. Garrison ports are on the office and the
+    hall's clerestory."""
+    X0, X1, Y0, Y1, H = -17.6, 8.2, -9.0, 11.6, 7.0
+    block(P, "corr_grey", None, X0, X1, Y0, Y1, H)
+    ring(P, "gconc", X0, X1, Y0, Y1, SUB, 2.4, o=0.06)
+    ring(P, "acc_blue", X0, X1, Y0, Y1, H - 0.35, H, o=0.05)
+    n = 4; dep = (Y1 - Y0) / n
+    for i in range(n):                                   # sawtooth teeth: slope rises towards +Y, glazing faces +Y
+        y0 = Y0 + i * dep; y1 = y0 + dep
+        P.prism("roof_grey", [(y0, H), (y1, H + 2.7), (y1, H)], "x", X0 - 0.15, X1 + 0.15)
+        P.span("ribbon", X0 + 0.2, X1 - 0.2, y1 - 0.01, y1 + 0.05, H + 0.15, H + 2.45)
+        for x in (X0 + 5.0, X0 + 13.0, X0 + 21.0):
+            P.cyl("metal", (x, y0 + dep * 0.35, H + 1.0 + 0.2), 0.35, 0.9, seg=8)
+    F = faces(X0, X1, Y0, Y1)
+    f = F["front"]
+    for u in (-12.6, -4.4):                                # roller doors + steel frames
+        f.span(P, "trim", u - 2.75, u + 2.75, 0.0, 0.08, 0.0, 5.45)
+        f.span(P, "door", u - 2.5, u + 2.5, 0.08, 0.12, 0.0, 5.2)
+        f.span(P, "yellow", u - 2.75, u - 2.5, 0.08, 0.14, 0.0, 1.0)
+        f.span(P, "yellow", u + 2.5, u + 2.75, 0.08, 0.14, 0.0, 1.0)
+    door(P, f, 3.6, 1.0, 2.2, leaf="door", hood=0.6)
+    for u in (-16.0, -8.5, -0.6, 6.4):                     # high window band between the doors
+        f.span(P, "wglass", u - 1.1, u + 1.1, 0.04, 0.08, 4.6, 5.6)
+        f.span(P, "trim", u - 1.2, u + 1.2, 0.0, 0.12, 4.5, 4.6)
+    P.span("gconc", -16.4, -0.6, -11.2, Y0, -0.2, 1.0)    # loading dock + bumpers + steps
+    for u in (-14.4, -10.8, -6.2, -2.6):
+        P.span("rubber", u - 0.3, u + 0.3, -11.35, -11.2, 0.3, 0.8)
+    P.span("gconc", -1.2, -0.6, -12.0, -11.2, -0.2, 0.33); P.span("gconc", -1.2, -0.6, -11.6, -11.2, 0.33, 0.66)
+    for side, us in (("left", (-6.0, -1.0, 4.0, 9.0)), ("back", (-15.0, -10.0, -5.0, 0.0, 5.0))):
+        for u in us:
+            F[side].span(P, "wglass", u - 1.2, u + 1.2, 0.04, 0.08, 4.4, 5.6)
+            F[side].span(P, "trim", u - 1.3, u + 1.3, 0.0, 0.12, 4.3, 4.4)
+    door(P, F["back"], 6.0, 1.0, 2.2, leaf="door")
+    for z in (2.0, 3.6):                                   # pipe run along the left wall
+        F["left"].span(P, "steel", -8.5, 10.5, 0.1, 0.3, z, z + 0.2)
+    # office block (front right)
+    OX0, OX1, OY0, OY1, OH, F1 = 8.6, 17.6, -11.6, 2.4, 7.6, 3.8
+    block(P, "plas_white", "roofc", OX0, OX1, OY0, OY1, OH)
+    ring(P, "plas_dark", OX0, OX1, OY0, OY1, SUB, 0.5, o=0.04)
+    ring(P, "trim", OX0, OX1, OY0, OY1, F1 - 0.12, F1 + 0.1, o=0.06)
+    ring(P, "acc_blue", OX0, OX1, OY0, OY1, OH - 0.3, OH, o=0.05)
+    parapet(P, "plas_white", OX0, OX1, OY0, OY1, OH, h=0.6)
+    G = faces(OX0, OX1, OY0, OY1)
+    door(P, G["front"], 13.1, 1.6, 2.4, leaf="glass", hood=1.0)
+    for u in (10.3, 15.9):
+        window(P, G["front"], u, 1.0, 1.8, 1.5)
+        window(P, G["front"], u, F1 + 0.9, 1.8, 1.5, sill=False, hood=True)
+    window(P, G["front"], 13.1, F1 + 0.9, 1.4, 1.5, sill=False, hood=True)
+    for u in (-9.6, -5.6, -1.6):
+        window(P, G["right"], u, 1.0, 1.6, 1.5)
+        window(P, G["right"], u, F1 + 0.9, 1.6, 1.5, sill=False, hood=True)
+    for u in (11.0, 15.4):
+        window(P, G["back"], u, F1 + 0.9, 1.4, 1.4)
+    ac_unit(P, G["right"], 0.8, F1 + 2.4)
+    roof_ac(P, 10.6, 0.8, OH); roof_ac(P, 12.4, 0.8, OH)
+    tank(P, 15.6, 1.2, OH, r=0.5, h=1.0, m="tank_w", stand=0.5)
+    antenna(P, 16.6, 1.6, OH, 2.2)
+    D = (13.1, -12.6, 0.0)
+    ports = [(G["front"], 10.3, 1.7), (G["front"], 15.9, 1.7), (G["front"], 10.3, F1 + 1.65), (G["front"], 15.9, F1 + 1.65),
+             (G["right"], -9.6, 1.7), (G["right"], -1.6, F1 + 1.65), (G["right"], -5.6, F1 + 1.65),
+             (f, -16.0, 5.1), (f, -0.6, 5.1), (F["left"], 4.0, 5.1)]
+    roof = [(OX0 + 0.6, OY0 + 0.6, OH + 0.85), (OX1 - 0.6, OY0 + 0.6, OH + 0.85)]
+    return D, ports, roof, None
+
+
+def civ_warehouse(kit, P):
+    """24 x 14 m storage shed: sand sheet cladding on a concrete plinth, shallow gable roof along X, two roller
+    doors under a canopy, high window strips (garrison ports)."""
+    X0, X1, Y0, Y1, H, R = -12.0, 12.0, -6.2, 7.0, 6.0, 7.5
+    block(P, "corr_sand", None, X0, X1, Y0, Y1, H)
+    ring(P, "gconc", X0, X1, Y0, Y1, SUB, 1.2, o=0.05)
+    ym = (Y0 + Y1) / 2
+    P.prism("roof_grey", [(Y0 - 0.35, H - 0.08), (ym, R), (Y1 + 0.35, H - 0.08), (Y1 + 0.35, H + 0.04), (ym, R + 0.12), (Y0 - 0.35, H + 0.04)],
+            "x", X0 - 0.3, X1 + 0.3)
+    gable_end(P, "corr_sand", X1, Y0, Y1, H, R, 1)
+    gable_end(P, "corr_sand", X0, Y0, Y1, H, R, -1)
+    F = faces(X0, X1, Y0, Y1)
+    f = F["front"]
+    for u in (-6.0, 2.6):
+        f.span(P, "trim", u - 2.3, u + 2.3, 0.0, 0.08, 0.0, 4.75)
+        f.span(P, "door", u - 2.1, u + 2.1, 0.08, 0.12, 0.0, 4.5)
+    door(P, f, 8.6, 1.0, 2.2, leaf="doorb")
+    P.span("metal", -9.0, 5.6, -7.0, Y0, 5.0, 5.15)        # canopy over the doors
+    for u in (-9.0, 5.6):
+        P.strut("metal", (u, -6.95, 5.0), (u, Y0, 5.9), 0.04, seg=4)
+    for side, us in (("left", (-3.0, 3.0)), ("right", (-3.0, 3.0)), ("back", (-8.0, -2.5, 2.5, 8.0))):
+        for u in us:
+            F[side].span(P, "wglass", u - 1.4, u + 1.4, 0.04, 0.08, 4.3, 5.1)
+            F[side].span(P, "trim", u - 1.5, u + 1.5, 0.0, 0.12, 4.2, 4.3)
+    for u in (-10.0, 10.0):
+        f.span(P, "wglass", u - 0.9, u + 0.9, 0.04, 0.08, 4.3, 5.1)
+    P.span("pave", X0, X1, -7.0, Y0, -0.1, 0.05)
+    for x in (-11.0, 11.0):
+        P.span("yellow", x - 0.15, x + 0.15, -6.95, -6.65, 0.0, 0.9)
+    D = (8.6, -7.6, 0.0)
+    ports = [(f, -10.0, 4.7), (f, 10.0, 4.7), (F["left"], -3.0, 4.7), (F["left"], 3.0, 4.7), (F["right"], -3.0, 4.7),
+             (F["right"], 3.0, 4.7), (F["back"], -8.0, 4.7), (F["back"], 8.0, 4.7)]
+    return D, ports, [], None
+
+
+def civ_school(kit, P):
+    """26 x 16 m two-storey school: ochre and sand plaster, classroom window rows, entrance porch, walled front
+    yard with a gate, rooftop tanks and solar panels; the fascia panel carries an abstract emblem only (no text)."""
+    X0, X1, Y0, Y1, F1, H = -13.0, 13.0, -2.6, 8.0, 3.6, 7.2
+    block(P, "plas_sand", "roofc", X0, X1, Y0, Y1, H)
+    ring(P, "acc_ochre", X0, X1, Y0, Y1, SUB, F1 - 0.15, o=0.05)
+    ring(P, "trim", X0, X1, Y0, Y1, F1 - 0.15, F1 + 0.1, o=0.08)
+    ring(P, "acc_terra", X0, X1, Y0, Y1, H - 0.3, H, o=0.05)
+    parapet(P, "plas_sand", X0, X1, Y0, Y1, H, h=0.7)
+    F = faces(X0, X1, Y0, Y1)
+    f = F["front"]
+    for u in (-10.6, -7.2, -3.8, 3.8, 7.2, 10.6):
+        window(P, f, u, 1.0, 2.0, 1.5, bars=0, n0=0.05)
+        window(P, f, u, F1 + 0.9, 2.0, 1.5, sill=False, hood=True)
+    window(P, f, 0.0, F1 + 0.9, 2.4, 1.5, sill=False, hood=True)
+    door(P, f, 0.0, 2.2, 2.4, leaf="doorb", step=False, n0=0.05)
+    for u in (-10.6, -6.4, -2.2, 2.2, 6.4, 10.6):
+        window(P, F["back"], u, 1.0, 2.0, 1.5, bars=3, n0=0.05)
+        window(P, F["back"], u, F1 + 0.9, 2.0, 1.5)
+    for side in ("left", "right"):
+        for u in (0.6, 5.0):
+            window(P, F[side], u, 1.0, 1.4, 1.5, bars=3, n0=0.05)
+            window(P, F[side], u, F1 + 0.9, 1.4, 1.5)
+    ac_unit(P, F["back"], -8.4, F1 + 2.4); ac_unit(P, F["back"], 4.3, F1 + 2.4)
+    # porch: canopy on two columns, emblem panel above
+    P.span("trim", -3.4, 3.4, -5.0, Y0, 3.1, 3.4)
+    P.span("acc_terra", -3.45, 3.45, -5.05, -4.9, 3.05, 3.45)
+    for x in (-3.0, 3.0):
+        P.cyl("trim", (x, -4.6, 1.55), 0.16, 3.1, seg=10)
+    Face("y", Y0, -1).span(P, "acc_teal", -2.2, 2.2, 0.0, 0.1, F1 + 2.45, H - 0.45)
+    P.cyl("sign_w", (-1.3, Y0 - 0.12, F1 + 2.95), 0.36, 0.04, rot=(PI / 2, 0, 0), seg=16)
+    P.cyl("acc_ochre", (-1.3, Y0 - 0.15, F1 + 2.95), 0.2, 0.04, rot=(PI / 2, 0, 0), seg=12)
+    Face("y", Y0, -1).span(P, "sign_w", -0.6, 1.8, 0.1, 0.12, F1 + 3.05, F1 + 3.17)
+    Face("y", Y0, -1).span(P, "sign_w", -0.6, 1.2, 0.1, 0.12, F1 + 2.7, F1 + 2.82)
+    # yard: paving, front wall with gate piers, two trees, flag-less pole base is the roof FlagPole
+    P.span("pave", X0 + 0.25, X1 - 0.25, -7.8, Y0, -0.1, 0.05)
+    for (a0, a1) in ((X0, -2.2), (2.2, X1)):
+        P.span("plas_sand", a0, a1, -8.0, -7.75, SUB, 1.5)
+        P.span("trim", a0 - 0.03, a1 + 0.03, -8.04, -7.71, 1.5, 1.58)
+    for (y0, y1, x) in ((-7.75, Y0, X0), (-7.75, Y0, X1 - 0.25)):
+        P.span("plas_sand", x, x + 0.25, y0, y1, SUB, 1.5)
+    for x in (-2.2, 2.2):
+        P.span("plas_dark", x - 0.2, x + 0.2, -8.05, -7.7, SUB, 2.0)
+    tree(P, -8.5, -5.2, h=4.0, r=1.4, seed=41)
+    tree(P, 8.5, -5.4, h=4.4, r=1.5, seed=43)
+    # roof: tanks, solar panel rows, stair hut
+    SX0, SX1, SY0, SY1, SH = -12.2, -9.2, 4.4, 7.4, H + 2.5
+    block(P, "plas_sand", "roofc", SX0, SX1, SY0, SY1, SH, z0=H)
+    door(P, Face("x", SX1, 1), 5.9, 0.9, 2.1, leaf="door", step=False, z0=H)
+    for k, x in enumerate((-7.6, -6.4)):
+        tank(P, x, 6.6, H, r=0.5, h=1.0, m=("tank_w" if k == 0 else "tank_bl"), stand=0.5)
+    for y in (1.4, 4.2):
+        for x in (-3.0, 0.6, 4.2, 7.8):
+            P.box("ribbon", (x, y, H + 0.55), (3.2, 1.6, 0.06), rot=(-0.5, 0, 0))
+            P.strut("metal", (x - 1.4, y + 0.5, H), (x - 1.4, y + 0.5, H + 0.95), 0.03, seg=4)
+            P.strut("metal", (x + 1.4, y + 0.5, H), (x + 1.4, y + 0.5, H + 0.95), 0.03, seg=4)
+    D = (0.0, -8.9, 0.0)
+    ports = [(f, -10.6, F1 + 1.65), (f, -3.8, F1 + 1.65), (f, 3.8, F1 + 1.65), (f, 10.6, F1 + 1.65), (f, -7.2, 1.75),
+             (f, 7.2, 1.75), (F["left"], 0.6, F1 + 1.65), (F["right"], 5.0, F1 + 1.65), (F["back"], -6.4, F1 + 1.65),
+             (F["back"], 6.4, F1 + 1.65)]
+    roof = [(X0 + 0.6, Y0 + 0.5, H + 0.95), (X1 - 0.6, Y0 + 0.5, H + 0.95)]
+    return D, ports, roof, None
+
+
+def civ_market(kit, P):
+    """26 x 12 m covered market (bazaar arcade): arched front arcade on square piers, shop fronts with shutters and
+    goods, barrel-vaulted roof bays with skylight slots. Secular design (no domes or religious features)."""
+    X0, X1, Y0, Y1, H = -13.0, 13.0, -2.4, 6.0, 4.8
+    block(P, "mud", None, X0, X1, Y0, Y1, H)
+    ring(P, "plas_dark", X0, X1, Y0, Y1, SUB, 0.45, o=0.04)
+    # roof slab + barrel vaults (one per bay, running along Y) with skylight slots
+    P.span("roofc", X0, X1, -6.0, Y1, H, H + 0.25)
+    bays = 6; bw = (X1 - X0) / bays
+    for i in range(bays):
+        cx = X0 + bw * (i + 0.5)
+        arc = [(cx + (bw / 2 - 0.25) * math.cos(a), H + 0.25 + 1.1 * math.sin(a)) for a in np.linspace(0, PI, 9)]
+        P.prism("plaster", arc, "y", -5.6, Y1 - 0.4)
+        P.span("glass", cx - 0.3, cx + 0.3, -1.0, 3.0, H + 1.3, H + 1.42)
+    parapet(P, "mud", X0, X1, -6.0, Y1, H + 0.25, h=0.5, cap="trim")
+    # arcade: piers at Y -6..-5.4, arches between them (crown pieces), back wall = shop fronts at Y0
+    piers = np.linspace(X0 + 0.3, X1 - 0.3, 9)
+    for x in piers:
+        P.span("plaster", x - 0.3, x + 0.3, -6.0, -5.4, SUB, H)
+    for a, b in zip(piers[:-1], piers[1:]):
+        x0, x1 = a + 0.3, b - 0.3; cx = (x0 + x1) / 2; r = (x1 - x0) / 2; spring = 2.6
+        for k in range(8):
+            t0, t1 = PI * k / 8, PI * (k + 1) / 8
+            p0 = (cx - r * math.cos(t0), spring + r * 0.9 * math.sin(t0)); p1 = (cx - r * math.cos(t1), spring + r * 0.9 * math.sin(t1))
+            P.prism("plaster", [p0, p1, (p1[0], H), (p0[0], H)], "y", -6.0, -5.4)
+        P.span("trim", x0 - 0.3, x1 + 0.3, -6.06, -5.35, H - 0.4, H - 0.3)
+    P.span("pave", X0, X1, -5.4, Y0, -0.1, 0.06)
+    F = faces(X0, X1, Y0, Y1)
+    f = F["front"]
+    goods = ["awn_t", "awn_s", "awn_r", "acc_ochre", "acc_blue", "acc_terra"]
+    for i, (a, b) in enumerate(zip(piers[:-1], piers[1:])):
+        u0, u1 = a + 0.5, b - 0.5
+        f.span(P, "trim", u0 - 0.1, u1 + 0.1, 0.0, 0.06, 0.0, 3.0)
+        if i % 3 == 1:                                     # shutters down
+            f.span(P, "door", u0, u1, 0.06, 0.1, 0.0, 2.8)
+        else:                                              # open stall: dark interior, goods on a counter
+            f.span(P, "dark", u0, u1, 0.06, 0.08, 0.0, 2.8)
+            f.span(P, "woodold", u0, u1, 0.08, 0.7, 0.0, 0.85)
+            for k in range(3):
+                uu = u0 + (k + 0.5) * (u1 - u0) / 3
+                f.span(P, goods[(i + k) % len(goods)], uu - 0.35, uu + 0.35, 0.15, 0.6, 0.85, 1.2 + 0.1 * k)
+    for side in ("left", "right"):
+        for u in (0.4, 3.8):
+            window(P, F[side], u, 2.6, 0.9, 0.9, bars=2)
+    for u in (-9.0, -3.0, 3.0, 9.0):
+        window(P, F["back"], u, 2.6, 1.0, 0.9, bars=2)
+    door(P, F["back"], 6.0, 1.2, 2.3, leaf="woodold")
+    D = (0.0, -6.8, 0.0)
+    ports = [(F["back"], -9.0, 3.05), (F["back"], 9.0, 3.05), (F["back"], -3.0, 3.05), (F["left"], 0.4, 3.05),
+             (F["right"], 3.8, 3.05)]
+    roof = [(X0 + 0.7, -5.4, H + 1.0), (-0.0, -5.4, H + 1.0), (X1 - 0.7, -5.4, H + 1.0)]
+    return D, ports, roof, None
+
+
+def civ_station(kit, P):
+    """10 x 20 m rail station (long axis along Godot Z): beige booking hall with a pitched centre block, flat-roofed
+    wings, and a platform canopy along the track side (-X). Abstract clock and sign panels only (no text)."""
+    X0, X1, Y0, Y1, H = -2.2, 5.0, -8.6, 8.6, 4.4
+    block(P, "plas_beige", "roofc", X0, X1, Y0, Y1, H)
+    ring(P, "plas_dark", X0, X1, Y0, Y1, SUB, 0.5, o=0.04)
+    ring(P, "acc_terra", X0, X1, Y0, Y1, H - 0.3, H, o=0.05)
+    parapet(P, "plas_beige", X0, X1, Y0, -2.6, H, h=0.5, sides="fblr")
+    parapet(P, "plas_beige", X0, X1, 2.6, Y1, H, h=0.5, sides="fblr")
+    # centre hall: higher block with a gable roof running along X
+    CY0, CY1, CH, CR = -2.6, 2.6, 6.0, 7.4
+    block(P, "plas_beige", None, X0, X1, CY0, CY1, CH, z0=H)
+    P.prism("roof_grey", [(CY0 - 0.4, CH - 0.06), (0.0, CR), (CY1 + 0.4, CH - 0.06), (CY1 + 0.4, CH + 0.06), (0.0, CR + 0.12), (CY0 - 0.4, CH + 0.06)],
+            "x", X0 - 0.4, X1 + 0.4)
+    gable_end(P, "plas_beige", X1, CY0, CY1, CH, CR, 1)
+    gable_end(P, "plas_beige", X0, CY0, CY1, CH, CR, -1)
+    P.cyl("sign_w", (X1 + 0.06, 0.0, CH + 0.55), 0.55, 0.06, rot=(0, PI / 2, 0), seg=16)          # clock (no text)
+    P.span("dark", X1 + 0.09, X1 + 0.11, -0.04, 0.04, CH + 0.5, CH + 0.95)
+    P.span("dark", X1 + 0.09, X1 + 0.11, -0.04, 0.32, CH + 0.51, CH + 0.59)
+    F = faces(X0, X1, Y0, Y1)
+    for side in ("left", "right"):
+        for u in (-6.6, -4.2, 4.2, 6.6):
+            window(P, F[side], u, 1.0, 1.1, 1.8, frame="trim", hood=True)
+        door(P, F[side], 0.0, 1.8, 2.6, leaf="doorb", hood=0.5)
+        window(P, F[side], 0.0, H + 0.3, 2.0, 0.9, sill=False)
+    for side in ("front", "back"):
+        window(P, F[side], 1.4, 1.0, 1.2, 1.6, shutter="shut_g")
+    F["right"].span(P, "acc_teal", -1.6, 1.6, 0.0, 0.1, 3.0, 3.8)                        # sign panel (no text)
+    # platform canopy (track side, -X): slab on columns, benches
+    P.span("roof_grey", -5.0, X0, -9.6, 9.6, 3.5, 3.65)
+    P.span("acc_terra", -5.05, -4.9, -9.6, 9.6, 3.35, 3.7)
+    for y in np.linspace(-8.8, 8.8, 5):
+        P.cyl("metal", (-4.4, y, 1.75), 0.1, 3.5, seg=8)
+        P.span("metal", -4.4, X0, y - 0.06, y + 0.06, 3.3, 3.5)
+    for y in (-5.8, 5.8):
+        P.span("woodold", -3.6, -3.1, y - 1.0, y + 1.0, 0.45, 0.52)
+        P.span("metal", -3.6, -3.1, y - 0.9, y - 0.8, 0.0, 0.45); P.span("metal", -3.6, -3.1, y + 0.8, y + 0.9, 0.0, 0.45)
+    roof_ac(P, 2.8, -6.0, H); roof_ac(P, 2.8, 6.0, H)
+    D = (5.9, 0.0, 0.0)
+    ports = [(F["left"], -6.6, 1.9), (F["left"], 6.6, 1.9), (F["right"], -6.6, 1.9), (F["right"], 6.6, 1.9),
+             (F["front"], 1.4, 1.8), (F["back"], 1.4, 1.8)]
+    roof = [(X1 - 0.6, Y0 + 0.6, H + 0.8), (X1 - 0.6, Y1 - 0.6, H + 0.8)]
+    return D, ports, roof, None
+
+
 BUILD = {"civ_house_a": civ_house_a, "civ_house_b": civ_house_b, "civ_apartment": civ_apartment,
-         "civ_center": civ_center, "civ_hospital": civ_hospital}
-PREFIX = {"civ_house_a": "CVA", "civ_house_b": "CVB", "civ_apartment": "CVP", "civ_center": "CVC", "civ_hospital": "CVH"}
+         "civ_center": civ_center, "civ_hospital": civ_hospital, "civ_factory": civ_factory,
+         "civ_warehouse": civ_warehouse, "civ_school": civ_school, "civ_market": civ_market, "civ_station": civ_station}
+PREFIX = {"civ_house_a": "CVA", "civ_house_b": "CVB", "civ_apartment": "CVP", "civ_center": "CVC", "civ_hospital": "CVH",
+          "civ_factory": "CVF", "civ_warehouse": "CVW", "civ_school": "CVS", "civ_market": "CVM", "civ_station": "CVR"}
+# FlagPole empty: base of a flag pole on the roof (the game mounts the occupying side's flag there). Blender coords.
+FLAGPOLE = {"civ_house_a": (3.9, -2.3, 3.3), "civ_house_b": (-2.0, -3.3, 6.4), "civ_apartment": (-6.5, -3.8, 12.9),
+            "civ_center": (-8.6, -2.2, 8.0), "civ_hospital": (-1.9, -3.5, 11.1), "civ_factory": (16.6, -10.6, 7.6),
+            "civ_warehouse": (-11.0, 0.0, 7.55), "civ_school": (-11.6, -1.6, 7.2), "civ_market": (12.0, 5.0, 5.05),
+            "civ_station": (4.2, 7.4, 4.4)}
 
 
 def make(bid, root):
@@ -775,6 +1085,7 @@ def make(bid, root):
         pr.add(p)
     if heal is not None:
         kit.empty("Heal", heal)
+    kit.empty("FlagPole", FLAGPOLE[bid])
     W, Dp = FOOT[bid]
     return kit.finish(out, bid + ".glb", ground_size=max(W, Dp) * 3)
 
@@ -982,7 +1293,7 @@ def main(argv):
         info[bid] = {"tris": tris, "ports": len(ports)}
         print(f"== {bid}: tris {tris}  meshes {names}  materials {mats}")
         print(f"   bbox blender x[{lo[0]:.2f},{hi[0]:.2f}] y[{lo[1]:.2f},{hi[1]:.2f}] z[{lo[2]:.2f},{hi[2]:.2f}]")
-        for k in ["Door", "Heal"] + ports:
+        for k in ["Door", "Heal", "FlagPole"] + ports:
             if k in emp:
                 print(f"   {k:6s} godot {gltf_to_godot(emp[k])}")
     if sheet:

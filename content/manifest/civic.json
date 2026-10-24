@@ -8,7 +8,7 @@
  "license": "original work, project-owned",
  "status": "shippable",
  "content_notes": "Generic Middle-East / Mediterranean town style. No real-world logos, brands, writing or flags (flagpole is bare; sign boards carry abstract shapes only). Hospital is marked only with a plain white 'H' on green panels and a white 'H' in a circle on the helipad; no red cross, red crescent, red crystal or other protected emblem.",
- "conventions": "1 unit = 1 m; origin = footprint centre at ground level; main entrance faces Godot +Z (Blender -Y), same as the existing structures and props; walls extend 0.5 m below ground. Nodes: mesh '<id>', empties 'Door', 'Port1'..'PortN', and 'Heal' (hospital only).",
+ "conventions": "1 unit = 1 m; origin = footprint centre at ground level; main entrance faces Godot +Z (Blender -Y), same as the existing structures and props; walls extend 0.5 m below ground. Nodes: mesh '<id>', empties 'Door', 'Port1'..'PortN', 'Heal' (hospital only) and 'FlagPole' (B3: base of a flag pole on the roof, every model).",
  "review": "docs/screens/civic_models_sheet.png",
  "items": [
   {
@@ -60,6 +60,61 @@
    ],
    "description": "Three-storey hospital: ribbon windows, glazed lobby behind an ambulance-bay canopy and drive, white 'H' on green sign panels (canopy, pylon, stair core), rooftop plant room and helipad with a white 'H' in a circle",
    "icon": "res://assets/ui/civic/civ_hospital_icon.png"
+  },
+  {
+   "id": "civ_factory",
+   "path": "res://assets/units3d/civic/civ_factory/civ_factory.glb",
+   "footprint_m": [
+    36,
+    24
+   ],
+   "description": "Light-industry works: four-tooth sawtooth north-light hall (concrete plinth, grey sheet cladding, two roller doors with a loading dock) and a two-storey white office at the front-right corner; roof vents, AC units",
+   "added": "B3 2026-10-23",
+   "icon": "res://assets/ui/civic/civ_factory_icon.png"
+  },
+  {
+   "id": "civ_warehouse",
+   "path": "res://assets/units3d/civic/civ_warehouse/civ_warehouse.glb",
+   "footprint_m": [
+    24,
+    14
+   ],
+   "description": "Storage shed: sand sheet cladding on a concrete plinth, shallow gable roof, two roller doors under a steel canopy, high window strips",
+   "added": "B3 2026-10-23",
+   "icon": "res://assets/ui/civic/civ_warehouse_icon.png"
+  },
+  {
+   "id": "civ_school",
+   "path": "res://assets/units3d/civic/civ_school/civ_school.glb",
+   "footprint_m": [
+    26,
+    16
+   ],
+   "description": "Two-storey ochre and sand school: classroom window rows, porch with an abstract emblem panel (no text), walled front yard with a gate and two trees, rooftop solar panels and tanks",
+   "added": "B3 2026-10-23",
+   "icon": "res://assets/ui/civic/civ_school_icon.png"
+  },
+  {
+   "id": "civ_market",
+   "path": "res://assets/units3d/civic/civ_market/civ_market.glb",
+   "footprint_m": [
+    26,
+    12
+   ],
+   "description": "Covered market (bazaar arcade): eight arched bays on square piers, shop fronts with shutters or open stalls with goods, barrel-vaulted roof bays with skylight slots; secular design (no domes or religious features)",
+   "added": "B3 2026-10-23",
+   "icon": "res://assets/ui/civic/civ_market_icon.png"
+  },
+  {
+   "id": "civ_station",
+   "path": "res://assets/units3d/civic/civ_station/civ_station.glb",
+   "footprint_m": [
+    10,
+    20
+   ],
+   "description": "Rail station booking hall: beige walls, pitched centre block with an abstract clock face, flat-roofed wings, platform canopy on columns along the track side (-X), benches; no text",
+   "added": "B3 2026-10-23",
+   "icon": "res://assets/ui/civic/civ_station_icon.png"
   }
  ],
  "icons": {
