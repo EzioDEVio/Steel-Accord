@@ -85,6 +85,7 @@ def build(mat):
     A.rings(rings)
     air = A.build(mat, smooth=40)
     zb_fn = H.bottom_fn(air)
+    zt_fn = H.top_fn(air)
     holes = [H.cut_bay(air, x0, x1, BAY_Y[0], BAY_Y[1], Z_MID) for x0, x1 in BAYS]
     objs["air"] = air
     # engine humps with recessed intakes and exhaust troughs
@@ -103,7 +104,7 @@ def build(mat):
         Hp.rings(rr)
         # intake: dark recess just behind the hump's front with a raised jagged lip (two teeth)
         yi = y0 - 1.6
-        zi = float(ZTOP(yi)) - 0.35
+        zi = zt_fn(xc_, yi) - 0.25
         D.box((xc_, yi - 0.05, zi), (2.1, 0.5, 0.42), rot=(math.radians(-18), 0, 0))
         for dx in (-0.55, 0.55):
             Hp.beam((xc_ + dx - 0.5, yi + 0.35, zi + 0.22), (xc_ + dx, yi + 0.75, zi + 0.24), 0.08, 0.06, up=(0, 0, 1))
@@ -111,8 +112,8 @@ def build(mat):
         # exhaust slots at the aft end of each hump
         for dx in (-0.7, 0.7):
             ye = y1 + 0.4
-            ze = float(ZTOP(ye)) - 0.15
-            D.box((xc_ + dx, ye, ze), (0.95, 0.5, 0.16))
+            ze = zt_fn(xc_ + dx, ye) - 0.07
+            D.box((xc_ + dx, ye, ze), (0.95, 0.5, 0.12))
             ex.append((xc_ + dx, ye - 0.3, ze))
     objs["humps"] = Hp.build(mat, smooth=40)
     objs["dark"] = D.build(mat, smooth=30)

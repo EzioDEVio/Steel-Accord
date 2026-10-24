@@ -204,6 +204,17 @@ def bottom_fn(obj):
     return fz
 
 
+def top_fn(obj):
+    """z of the highest surface of obj below (x, y) (ray cast down from above)."""
+    from mathutils.bvhtree import BVHTree
+    tree = BVHTree.FromObject(obj, bpy.context.evaluated_depsgraph_get())
+
+    def fz(x, y):
+        hit = tree.ray_cast(Vector((x, y, 50.0)), Vector((0, 0, -1)))
+        return hit[0].z if hit[0] is not None else 0.0
+    return fz
+
+
 def rect_outline(x, y, x0, x1, y0, y1, w=0.03):
     inside = (x > x0 - w) & (x < x1 + w) & (y > y0 - w) & (y < y1 + w)
     d = np.minimum(np.minimum(np.abs(x - x0), np.abs(x - x1)), np.minimum(np.abs(y - y0), np.abs(y - y1)))
