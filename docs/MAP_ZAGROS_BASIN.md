@@ -257,3 +257,11 @@ All gameplay carving is still applied on top: passes, trail, flattening, roads a
 - **`bldkit_b` defect found (not fixed there; outside this ticket's files).** In `Part.frustum`, `quad` and `loft`, faces on open islands keep zero normals. The planar "tile" UV then projects along X and the texture smears into stripes. `prop_zb_common.py` patches `K.orient_islands` to call `bm.normal_update()` first. Other `bldkit_b` assets that use `frustum` slabs (for example ground pads) may have the same striping.
 - **Resolution.** The heightfield is 2 m per sample, so cliff risers are one or two cells wide. Up close they look soft; the shader adds procedural detail.
 - **Preview renders.** The RTS render is a Blender preview using a colour map that approximates `terrain_map.gdshader`; it is not in-game output. Supply piles have no mesh in it.
+
+### B3 verification (2026-10-24, Linux, shared 2-CPU machine)
+* `maptest map=zagros_basin nation1=iran`: RESULT 36/36 (31 existing + roads_connect, road_grade, rail_train_portals,
+  buildings_clear_of_infra, road_speed_bonus). Quick modes: `b3only`, `civonly`.
+* `basetest aifast`: 19/19. `test` (army, Proving Ground): 21/22, `match_end` fails; it fails the same way with this
+  branch's scripts reverted to the base commit, so it is not caused by B3 (pre-existing or load-dependent; open).
+* Rendered 1080p (Xvfb software rasteriser, frame times not meaningful): overview 205 draw calls / 674 k primitives,
+  town 215 / 720 k, industry + portal + train 218 / 754 k.
