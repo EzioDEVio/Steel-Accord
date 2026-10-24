@@ -182,7 +182,7 @@ func _check_ai(ai, tag: String, need_later_waves := true) -> void:
 			", ".join(wave_rec.filter(func(w): return w[0] == t).map(func(w): return "%s %.0f%%" % [_clock(w[1]), 100.0 * w[2] / maxf(1.0, w[3])]))])
 	if need_later_waves: _log("%s_air_strike" % tag, ai.stats.air_strikes >= 1, "sorties %d, sorties that fired %d" % [ai.stats.air_sorties, ai.stats.air_strikes])
 	var pw := power_rec.filter(func(p): return p[0] == t)
-	var valid := pw.filter(func(p): return p[3] == "reveal" or p[5] >= 400.0)
+	var valid := pw.filter(func(p): return p[3] == "reveal" or p[3] == "drop" or p[5] >= 400.0)   # drops may go to an uncaptured derrick
 	_log("%s_support_power_valid_target" % tag, not pw.is_empty() and valid.size() == pw.size(),
 		"%d uses: %s" % [pw.size(), ", ".join(pw.map(func(p): return "%s %s %s(value %d)" % [_clock(p[1]), p[2], p[3], int(p[5])]))])
 	if not ai.role_kinds.arty.is_empty():
