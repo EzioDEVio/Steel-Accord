@@ -186,6 +186,10 @@ func _ready() -> void:
 		var ms: Node = load("res://scripts/mapshots.gd").new()
 		ms.battle = self
 		add_child(ms)
+	elif "movetest" in args:
+		var mv: Node = load("res://scripts/autotest_move.gd").new()
+		mv.battle = self
+		add_child(mv)
 	elif "maptest" in args:
 		var mt: Node = load("res://scripts/autotest_map.gd").new()
 		mt.battle = self
@@ -253,7 +257,7 @@ func grounded(p: Vector3) -> Vector3:
 
 
 func _automated() -> bool:
-	return "test" in args or "maptest" in args or "mapshots" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
+	return "test" in args or "maptest" in args or "mapshots" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "movetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).
@@ -382,9 +386,9 @@ func _nav_set() -> Array:
 	return out
 
 
-func find_path(from: Vector3, to: Vector3, move_class := "tracked") -> PackedVector3Array:
+func find_path(from: Vector3, to: Vector3, move_class := "tracked", clearance := 0.0) -> PackedVector3Array:
 	var g: GridNav = navs.get(move_class, gnav)
-	if g: return g.find_path(from, to)
+	if g: return g.find_path(from, to, clearance)
 	return PackedVector3Array([from, to])
 
 
@@ -477,10 +481,16 @@ func _execute(cmd: Dictionary) -> void:
 	if cmd.type in ["place", "place_wall", "produce", "cancel_unit", "rally", "sell", "cancel_build", "repair"]:
 		_execute_econ(cmd)
 		return
+	if cmd.type == "board":
+		_order_board(cmd)
+		return
 	var ids: Array = cmd.get("ids", [])
+	var movers: Array = []
 	for i in ids.size():
 		var u: Unit = by_id.get(ids[i])
 		if u == null or u.dead: continue
+		u.board_target = null          # any other order cancels a pending boarding
+		if cmd.type == "move": movers.append(u)     # formation speed for plain moves; attack-move keeps unit speeds
 		if u.state in [Unit.S.LANDED, Unit.S.RETURN] and u.domain == "heli" and cmd.type in ["move", "attack_move", "attack", "force_ground", "guard", "scatter"]:
 			u.state = Unit.S.IDLE
 		elif u.state == Unit.S.LANDED and cmd.type in ["move", "attack_move", "attack", "force_ground", "guard"]:
@@ -494,12 +504,6 @@ func _execute(cmd: Dictionary) -> void:
 			"force_ground": u.order_force_ground(cmd.pos)
 			"guard": u.order_guard(cmd.points[i], by_id.get(cmd.get("unit", -1)))
 			"stop": u.order_stop()
-			"board":
-				var tr: Unit = by_id.get(cmd.target)
-				if tr and tr.accepts(u):
-					u.board_target = tr
-					var door: Vector3 = (tr as Building).door_pos if tr is Building and (tr as Building).door_pos != Vector3.INF else tr.position
-					u.order_move(door)
 			"unload":
 				if u.is_transport() and not u.passengers.is_empty():
 					if u.domain == "heli": u.unload_pending = true
@@ -514,6 +518,7 @@ func _execute(cmd: Dictionary) -> void:
 				var away := Vector3(u.position.x - cmd.center.x, 0, u.position.z - cmd.center.z)
 				if away.length() < 0.5: away = Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1))
 				u.order_move(u.position + away.normalized() * 14.0)
+	if movers.size() > 1 and not cmd.get("append", false): _assign_group(movers)
 
 
 # ------------------------------------------------------------------ simulation
@@ -537,16 +542,19 @@ func _pmark(k: String) -> void:
 
 func sim_tick(dt: float) -> void:
 	var p := "prof" in args
+	Unit.prof_on = p
 	if p: _pt = Time.get_ticks_usec()
 	for c in pending: _execute(c)
 	pending.clear()
 	if ai and not game_over: ai.tick(dt)
 	if base_ai and not game_over: base_ai.tick(dt)
 	if p: _pmark("ai+cmds")
+	_build_nbr()
 	for u in units:
 		u.sim_tick(dt)
 	if p: _pmark("units")
 	_update_boarding()
+	_update_groups()
 	_separate()
 	if p: _pmark("separate")
 	_update_shots(dt)
@@ -577,6 +585,8 @@ func sim_tick(dt: float) -> void:
 		var tot := 0
 		for k in prof: tot += prof[k]
 		for k in prof: parts.append("%s %.2f" % [k, prof[k] / 300000.0])
+		parts.append("[avoid %.2f ms/tick in %d calls, paths %.2f ms/tick in %d plans]" % [Unit.prof_av_us / 300000.0, Unit.prof_av_n, Unit.prof_path_us / 300000.0, Unit.prof_path_n])
+		Unit.prof_av_us = 0; Unit.prof_av_n = 0; Unit.prof_path_us = 0; Unit.prof_path_n = 0
 		printerr("PROF t=%d units=%d sim %.2f ms/tick: %s | frame process %.2f ms, physics %.2f ms, nodes %d, draw calls %d" % [int(sim_time),
 			units.filter(func(u): return not u.dead).size(), tot / 300000.0, ", ".join(parts),
 			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
@@ -617,22 +627,250 @@ func _ground_units(dt: float) -> void:
 			u.body.rotation.z = lerp_angle(u.body.rotation.z, atan(grad.dot(r)), minf(1.0, dt * 8.0))
 
 
-## Destinations for a group order: a square grid around dest (stable order), so units do not queue in one file.
-func spread(ids: Array, dest: Vector3, spacing := 6.0) -> Array:
-	var n := ids.size()
-	var cols := maxi(1, int(ceil(sqrt(float(n)))))
-	var rows := int(ceil(float(n) / cols))
-	var pts: Array = []
-	for i in n:
-		var col := i % cols
-		var row := i / cols
-		pts.append(dest + Vector3((col - (cols - 1) / 2.0) * spacing, 0, (row - (rows - 1) / 2.0) * spacing))
-	return pts
+## Destinations for an AI group order (same slot logic as the player's formation).
+func spread(ids: Array, dest: Vector3, _spacing := 6.0) -> Array:
+	var us: Array = []
+	for id in ids:
+		var u: Unit = by_id.get(id)
+		if u != null: us.append(u)
+	if us.size() != ids.size():      # unknown ids: plain grid for those
+		var pts: Array = []
+		for i in ids.size(): pts.append(dest + Vector3((i % 4 - 1.5) * 6.0, 0, (i / 4) * 6.0))
+		return pts
+	return group_slots(us, dest)
 
 
-## Units push apart, out of structures and around map obstacles. Spatial hashing keeps this close to linear in the
-## number of units (the old all-pairs loop cost grew with the square of the army size).
-const SEP_CELL := 8.0
+# ------------------------------------------------------------------ movement support (B3)
+## Formation for a group order. Ground units and helicopters form a block centred on dest and oriented to the
+## direction of travel: larger units in the front rows, each row ordered left to right as the units stand (so paths do
+## not cross), slot widths from each unit's drawn size. Every slot is checked for that unit: on walkable ground for
+## its movement class (structures and rocks are blocked in the grid), inside the map, not overlapping another slot;
+## a bad slot moves to the nearest good spot. Jets get a line abreast 30 m apart. Returns points in the order of us.
+func group_slots(us: Array, dest: Vector3) -> Array:
+	var n := us.size()
+	var out: Array = []
+	out.resize(n)
+	if n == 0: return out
+	var c := Vector3.ZERO
+	for u in us: c += u.position
+	c /= n
+	var fwd := Vector3(dest.x - c.x, 0, dest.z - c.z)
+	fwd = fwd.normalized() if fwd.length() > 0.5 else Vector3(0, 0, -1)
+	var right := Vector3(-fwd.z, 0, fwd.x)
+	var taken: Array = []
+	for dom in ["ground", "heli", "jet"]:
+		var idx: Array = []
+		for i in n:
+			if us[i].domain == dom: idx.append(i)
+		if idx.is_empty(): continue
+		if dom == "jet":
+			idx.sort_custom(func(a, b): return us[a].position.dot(right) < us[b].position.dot(right) or (us[a].position.dot(right) == us[b].position.dot(right) and us[a].uid < us[b].uid))
+			for k in idx.size(): out[idx[k]] = dest + right * (float(k) - (idx.size() - 1) * 0.5) * 30.0
+			continue
+		# size class first (big in front), then the units furthest ahead, then id: a strict ordering
+		var key := func(u: Unit) -> int:
+			var r := u.body_r()
+			return 0 if u.def.get("visual") == "infantry" else (2 if r >= 2.2 else 1)
+		idx.sort_custom(func(a, b):
+			var ka: int = key.call(us[a]); var kb: int = key.call(us[b])
+			if ka != kb: return ka > kb
+			var fa: float = us[a].position.dot(fwd); var fb: float = us[b].position.dot(fwd)
+			if fa != fb: return fa > fb
+			return us[a].uid < us[b].uid)
+		var sz: Array = []      # slot width across the row
+		var dp: Array = []      # slot depth along the direction of travel (vehicles arrive facing it)
+		var area := 0.0
+		var smax := 0.0
+		for i in idx:
+			var u: Unit = us[i]
+			var gap := 3.0 if dom == "heli" else (1.0 if u.def.get("visual") == "infantry" else 1.8)
+			var w := 2.0 * u.sub_r() + gap
+			var dd := 2.0 * u.ext_r() + gap
+			sz.append(w); dp.append(dd); area += w * dd; smax = maxf(smax, w)
+		var W := maxf(smax, sqrt(area) * 1.3)
+		var rows: Array = []
+		var cur: Array = []
+		var cw := 0.0
+		var cd := 0.0
+		for k in idx.size():
+			if not cur.is_empty() and cw + sz[k] > W + 0.01:
+				rows.append([cur, cw, cd]); cur = []; cw = 0.0; cd = 0.0
+			cur.append(k); cw += sz[k]; cd = maxf(cd, dp[k])
+		rows.append([cur, cw, cd])
+		var depth := 0.0
+		for row in rows: depth += float(row[2])
+		var y := depth * 0.5
+		for row in rows:
+			y -= float(row[2]) * 0.5
+			var mem: Array = (row[0] as Array).duplicate()
+			mem.sort_custom(func(a, b):
+				var pa: float = us[idx[a]].position.dot(right); var pb: float = us[idx[b]].position.dot(right)
+				if pa != pb: return pa < pb
+				return us[idx[a]].uid < us[idx[b]].uid)
+			var x := -float(row[1]) * 0.5
+			for k in mem:
+				x += float(sz[k]) * 0.5
+				out[idx[k]] = _free_slot(dest + right * x + fwd * y, us[idx[k]], taken, fwd, float(sz[k]) * 0.5, float(dp[k]) * 0.5)
+				x += float(sz[k]) * 0.5
+			y -= float(row[2]) * 0.5
+	return out
+
+
+func _free_slot(p: Vector3, u: Unit, taken: Array, fwd: Vector3, hw: float, hd: float) -> Vector3:
+	var cls: String = u.move_class() if u.domain == "ground" else ""
+	var rec := [p, hw, hd, u.domain, fwd]
+	if _slot_ok(p, rec, cls, taken):
+		taken.append(rec); return grounded(p)
+	var step := maxf(1.5, minf(hw, hd))
+	for ring in range(1, 21):
+		var cnt := 6 * ring
+		for k in cnt:
+			var a := TAU * float(k) / float(cnt)
+			var q := p + Vector3(cos(a), 0, sin(a)) * float(ring) * step
+			rec = [q, hw, hd, u.domain, fwd]
+			if _slot_ok(q, rec, cls, taken):
+				taken.append(rec); return grounded(q)
+	taken.append([p, hw, hd, u.domain, fwd])
+	return grounded(p)
+
+
+## A slot (rectangle hw x hd half sizes, oriented to the travel direction) is good when it lies inside the map, its
+## centre and edges are walkable for the movement class, and it does not overlap a slot already given out.
+func _slot_ok(p: Vector3, rec: Array, cls: String, taken: Array) -> bool:
+	var hw: float = rec[1]; var hd: float = rec[2]; var dom: String = rec[3]; var f: Vector3 = rec[4]
+	var rt := Vector3(-f.z, 0, f.x)
+	if not map_bounds.grow(-maxf(hw, hd) - 2.0).has_point(Vector2(p.x, p.z)): return false
+	if cls != "":
+		var g: GridNav = navs.get(cls, gnav)
+		if g:
+			if g.blocked_at(p): return false
+			for o in [rt * (hw - 0.5), rt * -(hw - 0.5), f * (hd - 0.5), f * -(hd - 0.5)]:
+				if g.blocked_at(p + o): return false
+	for t in taken:
+		if t[3] != dom: continue
+		var d: Vector3 = p - t[0]
+		if absf(d.dot(rt)) < hw + float(t[1]) - 0.05 and absf(d.dot(f)) < hd + float(t[2]) - 0.05: return false
+	return true
+
+
+## Group order bookkeeping: members of one move share the slowest member's speed (per domain); jets and
+## helicopters of the group are spread over altitude layers.
+var _grp_seq := 0
+
+
+func _assign_group(movers: Array) -> void:
+	_grp_seq += 1
+	var gid := tick_n * 16 + (_grp_seq % 16) + 1
+	for dom in ["ground", "heli", "jet"]:
+		var m: Array = movers.filter(func(u): return u.domain == dom)
+		if dom == "jet" or dom == "heli":
+			for k in m.size(): m[k].alt_layer = k
+		if m.size() < 2 or dom == "jet": continue
+		var slow := INF
+		for u in m: slow = minf(slow, float(u.def.speed))
+		for u in m:
+			u.grp = gid; u.grp_speed = slow; u.grp_lag = false
+
+
+## Every 10 ticks: a group member well behind the others (distance to its goal more than 10 m over the group's
+## median) may drive at full speed to catch up; the rest keep the group speed.
+func _update_groups() -> void:
+	if tick_n % 10 != 0: return
+	var by := {}
+	for u in units:
+		if u.grp == 0 or u.dead or u is Building: continue
+		if not (u.state in [Unit.S.MOVE, Unit.S.ATTACK_MOVE]): continue
+		if not by.has(u.grp): by[u.grp] = []
+		by[u.grp].append(u)
+	for g in by:
+		var arr: Array = by[g]
+		if arr.size() < 2:
+			for u in arr: u.grp_lag = true      # alone now: no one to wait for
+			continue
+		var ds: Array = arr.map(func(u): return u.flat_dist(u.goal))
+		var sd: Array = ds.duplicate()
+		sd.sort()
+		var med: float = sd[sd.size() / 2]
+		for i in arr.size(): arr[i].grp_lag = float(ds[i]) > med + 10.0
+
+
+## Per-tick neighbour grids for local avoidance (ground and helicopter layers), the airborne jet list, and a grid of
+## structures (grown by 12 m) rebuilt whenever the set of structures changes.
+const NB_CELL := 10.0
+var nbr_ground := {}
+var nbr_heli := {}
+var nbr_blds := {}
+var air_jets: Array = []
+var _blds_sig := -1
+
+
+func _build_nbr() -> void:
+	nbr_ground.clear(); nbr_heli.clear(); air_jets.clear()
+	var sig := 0
+	for u in units:
+		if u.dead: continue
+		if u is Building:
+			sig += u.uid * 7 + 1
+			continue
+		if u.domain == "jet":
+			if u.airborne: air_jets.append(u)
+			continue
+		if u.domain == "heli" and u.state == Unit.S.LANDED: continue
+		if u._sub_r < 0.0 or u._body_r < 0.0: u.body_r(); u.sub_r()      # cached radii, read directly by avoidance
+		var g: Dictionary = nbr_ground if u.domain == "ground" else nbr_heli
+		var k := Vector2i(floori(u.position.x / NB_CELL), floori(u.position.z / NB_CELL))
+		var a: Variant = g.get(k)
+		if a == null:
+			g[k] = [u]
+		else:
+			(a as Array).append(u)
+	if sig != _blds_sig:
+		_blds_sig = sig
+		nbr_blds.clear()
+		for u in units:
+			if not (u is Building) or u.dead: continue
+			var e: float = (u as Building).half.length() + 12.0
+			for cx in range(floori((u.position.x - e) / NB_CELL), floori((u.position.x + e) / NB_CELL) + 1):
+				for cz in range(floori((u.position.z - e) / NB_CELL), floori((u.position.z + e) / NB_CELL) + 1):
+					var k := Vector2i(cx, cz)
+					if not nbr_blds.has(k): nbr_blds[k] = []
+					nbr_blds[k].append(u)
+
+
+## Structure footprint helpers. Footprints may be rotated (Building.yaw, radians, chosen at placement).
+func _foot_yaw(b: Unit) -> float:
+	return float(b.get("yaw")) if b is Building else 0.0
+
+
+## Closest point of a structure's footprint rectangle to the ground point p (x, z).
+func footprint_closest(b: Unit, p: Vector2) -> Vector2:
+	var h: Vector2 = (b as Building).half
+	var yaw := _foot_yaw(b)
+	var d := p - Vector2(b.position.x, b.position.z)
+	var cs := cos(yaw); var sn := sin(yaw)
+	var lx := d.x * cs - d.y * sn
+	var lz := d.x * sn + d.y * cs
+	lx = clampf(lx, -h.x, h.x); lz = clampf(lz, -h.y, h.y)
+	return Vector2(b.position.x, b.position.z) + Vector2(lx * cs + lz * sn, -lx * sn + lz * cs)
+
+
+## Point `gap` metres outside the footprint wall nearest to p (p inside or outside the footprint).
+func footprint_outside(b: Unit, p: Vector2, gap: float) -> Vector2:
+	var h: Vector2 = (b as Building).half
+	var yaw := _foot_yaw(b)
+	var d := p - Vector2(b.position.x, b.position.z)
+	var cs := cos(yaw); var sn := sin(yaw)
+	var lx := clampf(d.x * cs - d.y * sn, -h.x, h.x)
+	var lz := clampf(d.x * sn + d.y * cs, -h.y, h.y)
+	if h.x - absf(lx) < h.y - absf(lz): lx = signf(lx if lx != 0.0 else 1.0) * (h.x + gap)
+	else: lz = signf(lz if lz != 0.0 else 1.0) * (h.y + gap)
+	return Vector2(b.position.x, b.position.z) + Vector2(lx * cs + lz * sn, -lx * sn + lz * cs)
+
+
+## Safety net behind local avoidance: units that still overlap are eased apart a little each tick (deep overlaps are
+## resolved faster), never pulled through each other; units are kept out of structures and rocks. Spatial hashing
+## keeps this close to linear in the number of units.
+const SEP_CELL := 10.0
 var _obs_grid := {}
 var _obs_n := -1
 
@@ -642,7 +880,7 @@ func _obstacle_grid() -> Dictionary:
 		_obs_n = obstacles_2d.size()
 		_obs_grid.clear()
 		for o in obstacles_2d:
-			var r: float = o.z + 2.0
+			var r: float = o.z + 12.0
 			for cx in range(int(floor((o.x - r) / 16.0)), int(floor((o.x + r) / 16.0)) + 1):
 				for cz in range(int(floor((o.y - r) / 16.0)), int(floor((o.y + r) / 16.0)) + 1):
 					var k := Vector2i(cx, cz)
@@ -655,46 +893,71 @@ func _separate() -> void:
 	var grid := {}
 	var blds: Array = []
 	var live: Array = []
+	var hull: Array = []          # per live unit: hull circle centres (PackedVector2Array)
 	for u in units:
 		if u.dead: continue
 		if u is Building:
 			blds.append(u)
 			continue
-		if u.domain == "jet": continue
-		live.append(u)
+		if u.domain == "jet" or (u.domain == "heli" and u.state == Unit.S.LANDED): continue
+		if u._sub_r < 0.0: u.sub_r()
 		var k := Vector2i(int(floor(u.position.x / SEP_CELL)), int(floor(u.position.z / SEP_CELL)))
 		if not grid.has(k): grid[k] = []
-		grid[k].append(u)
+		grid[k].append(live.size())
+		live.append(u)
+		hull.append(u.hull_pts())
 	var og := _obstacle_grid()
-	for a: Unit in live:
+	for ia in live.size():
+		var a: Unit = live[ia]
 		var ka := Vector2i(int(floor(a.position.x / SEP_CELL)), int(floor(a.position.z / SEP_CELL)))
-		var ra: float = a.sep_r()
+		var ra: float = a._sub_r
+		var ea: float = a._sub_r + a._sub_off
 		var ga: bool = a.domain == "ground"
 		for dz in range(-1, 2):
 			for dx in range(-1, 2):
 				var cell: Variant = grid.get(ka + Vector2i(dx, dz))
 				if cell == null: continue
-				for b: Unit in cell:
-					if b.uid <= a.uid or (b.domain == "ground") != ga: continue
-					var d := Vector2(b.position.x - a.position.x, b.position.z - a.position.z)
-					var min_d: float = (ra + b.sep_r()) * 0.95
-					var l := d.length()
-					if l < min_d and l > 0.001:
-						var push := (min_d - l) * 0.5 * d / l
+				for ib: int in cell:
+					if ib <= ia: continue
+					var b: Unit = live[ib]
+					if (b.domain == "ground") != ga: continue
+					var dcx: float = b.position.x - a.position.x
+					var dcz: float = b.position.z - a.position.z
+					var reach: float = ea + b._sub_r + b._sub_off
+					if dcx * dcx + dcz * dcz >= reach * reach: continue
+					if a.board_target == b or b.board_target == a: continue
+					# deepest overlap between the two hull models (circles; vehicles have two each)
+					var min_d: float = (ra + b._sub_r) * 0.9
+					var pen := 0.0
+					var dir := Vector2.ZERO
+					for pa in hull[ia]:
+						for pb in hull[ib]:
+							var d: Vector2 = pb - pa
+							var l := d.length()
+							if min_d - l > pen:
+								pen = min_d - l
+								dir = d / l if l > 0.001 else (Vector2(1, 0) if a.uid % 2 == 0 else Vector2(0, 1))
+					if pen > 0.0:
+						var kk := 0.5 if pen > min_d * 0.4 else 0.15
+						var push := dir * pen * kk
 						a.position -= Vector3(push.x, 0, push.y)
 						b.position += Vector3(push.x, 0, push.y)
 		if ga:
 			for bb in blds:
 				var b: Building = bb
+				var dd := Vector2(a.position.x - b.position.x, a.position.z - b.position.z)
+				var lim: float = b.half.x + b.half.y + a.def.radius
+				if absf(dd.x) > lim or absf(dd.y) > lim: continue
+				if a.board_target == b: continue
 				a.position = b.push_out(a.position, a.def.radius * 0.5)    # oriented footprint (placement rotation)
 			var oc: Variant = og.get(Vector2i(int(floor(a.position.x / 16.0)), int(floor(a.position.z / 16.0))))
 			if oc != null:
 				for o in oc:
 					var d2 := Vector2(a.position.x - o.x, a.position.z - o.y)
-					var r: float = o.z + a.def.radius * 0.6
+					var r: float = o.z * 0.75 + a.def.radius * 0.5
 					if d2.length() < r and d2.length() > 0.001:
 						var nn := d2.normalized() * r
-						a.position = Vector3(o.x + nn.x, 0, o.y + nn.y)
+						a.position = Vector3(o.x + nn.x, a.position.y, o.y + nn.y)
 	for u in units:
 		if u.dead: continue
 		var m := 0.0 if u.domain == "ground" else 30.0   # aircraft may overfly the edge by 30 m while turning
@@ -1834,16 +2097,154 @@ func _update_boarding() -> void:
 		if u.dead:
 			continue
 		if u.board_target:
-			var tr: Unit = u.board_target
-			if tr.dead or not is_instance_valid(tr) or tr.capacity_left() <= 0:
-				u.board_target = null; continue
-			if u.state == Unit.S.IDLE and u.flat_dist(tr.position) > 6.0:
-				u.order_move(tr.position)             # transport moved: follow it
-			if u.flat_dist(tr.position) < tr.def.radius + 4.0 and tr.can_exchange():
-				_board(u, tr)
+			_boarding_step(u)
 		if u.is_transport() and u.unload_pending and u.domain != "heli" and u.can_exchange():
 			u.unload_pending = false
 			unload_all(u)
+
+
+## A "board" order (B3): passengers are taken nearest first up to the free capacity (seats already promised to
+## infantry on the way count as taken). The rest walk to the transport and wait next to it, with a message.
+func _order_board(cmd: Dictionary) -> void:
+	var tr: Unit = by_id.get(cmd.get("target", -1))
+	if tr == null or tr.dead: return
+	var cand: Array = []
+	for id in cmd.get("ids", []):
+		var u: Unit = by_id.get(id)
+		if u == null or u.dead or u == tr or not tr.accepts(u): continue
+		cand.append(u)
+	if cand.is_empty(): return
+	cand.sort_custom(func(a: Unit, b: Unit) -> bool:
+		var da := a.flat_dist(tr.position); var db := b.flat_dist(tr.position)
+		if da != db: return da < db
+		return a.uid < b.uid)
+	var promised := 0
+	for o in units:
+		if o.board_target == tr and not (o in cand) and not o.dead: promised += 1
+	var room: int = tr.capacity_left() - promised
+	var slot := promised
+	var waiting := 0
+	for u in cand:
+		if room > 0:
+			room -= 1
+			u.board_target = tr
+			u.board_slot = slot; slot += 1
+			u.board_t = 0.0
+			_board_go(u, tr, true)
+		else:
+			u.board_target = null
+			u.order_move(_wait_point(u, tr, waiting))
+			waiting += 1
+	if waiting > 0 and tr.team == 0 and int(cmd.get("team", tr.team)) == 0 and hud:
+		hud.flash_message("%s is full - %d waiting outside" % [tr.def.name, waiting])
+
+
+## Point where an infantryman boards: vehicles at the rear and rear quarters, then the sides (the hatch end, never
+## the middle of the hull); a helicopter right under its fuselage; a building at its door or the nearest wall.
+func board_point(u: Unit, tr: Unit) -> Vector3:
+	var ur := u.body_r()
+	if tr is Building:
+		var b := tr as Building
+		var me := Vector2(u.position.x, u.position.z)
+		var at := Vector2(b.door_pos.x, b.door_pos.z) if b.door_pos != Vector3.INF else me
+		var p2 := footprint_outside(b, at, ur + 0.6)
+		return grounded(Vector3(p2.x, 0, p2.y))
+	if tr.domain == "heli":
+		return grounded(tr.position)
+	var f := tr.forward()
+	var rgt := Vector3(-f.z, 0, f.x)
+	var hl := tr.half_len(); var hw := tr.half_wid()
+	var offs := [Vector2(0, -1), Vector2(-0.8, -0.85), Vector2(0.8, -0.85), Vector2(-1, -0.3), Vector2(1, -0.3), Vector2(-1, 0.3), Vector2(1, 0.3), Vector2(0, -1.5), Vector2(-1, 0.8), Vector2(1, 0.8)]
+	var o: Vector2 = offs[u.board_slot % offs.size()]
+	var p := tr.position + rgt * o.x * (hw + ur + 0.4) + f * o.y * (hl + ur + 0.4)
+	var g: GridNav = navs.get(u.move_class(), gnav)
+	if g and g.blocked_at(p):
+		for k in offs.size():     # the slot is in a wall or a rock: the first free one around the hull
+			var q: Vector2 = offs[k]
+			var pq := tr.position + rgt * q.x * (hw + ur + 0.4) + f * q.y * (hl + ur + 0.4)
+			if not g.blocked_at(pq): return grounded(pq)
+	return grounded(p)
+
+
+## Clearance (m) between an infantryman's body and the transport: hull rectangle for vehicles, the area under the
+## rotor for helicopters, the footprint for buildings.
+func board_gap(u: Unit, tr: Unit) -> float:
+	var ur := u.body_r()
+	if tr is Building:
+		var b := tr as Building
+		var gd: float = b.footprint_dist(u.position)
+		if b.door_pos != Vector3.INF: gd = minf(gd, u.flat_dist(b.door_pos) - 1.0)
+		return gd - ur
+	if tr.domain == "heli":
+		return u.flat_dist(tr.position) - (tr.body_r() * 0.7 + ur)
+	var d := u.position - tr.position
+	var f := tr.forward()
+	var lz := d.x * f.x + d.z * f.z
+	var lx := d.x * -f.z + d.z * f.x
+	var ex := maxf(0.0, absf(lx) - tr.half_wid())
+	var ez := maxf(0.0, absf(lz) - tr.half_len())
+	return Vector2(ex, ez).length() - ur
+
+
+## Walk to the boarding point: grid path while far, a straight approach for the last metres.
+func _board_go(u: Unit, tr: Unit, fresh := false) -> void:
+	var ap := board_point(u, tr)
+	if fresh or u.flat_dist(ap) > 12.0: u.order_move(ap)
+	else: u.order_approach(ap)
+
+
+func _wait_point(u: Unit, tr: Unit, k: int) -> Vector3:
+	var away := Vector2(u.position.x - tr.position.x, u.position.z - tr.position.z)
+	var a := away.angle() + float(k) * 0.5 if away.length() > 0.1 else float(k) * 0.9
+	var p := tr.position + Vector3(cos(a), 0, sin(a)) * (tr.body_r() + u.body_r() + 5.0)
+	var g: GridNav = navs.get(u.move_class(), gnav)
+	if g and g.blocked_at(p): p = g.center_of(g.nearest_free(g.cell_of(p)))
+	return grounded(p)
+
+
+## Boarding, every tick for each infantryman with a board_target: board on contact (vehicle stopped, helicopter low,
+## any building); a ground transport brakes while its passengers are within a few metres (at most ~6 s at a time);
+## the approach point is re-aimed as the transport moves; a soldier pressed against a crowded hull for 1.5 s squeezes in.
+func _boarding_step(u: Unit) -> void:
+	var tr: Unit = u.board_target
+	if not is_instance_valid(tr) or tr.dead or not tr.accepts(u):
+		u.board_target = null
+		return
+	if tr.capacity_left() <= 0:
+		_board_full(u, tr)
+		return
+	var gap := board_gap(u, tr)
+	var ground_tr: bool = not (tr is Building) and tr.domain == "ground"
+	if gap <= (1.5 if tr is Building else 1.2):
+		if tr.can_exchange():
+			_board(u, tr)
+			return
+		if ground_tr and tr.hold_sum < 6.0: tr.hold_t = 0.4
+	elif gap < 8.0 and ground_tr and tr.hold_sum < 6.0 and tr.speed_cur > 0.3:
+		tr.hold_t = 0.4
+	if gap < 3.0 and u.speed_cur < 0.5 and tr.can_exchange():
+		u.board_t += 1.0 / TICK_HZ
+		if u.board_t > 1.5:
+			_board(u, tr)
+			return
+	else:
+		u.board_t = 0.0
+	if u.state == Unit.S.IDLE or (tick_n + u.uid) % 10 == 0:
+		var ap := board_point(u, tr)
+		if u.state != Unit.S.MOVE or u.goal.distance_to(ap) > 1.5:
+			_board_go(u, tr)
+
+
+var _full_msg_t := -99.0
+
+
+func _board_full(u: Unit, tr: Unit) -> void:
+	u.board_target = null
+	if u.flat_dist(tr.position) < tr.body_r() + 14.0: u.order_stop()
+	else: u.order_move(_wait_point(u, tr, u.board_slot))
+	if u.team == 0 and hud and sim_time - _full_msg_t > 1.0:
+		_full_msg_t = sim_time
+		hud.flash_message("%s is full" % tr.def.name)
 
 
 func _board(u: Unit, tr: Unit) -> void:

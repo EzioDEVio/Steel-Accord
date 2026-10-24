@@ -127,11 +127,23 @@ func line_clear(a: Vector3, b: Vector3) -> bool:
 	return true
 
 
-func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
+## Straight line test for a body of half width `cl`: the centre line and two lines offset to either side.
+func line_clear_wide(a: Vector3, b: Vector3, cl: float) -> bool:
+	if not line_clear(a, b): return false
+	if cl <= 0.0: return true
+	var d := Vector3(b.x - a.x, 0, b.z - a.z)
+	if d.length() < 0.01: return true
+	var side := Vector3(-d.z, 0, d.x).normalized() * cl
+	return line_clear(a + side, b + side) and line_clear(a - side, b - side)
+
+
+## Grid path from `from` to `to`, string-pulled. `clearance` (m): straight shortcuts must leave that much room on
+## both sides (vehicles pass rocks and corners with their hull clear instead of shaving them).
+func find_path(from: Vector3, to: Vector3, clearance := 0.0) -> PackedVector3Array:
 	var a := nearest_free(cell_of(from))
 	var b := nearest_free(cell_of(to))
 	var goal := to if not blocked_at(to) else center_of(b)
-	if line_clear(from, goal): return PackedVector3Array([from, goal])
+	if line_clear_wide(from, goal, clearance): return PackedVector3Array([from, goal])
 	var ids := astar.get_id_path(a, b)
 	if ids.is_empty(): return PackedVector3Array([from, goal])
 	var raw: Array[Vector3] = [from]
@@ -144,7 +156,7 @@ func find_path(from: Vector3, to: Vector3) -> PackedVector3Array:
 	var n := raw.size()
 	while i < n - 1:
 		var j := i + 1
-		while j + 1 < n and j - i < 48 and line_clear(raw[i], raw[j + 1]): j += 1
+		while j + 1 < n and j - i < 48 and line_clear_wide(raw[i], raw[j + 1], clearance): j += 1
 		out.append(raw[j]); i = j
 	return out
 

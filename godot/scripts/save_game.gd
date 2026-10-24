@@ -19,7 +19,9 @@ const UNIT_FIELDS := ["hp", "state", "goal", "queue", "path", "path_i", "repath_
 	"guard_pos", "guard_unit", "home", "heading", "speed_cur", "vel", "turret_yaw", "altitude", "vet_xp", "vet_rank", "bank",
 	"w_reload", "w_ammo", "rearm_t", "airborne", "run_out_t", "ret_phase", "site", "has_runway", "taxi_out", "taxi_in", "taxi_i",
 	"rw_start", "rw_end", "park_heading", "taxi_phase", "haul_depot", "haul_phase", "haul_t", "cargo", "idle_t", "heal_t",
-	"last_fire_t", "board_target", "unload_pending", "para_alt", "garrison", "gar_slot"]
+	"last_fire_t", "board_target", "unload_pending", "para_alt", "garrison", "gar_slot",
+	"grp", "grp_speed", "grp_lag", "stuck_t", "stuck_n", "prog_best", "arrive_t", "hold_t", "hold_sum", "nudge_pos", "nudge_t", "rest_pos", "back_t", "back_n",
+	"av_ang", "av_last", "av_wait", "alt_layer", "climb_t", "climb_y", "board_slot", "board_t"]
 const BUILDING_FIELDS := ["hp", "progress", "built", "prod_queue", "prod_left", "rally", "has_rally", "builder_seen_t", "ever_seen",
 	"repairing", "repair_debt", "repair_blocked", "drop_t", "research_id", "research_left", "servicing", "w_reload", "wall_run", "gar_target",
 	"retaliate", "retaliate_t"]

@@ -488,18 +488,15 @@ func _left_release(mb: InputEventMouseButton) -> void:
 	if u is Building and (u as Building).is_civic() and not u.dead and (u.team == team or u.team < 0) and scheme == "classic" and not mb.shift_pressed:
 		var inf := live_selection().filter(func(x): return x.def.get("visual", "") == "infantry" and x.team == team)
 		if not inf.is_empty():
-			var room: int = maxi(u.capacity_left(), 0)
-			battle.issue({"type": "board", "team": team, "ids": inf.slice(0, room).map(func(x): return x.uid), "target": u.uid})
+			battle.issue({"type": "board", "team": team, "ids": inf.map(func(x): return x.uid), "target": u.uid})   # extra soldiers wait outside
 			FX.order_marker(battle, u.position, Color(0.5, 0.9, 1.0, 0.9))
-			if inf.size() > room and battle.hud: battle.hud.flash_message("%s has room for %d" % [u.def.name, room])
 			return
 	# infantry + own transport: board it
 	if own and not (u is Building) and u.is_transport() and scheme == "classic" and not mb.shift_pressed:
 		var inf := live_selection().filter(func(x): return u.accepts(x))
 		if not inf.is_empty():
-			battle.issue({"type": "board", "team": team, "ids": inf.slice(0, maxi(u.capacity_left(), 0)).map(func(x): return x.uid), "target": u.uid})
+			battle.issue({"type": "board", "team": team, "ids": inf.map(func(x): return x.uid), "target": u.uid})   # extra soldiers wait outside
 			FX.order_marker(battle, u.position, Color(0.5, 0.9, 1.0, 0.9))
-			if inf.size() > u.capacity_left() and battle.hud: battle.hud.flash_message("%s has room for %d" % [u.def.name, u.capacity_left()])
 			return
 	# vehicles + own War Factory: drive to its repair bay; aircraft + own Airfield: return to their pads
 	if own and u is Building and u.built and not live_selection().is_empty() and scheme == "classic" and not mb.shift_pressed:
@@ -625,7 +622,7 @@ func _command_at(p: Vector2, force := false, waypoint := false) -> void:
 	if u is Building and (u as Building).is_civic() and (u.team == team or u.team < 0) and not force:
 		var inf := live_selection().filter(func(x): return x.def.get("visual", "") == "infantry")
 		if not inf.is_empty():
-			battle.issue({"type": "board", "team": team, "ids": inf.slice(0, maxi(u.capacity_left(), 0)).map(func(x): return x.uid), "target": u.uid})
+			battle.issue({"type": "board", "team": team, "ids": inf.map(func(x): return x.uid), "target": u.uid})
 			FX.order_marker(battle, u.position, Color(0.5, 0.9, 1.0, 0.9))
 			return
 		u = null
@@ -757,29 +754,7 @@ func cmd_return() -> void:
 	battle.issue({"type": "return", "ids": _ids()})
 
 
-## Grid formation centred on `dest`, facing the direction of travel; slots matched left-to-right.
-func formation(dest: Vector3, spacing := 7.5) -> Array:
-	var live: Array = live_selection()
-	var n := live.size()
-	if n == 0: return []
-	var c := Vector3.ZERO
-	for u in live: c += u.global_position
-	c /= n
-	var fwd := Vector3(dest.x - c.x, 0, dest.z - c.z)
-	fwd = fwd.normalized() if fwd.length() > 0.5 else Vector3(0, 0, -1)
-	var right := Vector3(-fwd.z, 0, fwd.x)
-	var cols := int(ceil(sqrt(n)))
-	var rows := int(ceil(float(n) / cols))
-	var slots: Array = []
-	for i in n:
-		var col := i % cols
-		var row := i / cols
-		slots.append(dest + right * (col - (cols - 1) / 2.0) * spacing - fwd * (row - (rows - 1) / 2.0) * spacing)
-	var order := range(n)
-	order.sort_custom(func(a, b): return live[a].global_position.dot(right) < live[b].global_position.dot(right))
-	slots.sort_custom(func(a, b): return a.dot(right) < b.dot(right))
-	var pts: Array = []
-	pts.resize(n)
-	for i in n:
-		pts[order[i]] = slots[i]
-	return pts
+## Formation slots for the selection around `dest` (Battle.group_slots: oriented to the direction of travel, spaced
+## by unit size, every slot on ground the unit can stand on). `spacing` is kept for callers; slot widths come from the units.
+func formation(dest: Vector3, _spacing := 7.5) -> Array:
+	return battle.group_slots(live_selection(), dest)
