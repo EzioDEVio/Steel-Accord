@@ -774,7 +774,7 @@ func _air_powers(ccp: Vector3) -> void:
 		"Alt+%d -> mode '%s'; tooltip: %s" % [gi, battle.commander.mode if not mode_ok else "power:gunship", hb.tooltip_text.replace("\n", " | ") if hb else "none"])
 
 	# --- AC-130: orbit left-hand round the target, fire all three guns, damage enemies, leave
-	var P: Vector3 = battle.grounded(ccp + Vector3(-20, 0, -150))
+	var P: Vector3 = battle.grounded(ccp + Vector3(-150, 0, -200))   # away from the player's army (full QA run)
 	var foes: Array = []
 	for i in 2: foes.append(battle._spawn("abrams", 1, P + Vector3(i * 9 - 4.5, 0, 4), 0.0))
 	for i in 4: foes.append(battle._spawn("rifleman", 1, P + Vector3(i * 4 - 6, 0, -8), 0.0))
@@ -787,14 +787,15 @@ func _air_powers(ccp: Vector3) -> void:
 	await _until(func(): return not battle.gunships.is_empty(), 5.0)
 	var gs: Dictionary = battle.gunships[0] if not battle.gunships.is_empty() else {}
 	var gu: Unit = gs.get("u")
-	var rmin := INF; var rmax := 0.0; var left_ok := true; var shot_g := false; var orbit_s := 0.0
+	var rmin := INF; var rmax := 0.0; var left_ok := true; var shot_g := false; var orbit_s := 0.0; var orbit_t0 := -1.0
 	t0 = battle.sim_time
 	while not battle.gunships.is_empty() and battle.sim_time - t0 < 150.0:
 		await _wait_sim(0.1)
 		for f in foes:
 			if not f.dead: f.order_stop()
 		if gs.get("phase", "") == "orbit" and is_instance_valid(gu) and not gu.dead:
-			orbit_s += 0.1
+			if orbit_t0 < 0.0: orbit_t0 = battle.sim_time
+			orbit_s = battle.sim_time - orbit_t0
 			var rel := Vector3(gs.c.x - gu.position.x, 0, gs.c.z - gu.position.z)
 			rmin = minf(rmin, rel.length()); rmax = maxf(rmax, rel.length())
 			if Vector3(-cos(gu.heading), 0, sin(gu.heading)).dot(rel.normalized()) < 0.95: left_ok = false
