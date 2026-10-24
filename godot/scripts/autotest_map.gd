@@ -234,6 +234,15 @@ func _run() -> void:
 			var ir_r: Unit = battle._spawn("ir_rifleman", 1, p0 + Vector3(0, 0, -25), PI)
 			await _wait_sim(4.0)
 			_log("iran_battle_cry", battle.cries > cry0, "battle cries %d -> %d (clip iran_shout, 14 s per-team cooldown)" % [cry0, battle.cries])
+			# recruit shouts: an Iranian rifleman leaving the Barracks plays the male exit shout; attack cries rotate
+			battle.exit_cry_t[1] = -99.0
+			var ex0: int = battle.exit_cries
+			battle._exit_cry(ir_r)
+			var rot: Array = battle.CRY_ROTATION.male
+			_log("iran_recruit_shouts", battle.exit_cries == ex0 + 1 and "iran_shout" in rot and rot.size() >= 4
+				and SFX.CLIPS.has(battle.CRY_EXIT.male) and SFX.CLIPS.has(battle.CRY_EXIT.female)
+				and rot.all(func(c): return ResourceLoader.exists(SFX.CLIPS[c])),
+				"exit shout %s / %s; attack rotation %s" % [battle.CRY_EXIT.male, battle.CRY_EXIT.female, str(rot)])
 			for u in [us_r, ir_r]:
 				if not u.dead: u.take_damage(9999.0, null)
 			# Iranian support powers: Shahed drone strike and paratroopers from an Iranian C-130

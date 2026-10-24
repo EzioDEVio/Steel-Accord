@@ -17,9 +17,17 @@ const CLIPS := {
 	"construction_loop": "res://assets/audio/construction_loop.ogg",
 	"radar_ping": "res://assets/audio/radar_ping.ogg",
 	"iran_shout": "res://assets/audio/iran_shout.ogg",
+	"ir_m_abulfazl": "res://assets/audio/ir_m_abulfazl.ogg",     # client-supplied Iranian recruit shouts (B3.1)
+	"ir_m_yahussein": "res://assets/audio/ir_m_yahussein.ogg",
+	"ir_m_yazahra": "res://assets/audio/ir_m_yazahra.ogg",
+	"ir_f_yazahra": "res://assets/audio/ir_f_yazahra.ogg",
+	"ir_f_yahussein": "res://assets/audio/ir_f_yahussein.ogg",
+	"ir_f_abulfazl": "res://assets/audio/ir_f_abulfazl.ogg",
+	"shahed_overhead": "res://assets/audio/shahed_overhead.ogg",
 }
 const MAX_VOICES := {"explosion_big": 6, "mg_burst": 4, "rifle_burst": 4, "rocket_launch": 5, "a10_cannon": 3,
-	"bomb_fall": 4, "jet_flyby": 3, "jet_takeoff": 2, "sam_launch": 3, "radar_ping": 2, "iran_shout": 2}
+	"bomb_fall": 4, "jet_flyby": 3, "jet_takeoff": 2, "sam_launch": 3, "radar_ping": 2, "iran_shout": 2,
+	"ir_m_abulfazl": 2, "ir_m_yahussein": 2, "ir_m_yazahra": 2, "ir_f_yazahra": 2, "ir_f_yahussein": 2, "ir_f_abulfazl": 2, "shahed_overhead": 1}
 
 static var _cache := {}
 static var _voices := {}      # clip id -> Array of live players

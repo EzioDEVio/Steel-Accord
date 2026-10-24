@@ -1051,8 +1051,20 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 ## Nation battle cries: Iranian infantry shout (Farsi, client-supplied clip) when they open fire on the enemy.
 ## At most one cry per team every 14 s so a firefight does not turn into a loop. Presentation only.
 const BATTLE_CRY := {"iran": "iran_shout"}
+## Iranian infantry: a recruit shouts when leaving the Barracks (male / female voice by the unit's "voice" field);
+## attack cries rotate through the voice's clips and keep the original battle shout in the rotation.
+const CRY_EXIT := {"male": "ir_m_abulfazl", "female": "ir_f_yazahra"}
+const CRY_ROTATION := {"male": ["iran_shout", "ir_m_yahussein", "ir_m_abulfazl", "ir_m_yazahra"],
+	"female": ["iran_shout", "ir_f_yazahra", "ir_f_yahussein", "ir_f_abulfazl"]}
 var cry_t := [-99.0, -99.0]
 var cries := 0
+var cry_n := 0
+var exit_cry_t := [-99.0, -99.0]
+var exit_cries := 0
+
+
+func _voice(u: Unit) -> String:
+	return str(u.def.get("voice", "male"))
 
 
 func _battle_cry(shooter: Unit) -> void:
@@ -1060,8 +1072,20 @@ func _battle_cry(shooter: Unit) -> void:
 	var clip: String = BATTLE_CRY.get(nation_of(shooter.team), "")
 	if clip == "" or sim_time - cry_t[shooter.team] < 14.0: return
 	cry_t[shooter.team] = sim_time
+	var rot: Array = CRY_ROTATION.get(_voice(shooter), [clip])
+	clip = rot[cry_n % rot.size()]
+	cry_n += 1
 	cries += 1
 	SFX.play(shooter.body, clip, shooter.global_position, 2.0, 1.0, true)
+
+
+## A new recruit leaving the Barracks (Iran) shouts; at most one exit shout per side every 4 s.
+func _exit_cry(u: Unit) -> void:
+	if u.def.get("visual") != "infantry" or u.team < 0 or u.team > 1: return
+	if BATTLE_CRY.get(nation_of(u.team), "") == "" or sim_time - exit_cry_t[u.team] < 4.0: return
+	exit_cry_t[u.team] = sim_time
+	exit_cries += 1
+	SFX.play(u.body, CRY_EXIT.get(_voice(u), "ir_m_abulfazl"), u.global_position, 2.0, 1.0, true)
 
 
 var _snd_t := {}   # "uid:clip" -> sim time of the last report, so automatic weapons play one burst sound per burst
@@ -1921,6 +1945,7 @@ func spawn_produced(b: Building, k: String) -> void:
 	var yaw := atan2(-exit_dir.x, -exit_dir.z)
 	var u := _spawn(k, team, pos, yaw)
 	var d: Dictionary = UnitDefs.def_of(k)
+	if b.bkind == "barracks": _exit_cry(u)
 	if not b.pads.is_empty():
 		var i := b.free_pad()
 		if i < 0: i = 0
@@ -2890,6 +2915,7 @@ func _launch_drones(team: int, id: String, target: Vector3) -> void:
 		drones.append({"node": node, "pos": start, "aim": aim, "speed": float(p.speed), "alt": float(p.altitude), "team": team,
 			"dmg": float(p.damage), "splash": float(p.splash), "diving": false})
 	SFX.play(self, "jet_flyby", target, -8.0, 1.9)
+	if not drones.is_empty() and id == "shahed": SFX.play(drones[drones.size() - 1].node, "shahed_overhead", target, 0.0, 1.0, true)
 	FX.target_marker(self, target, 16.0)
 	if hud and team == 0: hud.flash_message("%s inbound" % p.name)
 

@@ -210,6 +210,83 @@
    "provenance": "Supplied by the client (Mohammed) 2026-10-22; original source and licence not stated. Spoken content not verified by the developer.",
    "status": "dev_only; release blocked until source/licence and content are confirmed",
    "edits": "mono downmix 44.1 kHz, loudness normalise (-16 LUFS), 0.3 s fade-out, OGG q5"
+  },
+  "ir_m_abulfazl": {
+   "file": "res://assets/audio/ir_m_abulfazl.ogg",
+   "loop": false,
+   "use": "Male Iranian recruit shout when leaving the Barracks; in the attack-cry rotation",
+   "source_file": "iranian_male_shouting_abualfazel2.mp3",
+   "source_sha256": "1bd38e9308e09f6e59a607aa3227947516d503bd63d2b577fcaf2c0787f9a87b",
+   "duration_s": 2.5,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-24 in IRAN.zip; original source and licence not stated.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, leading-silence trim, loudness normalise (-16 LUFS; drone -18), OGG q5 (drone q4)"
+  },
+  "ir_m_yahussein": {
+   "file": "res://assets/audio/ir_m_yahussein.ogg",
+   "loop": false,
+   "use": "Male Iranian infantry attack-cry rotation",
+   "source_file": "Iranian_male_shouting_yahussen3.wav",
+   "source_sha256": "b20f981ba708e687b5c44c9e27c14095af04cf1ac6af0441cada7bc054ad2fbc",
+   "duration_s": 2.34,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-24 in IRAN.zip; original source and licence not stated.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, leading-silence trim, loudness normalise (-16 LUFS; drone -18), OGG q5 (drone q4)"
+  },
+  "ir_m_yazahra": {
+   "file": "res://assets/audio/ir_m_yazahra.ogg",
+   "loop": false,
+   "use": "Male Iranian infantry attack-cry rotation",
+   "source_file": "Iranian_male_shouting_yazahra4.wav",
+   "source_sha256": "da3909b46ffa4e9bec491f5ce5bc95123b67b71076038ac7e8136ec8d7c27229",
+   "duration_s": 2.33,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-24 in IRAN.zip; original source and licence not stated.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, leading-silence trim, loudness normalise (-16 LUFS; drone -18), OGG q5 (drone q4)"
+  },
+  "ir_f_yazahra": {
+   "file": "res://assets/audio/ir_f_yazahra.ogg",
+   "loop": false,
+   "use": "Female Iranian recruit shout when leaving the Barracks; in the attack-cry rotation",
+   "source_file": "Iranian_female_shouting_yazahra4.wav",
+   "source_sha256": "9af979d576f52ef6aba43a2efb0c64f91c999d2c123dca0876dd97a06c23e02e",
+   "duration_s": 2.38,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-24 in IRAN.zip; original source and licence not stated.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, leading-silence trim, loudness normalise (-16 LUFS; drone -18), OGG q5 (drone q4)"
+  },
+  "ir_f_yahussein": {
+   "file": "res://assets/audio/ir_f_yahussein.ogg",
+   "loop": false,
+   "use": "Female Iranian infantry attack-cry rotation",
+   "source_file": "Iranian_female_shouting_yahussen3.wav",
+   "source_sha256": "1398f87f274191775b73e93349bd4800fadbb057c3adff2414da407cf4c2cf73",
+   "duration_s": 2.21,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-24 in IRAN.zip; original source and licence not stated.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, leading-silence trim, loudness normalise (-16 LUFS; drone -18), OGG q5 (drone q4)"
+  },
+  "ir_f_abulfazl": {
+   "file": "res://assets/audio/ir_f_abulfazl.ogg",
+   "loop": false,
+   "use": "Female Iranian infantry attack-cry rotation",
+   "source_file": "Iranian_female_shout_abulfazel.mp3",
+   "source_sha256": "4061bab8f71b1a6b9cc9d0a92081ce988651ca61c6d953ea38c52c1e9d765c1c",
+   "duration_s": 3.97,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-24 in IRAN.zip; original source and licence not stated.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, leading-silence trim, loudness normalise (-16 LUFS; drone -18), OGG q5 (drone q4)"
+  },
+  "shahed_overhead": {
+   "file": "res://assets/audio/shahed_overhead.ogg",
+   "loop": false,
+   "use": "Shahed drone strike: engine drone of the lead drone (follows it)",
+   "source_file": "Shahid_drone_overhead.mp3",
+   "source_sha256": "b390f71dd6da9a1c337aeb1b11d5c5136ee0f0fcc9cfb3e2981d9f4a97c9ead7",
+   "duration_s": 24.8,
+   "provenance": "Supplied by the client (Mohammed) 2026-10-24 in IRAN.zip; original source and licence not stated.",
+   "status": "dev_only; release blocked until source/licence and content are confirmed",
+   "edits": "mono downmix 44.1 kHz, leading-silence trim, loudness normalise (-16 LUFS; drone -18), OGG q5 (drone q4)"
   }
  }
 }
