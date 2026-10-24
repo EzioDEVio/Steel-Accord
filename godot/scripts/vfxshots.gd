@@ -9,6 +9,7 @@ var out := "user://test_output/vfx"
 var args := {}
 var frame_us: Array = []
 var _last_us := 0
+var shot_size := Vector2i(1920, 1080)
 
 
 func _ready() -> void:
@@ -22,7 +23,8 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(out)
 	if args.has("res") and DisplayServer.get_name() != "headless":
 		var r := str(args.res).split("x")
-		get_window().size = Vector2i(int(r[0]), int(r[1]))
+		shot_size = Vector2i(int(r[0]), int(r[1]))
+		if args.has("vfxbench"): get_window().size = shot_size
 	_run()
 
 
@@ -40,14 +42,14 @@ func _wait_sim(t: float) -> void:
 
 func _shot(tag: String) -> void:
 	if DisplayServer.get_name() == "headless": return
-	# software rendering is slow: frames are only drawn around a capture (the simulation keeps running)
-	RenderingServer.render_loop_enabled = true
-	await get_tree().process_frame
-	await get_tree().process_frame
+	# software rendering is slow: the window stays tiny while the simulation runs and is enlarged for a capture
+	var small := get_window().size
+	get_window().size = shot_size
+	for i in 3: await get_tree().process_frame
 	await RenderingServer.frame_post_draw
-	RenderingServer.render_loop_enabled = args.has("vfxbench")
 	get_viewport().get_texture().get_image().save_png("%s/%s.png" % [out, tag])
-	print("SHOT ", tag)
+	get_window().size = small
+	printerr("SHOT ", tag)
 
 
 func _look(p: Vector3, zoom := 55.0, yaw := 0.0) -> void:
@@ -78,8 +80,6 @@ func _run() -> void:
 	for u in battle.units: if u.team == 1: u.order_stop()
 	if args.has("vfxbench"):
 		await _bench()
-	elif DisplayServer.get_name() != "headless":
-		RenderingServer.render_loop_enabled = false
 	else:
 		await _shots()
 	await get_tree().create_timer(0.5).timeout
