@@ -827,6 +827,22 @@ func _air_powers(ccp: Vector3) -> void:
 ## C-17 airborne armour and Iran's airdrop from its own C-130.
 func _air_c17(ccp: Vector3) -> void:
 	var t0 := 0.0
+	# --- C-130 paratroopers: all six released from the aircraft's real height (no enemies around in this check)
+	var PT: Vector3 = battle.grounded(ccp + Vector3(-40, 0, -120))
+	var para0: Array = _team(["paratrooper"])
+	battle.power_ready[0]["paradrop"] = 0.0
+	battle.issue({"type": "power", "team": 0, "id": "paradrop", "pos": PT})
+	var hmax := 0.0
+	t0 = battle.sim_time
+	while battle.sim_time - t0 < 20.0:
+		await _wait_sim(0.2)
+		for u in _team(["paratrooper"]):
+			if not (u in para0): hmax = maxf(hmax, u.para_alt)
+	var paras: Array = _team(["paratrooper"]).filter(func(u): return not (u in para0))
+	var down: int = paras.filter(func(u): return u.para_alt <= 0.0 and u.flat_dist(PT) < 60.0).size()
+	_log("paradrop_six_from_aircraft_height", paras.size() == 6 and down == 6 and hmax > 25.0,
+		"dropped %d, landed near the target %d, highest canopy height above the ground %.1f m" % [paras.size(), down, hmax])
+	for u in paras: u.take_damage(99999.0, null)
 	# --- C-17 airborne armour: 2 HMMWV .50 + Stryker under canopies, land, become controllable units
 	var T: Vector3 = battle.grounded(ccp + Vector3(60, 0, -125))
 	var before: Array = _team(["hmmwv_50cal", "stryker"])
