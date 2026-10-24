@@ -59,6 +59,26 @@ var haul_t := 0.0
 var cargo := 0
 var haul_pile: Dictionary = {}
 var idle_t := 0.0
+# ---- movement (B3): local avoidance, group moves, clean arrival, stuck detection, boarding approach
+var grp := 0                   # group-move id (0 = none); members share grp_speed while moving together
+var grp_speed := 0.0           # slowest member's speed (m/s), 0 = no cap
+var grp_lag := false           # behind the rest of its group: may use full speed to catch up
+var stuck_t := 0.0             # seconds without progress toward the current waypoint
+var stuck_n := 0               # repaths made in this move without reaching the goal
+var prog_best := 1e9           # best distance to the current waypoint so far
+var arrive_t := 0.0            # seconds spent close to a crowded goal
+var hold_t := 0.0              # transport: braking so that passengers can board
+var hold_sum := 0.0            # seconds held recently (bounded so a transport is never pinned)
+var nudge_pos := Vector3.INF   # idle unit stepping aside for a passing friendly
+var nudge_t := 0.0
+var rest_pos := Vector3.INF    # where an idle unit settled (it walks back there after stepping aside)
+var back_t := 0.0              # seconds until it walks back
+var back_n := 0                # walk-back attempts postponed by passing traffic
+var av_ang := 0.0              # last avoidance heading offset (hysteresis against left/right dithering)
+var alt_layer := -1            # aircraft altitude layer (-1: from the unit id)
+var board_slot := 0            # boarding infantry: approach slot around the transport
+var board_t := 0.0             # boarding infantry: seconds spent pressed against a crowded transport
+var _body_r := -1.0
 
 var model: Node3D
 var body: Node3D              # visual root (lifted for aircraft)
@@ -502,7 +522,74 @@ func set_selected(v: bool) -> void:
 ## Point just above the model for the health bar / rank / group number (measured from the meshes once).
 ## Spacing radius used when units push apart: infantry models are drawn larger than their hit radius.
 func sep_r() -> float:
-	return float(def.radius) * (1.45 if def.get("visual") == "infantry" else 1.0)
+	return body_r()
+
+
+## Ground-plane radius of the drawn model, used for avoidance, spacing and formation slots. Infantry: hit radius at
+## the infantry draw scale. Vehicles: between half width and half length of the drawn hull (a circle cannot be both).
+## Helicopters: the rotor disc (twin-rotor: half the airframe). Jets: half the drawn length.
+func body_r() -> float:
+	if _body_r < 0.0:
+		if def.get("visual") == "infantry":
+			_body_r = float(def.radius) * 1.3
+		elif domain == "heli":
+			_body_r = maxf(float(def.radius), float(def.get("rotor", 0.0)) * vis_scale)
+			if def.get("rotor_twin", false): _body_r = maxf(_body_r, float(def.get("length", 0.0)) * vis_scale * 0.5)
+		elif domain == "jet":
+			_body_r = float(def.get("length", 8.0)) * vis_scale * 0.5
+		else:
+			_body_r = maxf(float(def.radius), 0.5 * (half_len() + float(def.radius)))
+	return _body_r
+
+
+## Hull model for avoidance and the separation safety net: a ground vehicle is two circles along its hull (front and
+## rear, radius a little over half the drawn width), so long vehicles keep their full length clear nose to tail yet can
+## still park side by side; everything else is a single circle of body_r().
+var _sub_r := -1.0
+var _sub_off := 0.0
+
+
+func sub_r() -> float:
+	if _sub_r < 0.0:
+		if domain == "ground" and def.get("visual") != "infantry":
+			_sub_r = maxf(half_wid() * 1.25, 0.8)
+			_sub_off = maxf(0.0, half_len() - half_wid() * 0.9)
+		else:
+			_sub_r = body_r(); _sub_off = 0.0
+	return _sub_r
+
+
+func sub_off() -> float:
+	if _sub_r < 0.0: sub_r()
+	return _sub_off
+
+
+## Reach of the hull model from the unit's centre.
+func ext_r() -> float:
+	return sub_off() + sub_r()
+
+
+## Hull circle centres (ground plane, world) for the current heading.
+func hull_pts() -> PackedVector2Array:
+	var c := Vector2(position.x, position.z)
+	var o := sub_off()
+	if o <= 0.0: return PackedVector2Array([c])
+	var f := Vector2(-sin(heading), -cos(heading)) * o
+	return PackedVector2Array([c + f, c - f])
+
+
+## Side clearance asked of planned straight lines: vehicles keep their hull off rocks and corners.
+func path_clearance() -> float:
+	return sub_r() if domain == "ground" and def.get("visual") != "infantry" else 0.0
+
+
+## Drawn hull half length / half width (ground vehicles; boarding contact and test geometry).
+func half_len() -> float:
+	return maxf(float(def.get("length", 0.0)) * vis_scale * 0.5, float(def.radius))
+
+
+func half_wid() -> float:
+	return float(def.radius) * 0.78
 
 
 func bar_anchor() -> Vector3:
@@ -582,6 +669,15 @@ func has_ammo() -> bool:
 # ------------------------------------------------------------------ orders (executed by Battle at tick start)
 func _clear() -> void:
 	target = null; forced_target = false; guard_unit = null; queue.clear()
+	grp = 0; grp_speed = 0.0; grp_lag = false; nudge_t = 0.0
+
+
+## Boarding: walk straight to a point next to the transport (no grid path: the last metres to a hull or a door are
+## open ground even where the grid cell is blocked by the structure's padding). Keeps board_target.
+func order_approach(p: Vector3) -> void:
+	_clear(); state = S.MOVE; goal = p
+	path = PackedVector3Array([position, p]); path_i = 1
+	repath_t = 1.0; stuck_t = 0.0; stuck_n = 0; prog_best = 1e9; arrive_t = 0.0
 
 
 func order_move(p: Vector3, append := false) -> void:
@@ -629,6 +725,7 @@ func start_haul(depot: Node) -> void:
 
 func order_stop() -> void:
 	_clear(); state = S.IDLE
+	rest_pos = position; back_t = 0.0
 	path = PackedVector3Array(); path_i = 0
 	if domain == "jet": goal = position
 
@@ -638,13 +735,29 @@ func order_return() -> void:
 	_clear(); state = S.RETURN; goal = home; ret_phase = 0
 
 
+## Movement profiling ("prof" argument): time in local avoidance and path planning, printed with the PROF line.
+static var prof_on := false
+static var prof_av_us := 0
+static var prof_av_n := 0
+static var prof_path_us := 0
+static var prof_path_n := 0
+
+
+func _find_path(p: Vector3) -> PackedVector3Array:
+	var t0 := Time.get_ticks_usec() if prof_on else 0
+	var r: PackedVector3Array = battle.find_path(position, p, move_class(), path_clearance())
+	if prof_on: prof_path_us += Time.get_ticks_usec() - t0; prof_path_n += 1
+	return r
+
+
 func _plan(p: Vector3) -> void:
 	if domain == "ground":
-		path = battle.find_path(position, p, move_class())
+		path = _find_path(p)
 	else:
 		path = PackedVector3Array([position, p])
 	path_i = 1 if path.size() > 1 else 0
 	repath_t = 1.0
+	stuck_t = 0.0; stuck_n = 0; prog_best = 1e9; arrive_t = 0.0
 
 
 # ------------------------------------------------------------------ simulation
@@ -734,10 +847,28 @@ func _surface_tick(dt: float) -> void:
 	match state:
 		S.IDLE:
 			_acquire(sight_r() * 0.8 if domain == "heli" else max_range_any() * 1.05)
+			if nudge_t > 0.0:      # step aside for a passing friendly, then stand again
+				nudge_t -= dt
+				if flat_dist(nudge_pos) > 0.35 and nudge_t > 0.0:
+					moving = true; _steer_to(nudge_pos, dt, 0.6)
+				elif nudge_pos == rest_pos:     # back on its spot (or as close as it got): stay
+					nudge_t = 0.0; back_t = 0.0; rest_pos = position
+				else:
+					nudge_t = 0.0; back_t = 1.5
+			elif back_t > 0.0:     # once the way is clear again: go back to the spot it was given
+				back_t -= dt
+				if back_t <= 0.0 and rest_pos != Vector3.INF and flat_dist(rest_pos) > 1.5:
+					if _movers_near(rest_pos, body_r() + 9.0) or _occupied(rest_pos):
+						back_n += 1
+						back_t = 1.0 if back_n < 8 else 0.0
+						if back_n >= 8: rest_pos = position      # traffic never cleared: this is the spot now
+					else:
+						back_n = 0
+						nudge_pos = rest_pos; nudge_t = 5.0
 		S.MOVE:
 			moving = true
 			if _follow(dt):
-				if queue.is_empty(): state = S.IDLE; speed_cur = 0.0
+				if queue.is_empty(): state = S.IDLE; speed_cur = 0.0; rest_pos = position; back_t = 0.0
 				else: goal = queue.pop_front(); _plan(goal)
 		S.ATTACK_MOVE:
 			_acquire(sight_r())
@@ -776,8 +907,10 @@ func _surface_tick(dt: float) -> void:
 		position += forward() * speed_cur * dt
 		bank = move_toward(bank, 0.0, dt)
 	vel = forward() * speed_cur
+	if hold_t > 0.0: hold_t -= dt; hold_sum += dt
+	else: hold_sum = maxf(0.0, hold_sum - dt * 0.5)
 	if domain == "heli":
-		var want_alt: float = 1.6 if (unload_pending or _loading_nearby()) and speed_cur < 2.0 else def.altitude
+		var want_alt: float = 1.6 if (unload_pending or _loading_nearby()) and speed_cur < 2.0 else cruise_alt()
 		altitude = move_toward(altitude, want_alt, dt * 5.0)   # lift-off / cruise height (low hover to load / unload)
 		if unload_pending and can_exchange():
 			unload_pending = false
@@ -798,7 +931,7 @@ func _heli_pad(dt: float) -> void:
 		return
 	var d := flat_dist(home)
 	if d > 1.5:
-		altitude = move_toward(altitude, def.altitude, dt * 5.0)
+		altitude = move_toward(altitude, cruise_alt(), dt * 5.0)
 		_steer_to(home, dt)
 		vel = forward() * speed_cur
 	else:
@@ -880,7 +1013,7 @@ var unload_pending := false     # helicopter: descend, then unload everyone
 
 
 func _loading_nearby() -> bool:
-	if not is_transport() or state != S.IDLE: return false
+	if not is_transport() or state in [S.MOVE, S.RETURN, S.HAUL, S.LANDED] or speed_cur > 2.0: return false
 	for u in battle.units:
 		if u.board_target == self and u.flat_dist(position) < 25.0: return true
 	return false
@@ -981,7 +1114,7 @@ func _chase(dt: float) -> void:
 		_steer_to(target.position, dt); return
 	repath_t -= dt
 	if repath_t <= 0.0 or path_i >= path.size():
-		path = battle.find_path(position, target.position, move_class())
+		path = _find_path(target.position)
 		path_i = 1 if path.size() > 1 else 0
 		repath_t = 1.0
 	_follow(dt)
@@ -995,33 +1128,335 @@ func _face(p: Vector3, dt: float) -> void:
 	heading = wrapf(heading + clampf(diff, -step, step), -PI, PI)
 
 
-func _steer_to(p: Vector3, dt: float) -> void:
+## Turn toward p and drive. The preferred velocity (toward p at the unit's speed, capped by its group's speed and
+## slowed on the approach) is corrected by local avoidance before the unit turns and accelerates.
+func _steer_to(p: Vector3, dt: float, speed_k := 1.0) -> void:
 	var to := Vector3(p.x - position.x, 0, p.z - position.z)
-	var want := atan2(-to.x, -to.z)
+	var dist := to.length()
+	var top: float = def.speed
+	if domain == "ground": top *= battle.terrain_speed_mult(self) * battle.speed_mult(self)
+	var pref := top * speed_k
+	if grp_speed > 0.0 and not grp_lag and target == null and state in [S.MOVE, S.ATTACK_MOVE]:
+		pref = minf(pref, grp_speed * top / float(def.speed))
+	pref = minf(pref, maxf(2.0, dist * 1.2))
+	var want_v := Vector2(to.x, to.z) / maxf(dist, 1e-4)
+	if dist > 0.05:
+		var t_av := Time.get_ticks_usec() if prof_on else 0
+		var av := _avoid(want_v, pref)
+		if prof_on: prof_av_us += Time.get_ticks_usec() - t_av; prof_av_n += 1
+		want_v = Vector2(av.x, av.y); pref = av.z
+	if hold_t > 0.0: pref = 0.0
+	if pref < 0.0:       # backing off (avoidance): keep the heading, drive in reverse
+		speed_cur = move_toward(speed_cur, pref, def.accel * dt)
+		position += forward() * speed_cur * dt
+		return
+	var want := atan2(-want_v.x, -want_v.y)
 	var diff := wrapf(want - heading, -PI, PI)
 	var step := deg_to_rad(def.turn_deg) * dt
 	heading = wrapf(heading + clampf(diff, -step, step), -PI, PI)
 	var align := clampf(cos(diff), 0.0, 1.0)
-	var ts: float = def.speed * align * align
-	if domain == "ground": ts *= battle.terrain_speed_mult(self) * battle.speed_mult(self)
-	ts = minf(ts, maxf(2.0, to.length() * 1.2))
+	var ts: float = pref * align * align
 	speed_cur = move_toward(speed_cur, ts, def.accel * dt)
 	position += forward() * speed_cur * dt
 	bank = move_toward(bank, clampf(diff, -0.4, 0.4) * (0.6 if domain == "heli" else 0.0), dt)
 
 
-## Follow the current path; returns true when the final point is reached.
+## Follow the current path; returns true when the final point is reached. Arrival is clean: a unit whose goal is
+## crowded accepts the spot it reached after a short wait instead of circling, and a unit that makes no progress for
+## 1.5 s re-plans its route from where it stands (it gives up after repeated failures).
 func _follow(dt: float) -> bool:
 	if path_i >= path.size():
 		return true
 	var p := path[path_i]
 	var to := Vector3(p.x - position.x, 0, p.z - position.z)
+	var d := to.length()
 	var last := path_i == path.size() - 1
-	if to.length() < (1.5 if last else 3.0):
-		path_i += 1
+	var inf: bool = def.get("visual") == "infantry"
+	var tol := (1.0 if inf else 1.5) if last else maxf(3.0, body_r() + 1.5)
+	var passed := false
+	if not last and d < 10.0:      # deflected past a corner waypoint: carry on to the next one
+		var nx := path[path_i + 1]
+		passed = (position.x - p.x) * (nx.x - p.x) + (position.z - p.z) * (nx.z - p.z) > 0.0
+		if passed and domain == "ground":
+			var g: GridNav = battle.navs.get(move_class(), battle.gnav)
+			passed = g == null or g.line_clear(position, nx)
+	if d < tol or passed:
+		path_i += 1; prog_best = 1e9; stuck_t = 0.0
 		return path_i >= path.size()
+	if d < prog_best - 0.5:
+		if prog_best < 1e8: stuck_n = maxi(0, stuck_n - 1)     # real progress pays back earlier stalls
+		prog_best = d; stuck_t = 0.0
+	else:
+		stuck_t += dt
+	if last:
+		var slack := body_r() * 2.0 + 2.5
+		if d < slack and speed_cur < float(def.speed) * 0.3: arrive_t += dt
+		else: arrive_t = maxf(0.0, arrive_t - dt)
+		if arrive_t > 0.8:
+			arrive_t = 0.0; path_i = path.size()
+			return true
+	if stuck_t > 1.5:
+		stuck_t = 0.0; prog_best = 1e9; stuck_n += 1
+		if "movedbg" in battle.args:
+			var near: Array = []
+			for o in battle.units:
+				if o != self and not o.dead and o.domain == domain and o.flat_dist(position) < 12.0:
+					near.append("%s#%d@%.1f st%d v%.1f" % [o.kind, o.uid, o.flat_dist(position), o.state, o.speed_cur])
+			var rocks: Array = []
+			for o in battle.obstacles_2d:
+				var dd := Vector2(o.x - position.x, o.y - position.z).length()
+				if dd < 25.0: rocks.append("rock(%.1f,%.1f r%.1f)@%.1f" % [o.x, o.y, o.z, dd])
+			var g: GridNav = battle.navs.get(move_class(), battle.gnav)
+			printerr("STUCK t=%.1f %s#%d n=%d pos=(%.1f,%.1f) h=%.2f spd=%.2f d=%.1f wp=(%.1f,%.1f) goal=(%.1f,%.1f) clear=%s av=%s wait=%.1f near: %s | %s" % [battle.sim_time, kind, uid, stuck_n,
+				position.x, position.z, heading, speed_cur, d, p.x, p.z, goal.x, goal.z, str(g.line_clear(position, p) if g else true), str(av_last), av_wait, ", ".join(near), ", ".join(rocks)])
+		var gp := path[path.size() - 1]
+		if (stuck_n >= 2 and flat_dist(gp) < arrive_slack()) or stuck_n >= 10:
+			path_i = path.size()              # close enough, or unreachable from here: stop instead of pushing
+			return true
+		if domain == "ground" and board_target == null:
+			path = _find_path(gp)
+			path_i = 1 if path.size() > 1 else 0
+			if path_i >= path.size(): return true
+			p = path[path_i]
 	_steer_to(p, dt)
 	return false
+
+
+## Distance from a crowded goal at which a blocked unit accepts where it stands (about one body length).
+func arrive_slack() -> float:
+	return 4.0 + body_r() * 3.0
+
+
+## Local avoidance (sampled reciprocal velocity obstacles). Candidate velocities around the preferred one are scored
+## by deviation from it plus a penalty that grows as the time to first contact with any neighbour shrinks; moving
+## neighbours share the avoidance (reciprocal), standing ones are treated as fixed and friendly idle ones are asked to
+## step aside. Ground units also avoid structures, rocks and blocked terrain. A slight keep-right bias and hysteresis
+## stop two units from mirroring each other. Returns (direction x, direction z, speed).
+const AV_ANGS := [0.0, 0.4, -0.4, 0.8, -0.8, 1.25, -1.25, 1.75, -1.75, 2.4, -2.4]
+const AV_SPD := [1.0, 0.55]
+
+
+var av_last := Vector2(0.0, 1.0)   # last avoidance result: heading offset (rad), speed factor (negative: reversing)
+var av_wait := 0.0                 # seconds spent slowed or stopped by avoidance (impatience)
+
+
+func _avoid(want: Vector2, pref: float) -> Vector3:
+	if domain == "jet" or pref <= 0.0: return Vector3(want.x, want.y, pref)
+	# full evaluation every other tick (staggered by unit id); in between the last correction is reused relative to
+	# the current preferred direction (avoidance reacts within 1/15 s)
+	if (battle.tick_n + uid) % 2 == 1:
+		var d0 := want.rotated(av_last.x) if av_last.x != 0.0 else want
+		return Vector3(d0.x, d0.y, pref * av_last.y)
+	var me := Vector2(position.x, position.z)
+	var r := body_r()
+	var ground := domain == "ground"
+	var H := clampf(maxf(speed_cur, pref) / maxf(float(def.accel), 1.0) + 1.0, 1.2, 3.0)
+	var look := minf(r + 2.0 + (pref + 2.0) * H, 18.0)
+	var vme := Vector2(vel.x, vel.z)
+	var P := PackedVector2Array(); var V := PackedVector2Array(); var RR := PackedFloat32Array(); var REC := PackedByteArray()
+	var msr := sub_r()
+	var mo := sub_off()
+	var mext := mo + msr
+	var mcs := PackedVector2Array([Vector2.ZERO])
+	if mo > 0.0:
+		var mf := Vector2(-sin(heading), -cos(heading)) * mo
+		mcs = PackedVector2Array([mf, -mf])
+	var passing := state != S.IDLE and (board_target != null or flat_dist(goal) > r + 3.0)
+	var margin := 0.25 if ground else 1.0
+	var nb: Dictionary = battle.nbr_ground if ground else battle.nbr_heli
+	var cs: float = battle.NB_CELL
+	var kx := floori(me.x / cs); var kz := floori(me.y / cs)
+	var span := ceili(look / cs)
+	for dz in range(-span, span + 1):
+		for dx in range(-span, span + 1):
+			var cell: Variant = nb.get(Vector2i(kx + dx, kz + dz))
+			if cell == null: continue
+			for o: Unit in cell:
+				if o == self or o == board_target or (o.board_target == self and is_transport()): continue
+				var pp := Vector2(o.position.x - me.x, o.position.z - me.y)
+				var oo: float = o._sub_off
+				var osr: float = o._sub_r
+				var dl := pp.length()
+				var ov := Vector2(o.vel.x, o.vel.z)
+				var ovl := ov.length()
+				# out of reach within the horizon even if both close at full speed: ignore
+				if dl - mext - oo - osr > (maxf(pref, absf(speed_cur)) + ovl) * H + 1.0: continue
+				var mv := ovl > 0.5 or (o.state != S.IDLE and o.path_i < o.path.size())
+				if not mv and passing and o.team == team and o.state == S.IDLE and o.hold_t <= 0.0:
+					# friendly standing in the corridor ahead: ask it to step aside
+					var Rb := r + o._body_r + 0.55
+					var along := pp.dot(want)
+					if along > -0.5 and along < r + o._body_r + 6.0 and absf(pp.cross(want)) < Rb:
+						o.request_nudge(want, me, Rb)
+				var R := msr + osr + margin
+				var rec := 1 if mv else 0
+				if oo <= 0.0 and mo <= 0.0:
+					P.append(pp); V.append(ov); RR.append(R); REC.append(rec)
+				else:
+					var of := Vector2(-sin(o.heading), -cos(o.heading)) * oo
+					for mc in mcs:
+						if oo <= 0.0:
+							P.append(pp - mc); V.append(ov); RR.append(R); REC.append(rec)
+						else:
+							P.append(pp + of - mc); V.append(ov); RR.append(R); REC.append(rec)
+							P.append(pp - of - mc); V.append(ov); RR.append(R); REC.append(rec)
+	if ground:
+		for b: Unit in battle.nbr_blds.get(Vector2i(kx, kz), []):
+			if b == board_target or b.dead: continue
+			for mc in mcs:
+				var cp: Vector2 = battle.footprint_closest(b, me + mc)
+				var pp := cp - me - mc
+				if pp.length() > minf(look, pref * H + msr + 1.5): continue
+				P.append(pp); V.append(Vector2.ZERO); RR.append(msr + 0.3); REC.append(0)
+		var og: Dictionary = battle._obstacle_grid()
+		var oc: Variant = og.get(Vector2i(floori(me.x / 16.0), floori(me.y / 16.0)))
+		if oc != null:
+			for o in oc:
+				var pr := Vector2(o.x - me.x, o.y - me.y)
+				if pr.length() - o.z - mext > pref * H + 1.5: continue
+				for mc in mcs:
+					P.append(pr - mc); V.append(Vector2.ZERO); RR.append(o.z * 0.75 + msr + 0.1); REC.append(0)
+	if P.is_empty():
+		av_ang = 0.0; av_last = Vector2(0.0, 1.0)
+		return Vector3(want.x, want.y, pref)
+	var n := P.size()
+	# the preferred velocity first: if it is free there is nothing to do
+	var tp := _ttc_min(P, V, RR, REC, want * pref, vme, n, H)
+	if tp >= H:
+		av_ang *= 0.8; av_last = Vector2(0.0, 1.0); av_wait = maxf(0.0, av_wait - 4.0 / 30.0)
+		return Vector3(want.x, want.y, pref)
+	var nav: GridNav = battle.navs.get(move_class(), battle.gnav) if ground else null
+	var best := Vector3(want.x, want.y, pref)
+	var best_c := 1.5 * (1.0 / maxf(tp, 0.02) - 1.0 / H)
+	# vehicles never steer more than ~70 degrees off their route (no running away from an oncoming crowd): when
+	# boxed in they slow, wait, or back off instead
+	var amax := 1.3 if (ground and def.get("visual") != "infantry") else 3.0
+	for ai in range(1, AV_ANGS.size()):
+		var a: float = AV_ANGS[ai]
+		if absf(a) > amax: break
+		var dir := want.rotated(a)
+		var base_c := 0.0
+		if a < 0.0: base_c += 0.04             # keep right
+		if av_ang != 0.0 and signf(a) != signf(av_ang): base_c += 0.25
+		if base_c + 2.0 * sin(absf(a) * 0.5) * 0.45 >= best_c: continue    # even the slower sample costs more
+		if nav:
+			var probe := Vector3(me.x + dir.x * (r + 2.0), 0, me.y + dir.y * (r + 2.0))
+			if nav.blocked_at(probe): continue
+		for si in AV_SPD.size():
+			var s: float = pref * AV_SPD[si]
+			var v := dir * s
+			var c := base_c + (want * pref - v).length() / maxf(pref, 0.5)
+			if c >= best_c: continue
+			var t := _ttc_min(P, V, RR, REC, v, vme, n, H)
+			if t < H: c += 1.5 * (1.0 / maxf(t, 0.02) - 1.0 / H)
+			if c < best_c: best_c = c; best = Vector3(dir.x, dir.y, s)
+	# slowing down on the preferred heading, or standing still (yield), are candidates too; waiting grows more
+	# expensive the longer it lasts (impatience), so two units never wait for each other forever
+	for k: float in [0.55, 0.0]:
+		var c1 := 1.0 - k + av_wait * (0.9 if k == 0.0 else 0.5)
+		if c1 >= best_c: continue
+		var t1 := _ttc_min(P, V, RR, REC, want * pref * k, vme, n, H)
+		if t1 < H: c1 += 1.5 * (1.0 / maxf(t1, 0.02) - 1.0 / H)
+		if c1 < best_c: best = Vector3(want.x, want.y, pref * k); best_c = c1
+	# a vehicle boxed in for a while may back off a few metres (it cannot turn on the spot)
+	var f := Vector2(-sin(heading), -cos(heading))
+	if ground and av_wait > 0.8 and absf(speed_cur) < 1.0 and def.get("visual") != "infantry":
+		var vr := -f * float(def.speed) * 0.35
+		var cr := 1.2 + 1.5 * (1.0 / maxf(_ttc_min(P, V, RR, REC, vr, vme, n, H), 0.02) - 1.0 / H)
+		var back := Vector3(position.x - f.x * (ext_r() + 1.5), 0, position.z - f.y * (ext_r() + 1.5))
+		if cr < best_c and (nav == null or not nav.blocked_at(back)):
+			av_wait = maxf(0.0, av_wait - 0.2)
+			av_last = Vector2(want.angle_to(f), -0.35 * float(def.speed) / pref)
+			return Vector3(f.x, f.y, -float(def.speed) * 0.35)
+	var ang := want.angle_to(Vector2(best.x, best.y))
+	av_ang = ang if absf(ang) > 0.05 else av_ang * 0.8
+	av_last = Vector2(ang if absf(ang) > 0.01 else 0.0, best.z / pref)
+	if best.z < pref * 0.3: av_wait += 2.0 / 30.0      # evaluated every other tick
+	else: av_wait = maxf(0.0, av_wait - 4.0 / 30.0)
+	return best
+
+
+## Earliest time (s, capped at H) at which velocity v brings this unit into contact with any listed neighbour.
+## Reciprocal neighbours (moving) are assumed to take half of the avoidance; overlapping pairs only forbid closing.
+static func _ttc_min(P: PackedVector2Array, V: PackedVector2Array, RR: PackedFloat32Array, REC: PackedByteArray, v: Vector2, vme: Vector2, n: int, H: float) -> float:
+	var tmin := H
+	for i in n:
+		var w := (v * 2.0 - vme - V[i]) if REC[i] == 1 else (v - V[i])
+		var p := P[i]
+		var R := RR[i]
+		var b := p.dot(w)
+		var c := p.length_squared() - R * R
+		if c < 0.0:      # already touching: only forbid moving further in (sliding past along the contact is allowed)
+			if b > 0.25 * p.length() * w.length(): return 0.0
+			continue
+		if b <= 0.0: continue
+		var a := w.length_squared()
+		var disc := b * b - a * c
+		if disc < 0.0: continue
+		var t := (b - sqrt(disc)) / a
+		if t < tmin: tmin = t
+	return tmin
+
+
+## A moving friendly unit needs to pass: step out of its corridor (to the side it is already on) if the ground
+## there is free, otherwise to the other side; an idle unit never wanders further than that.
+func request_nudge(dir: Vector2, src: Vector2, need: float) -> void:
+	if (nudge_t > 0.0 and back_t > 0.0) or speed_cur > 1.5 or state != S.IDLE or (self is Building): return
+	if nudge_t > 0.0 and nudge_pos == rest_pos: nudge_t = 0.0      # walking back: give way first
+	elif nudge_t > 0.0: return
+	var me := Vector2(position.x, position.z)
+	var rel := me - src
+	var side := Vector2(-dir.y, dir.x)
+	var lat := rel.dot(side)
+	var s := signf(lat)
+	if s == 0.0: s = 1.0 if uid % 2 == 0 else -1.0
+	var nav: GridNav = battle.navs.get(move_class(), battle.gnav) if domain == "ground" else null
+	for k in 2:
+		var sg := s if k == 0 else -s
+		var amt := need - absf(lat) + 1.2 if k == 0 else need + absf(lat) + 1.2
+		var tgt := me + side * sg * amt + dir * 0.8
+		var p3 := Vector3(tgt.x, position.y, tgt.y)
+		if (nav == null or not nav.blocked_at(p3)) and battle.map_bounds.has_point(tgt):
+			nudge_pos = p3; nudge_t = 2.5; back_t = 0.0
+			return
+
+
+## Any other unit of this layer moving within r of p (traffic that a unit returning to p would get in the way of).
+func _movers_near(p: Vector3, r: float) -> bool:
+	var nb: Dictionary = battle.nbr_ground if domain == "ground" else battle.nbr_heli
+	var cs: float = battle.NB_CELL
+	var kx := floori(p.x / cs); var kz := floori(p.z / cs)
+	var span := ceili(r / cs)
+	for dz in range(-span, span + 1):
+		for dx in range(-span, span + 1):
+			var cell: Variant = nb.get(Vector2i(kx + dx, kz + dz))
+			if cell == null: continue
+			for o: Unit in cell:
+				if o == self or o.state == S.IDLE: continue
+				if o.speed_cur > 0.3 and Vector2(o.position.x - p.x, o.position.z - p.z).length() < r: return true
+	return false
+
+
+## Another unit of this layer standing on p (within the two bodies' radii).
+func _occupied(p: Vector3) -> bool:
+	var nb: Dictionary = battle.nbr_ground if domain == "ground" else battle.nbr_heli
+	var cs: float = battle.NB_CELL
+	var kx := floori(p.x / cs); var kz := floori(p.z / cs)
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var cell: Variant = nb.get(Vector2i(kx + dx, kz + dz))
+			if cell == null: continue
+			for o: Unit in cell:
+				if o == self: continue
+				if Vector2(o.position.x - p.x, o.position.z - p.z).length() < (body_r() + o._body_r) * 0.9: return true
+	return false
+
+
+## Hover / cruise height: helicopters and jets are spread over a few altitude layers so airframes never intersect.
+func cruise_alt() -> float:
+	var n := 4 if domain == "jet" else 3
+	var l := alt_layer if alt_layer >= 0 else uid % n
+	return float(def.altitude) + float(l % n) * (3.5 if domain == "jet" else 1.5)
 
 
 ## Jets never stop in the air. Phases: take-off roll from the pad -> climb -> orbit / move / attack runs ->
@@ -1076,7 +1511,7 @@ func _jet_tick(dt: float) -> void:
 		return
 	if not has_ammo() and state != S.RETURN:
 		_clear(); state = S.RETURN; goal = home; ret_phase = 0
-	altitude = move_toward(altitude, def.altitude, dt * maxf(4.0, speed_cur * 0.3))
+	altitude = move_toward(altitude, cruise_alt(), dt * maxf(4.0, speed_cur * 0.3))
 	var steer := goal
 	var throttle: float = def.speed
 	var min_v: float = def.min_speed
@@ -1142,6 +1577,7 @@ func _jet_tick(dt: float) -> void:
 					position = Vector3(home.x, 0, home.z); heading = 0.0
 					state = S.LANDED; rearm_t = 1.5; speed_cur = 0.0; airborne = false
 					return
+	if state != S.RETURN or ret_phase == 0: steer = _jet_separate(steer, dt)
 	var to := Vector3(steer.x - position.x, 0, steer.z - position.z)
 	var diff := wrapf(atan2(-to.x, -to.z) - heading, -PI, PI)
 	var step := deg_to_rad(def.turn_deg) * dt
@@ -1222,6 +1658,35 @@ func _orbit_point(c: Vector3, r: float) -> Vector3:
 	var rel := Vector3(position.x - c.x, 0, position.z - c.z)
 	var ang := atan2(rel.z, rel.x) + 0.9
 	return c + Vector3(cos(ang), 0, sin(ang)) * r
+
+
+## Jet-vs-jet separation in flight: predict the closest approach to every airborne jet near this one's altitude over
+## the next 2.5 s; if it falls inside the safety distance, bend the steering point away from it. Jets of one group
+## fly on separate altitude layers (cruise_alt), so this only has to act between jets sharing a layer.
+func _jet_separate(steer: Vector3, dt: float) -> Vector3:
+	var me := Vector2(position.x, position.z)
+	var v := Vector2(vel.x, vel.z)
+	var push := Vector2.ZERO
+	var my_y := position.y + altitude
+	for o: Unit in battle.air_jets:
+		if o == self or o.dead or not o.airborne: continue
+		var p := Vector2(o.position.x, o.position.z) - me
+		if p.length_squared() > 200.0 * 200.0: continue
+		var dv := (o.position.y + o.altitude) - my_y
+		if absf(dv) > 6.0: continue
+		var w := v - Vector2(o.vel.x, o.vel.z)
+		var t := clampf(p.dot(w) / maxf(w.length_squared(), 1e-3), 0.0, 2.5)
+		var miss := p - w * t
+		var need := (body_r() + o.body_r()) * 1.8
+		var ml := miss.length()
+		if ml < need:
+			var away := -miss / ml if ml > 0.01 else Vector2(-v.y, v.x).normalized() * (1.0 if uid > o.uid else -1.0)
+			push += away * (need - ml) / need
+	if push == Vector2.ZERO: return steer
+	var sd := Vector2(steer.x, steer.z) - me
+	var dir := (sd.normalized() if sd.length() > 0.1 else Vector2(-sin(heading), -cos(heading))) + push * 2.0
+	dir = dir.normalized() * maxf(sd.length(), 60.0)
+	return Vector3(me.x + dir.x, 0, me.y + dir.y)
 
 
 func _aim_turret(dt: float) -> void:
