@@ -37,8 +37,8 @@ func _fast(on: bool) -> void:
 
 
 func _shot(tag: String, img: Image = null) -> void:
-	if DisplayServer.get_name() == "headless":
-		printerr("SHOT(headless, skipped) ", tag, " t=", battle.sim_time)
+	if DisplayServer.get_name() == "headless" or not _want(tag):
+		printerr("SHOT(skipped) ", tag, " t=", battle.sim_time)
 		return
 	var was_fast := Engine.time_scale > 1.0
 	if was_fast: _fast(false)
@@ -48,6 +48,15 @@ func _shot(tag: String, img: Image = null) -> void:
 	im.save_png("%s/%s.png" % [out, tag])
 	printerr("SHOT ", tag, " ", im.get_size())
 	if was_fast: _fast(true)
+
+
+## only=<tag prefix>[,<prefix>...] limits which images are written (the machine is shared; captures are slow).
+func _want(tag: String) -> bool:
+	var only := str(battle.args.get("only", ""))
+	if only == "": return true
+	for o in only.split(","):
+		if tag.begins_with(o) or o.begins_with(tag): return true
+	return false
 
 
 func _flight(id: String, i := 0) -> Dictionary:
@@ -87,7 +96,8 @@ func _run() -> void:
 	battle.add_child(cam)
 	var tgt: Vector3 = battle.grounded(Vector3(20, 0, -40))
 	# 1. close-ups of each bomber during its own strike (doors open / B-1 swept just before release)
-	for e in [["supersonic", "b3_b1_hd_close", 26.0, 7.0, 20.0], ["stealth", "b3_b2_hd_close", 24.0, 9.0, 22.0], ["carpet", "b3_b52_hd_close", 34.0, 10.0, 30.0]]:
+	for e in ([] if not (_want("b3_b1") or _want("b3_b2") or _want("b3_b52_hd")) else [["supersonic", "b3_b1_hd_close", 26.0, 7.0, 20.0], ["stealth", "b3_b2_hd_close", 24.0, 9.0, 22.0], ["carpet", "b3_b52_hd_close", 34.0, 10.0, 30.0]]):
+		if not _want(e[1]): continue
 		battle.power_ready[0][e[0]] = 0.0
 		battle.launch_power(0, e[0], tgt)
 		var t_end: float = battle.sim_time + 40.0
@@ -101,6 +111,8 @@ func _run() -> void:
 		_freeze(false)
 		while battle.flights.any(func(x): return x.has("strike")) or battle.bombs.any(func(b): return b.has("strike")):
 			await _wait_sim(0.5)
+	if not _want("b3_b52_bay") and not _want("b3_b52_imp"):
+		await _package(); return
 	# 2. B-52 bay open, bombs falling: main view beside / below the bomber with the strike-camera inset, and the inset alone
 	var t2: Vector3 = battle.grounded(Vector3(-30, 0, -60))
 	battle.power_ready[0]["carpet"] = 0.0
@@ -123,7 +135,14 @@ func _run() -> void:
 	await _shot("b3_b52_impacts_rts_pip")
 	while battle.flights.any(func(x): return x.has("strike")) or battle.bombs.any(func(b): return b.has("strike")) or battle.strikes.cam != null:
 		await _wait_sim(0.5)
+	await _package()
+
+
+func _package() -> void:
+	if not _want("b3_strike"):
+		printerr("BOMBERSHOTS DONE"); get_tree().quit(); return
 	# 3. Strategic Strike Package over Zagros
+	var t_e: float
 	var t3: Vector3 = battle.grounded(Vector3(0, 0, -20))
 	battle.power_ready[0]["strike_package"] = 0.0
 	battle.launch_power(0, "strike_package", t3)

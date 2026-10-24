@@ -21,7 +21,7 @@ func _ready() -> void:
 			return
 	# automated runs (tests / diagnostics / evidence) skip the menu
 	for a in OS.get_cmdline_user_args():
-		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots", "pilotshots", "m1shots", "maptest", "mapshots"] or a.begins_with("test"):
+		if a in ["test", "airdiag", "evidence", "uishots", "vischeck", "basetest", "baseshots", "pilotshots", "m1shots", "maptest", "mapshots", "bombershots"] or a.begins_with("test"):
 			Game.call_deferred("start_match")
 			return
 	var bg := TextureRect.new()
