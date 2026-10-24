@@ -240,9 +240,8 @@ func _b3_shots() -> void:
 	var shots_on: bool = not ("perfonly" in battle.args)
 	var z: Dictionary = battle.terrain.data.get("zones", {})
 	var portal: Vector3 = battle.map_point(z.get("portal_a_east", [166.0, 294.0]))
-	var views := [["b3_overview", Vector3(0, 0, 0), 300.0, 0.0, 70.0], ["b3_town", Vector3(-275, 0, 305), 125.0, 0.0, 50.0],
-		["b3_industry", Vector3(205, 0, 245), 115.0, 330.0, 48.0], ["b3_portal_train", portal + Vector3(-4, 0, -30), 62.0, 200.0, 38.0],
-		["b3_bridge", Vector3(-318, 0, 194), 55.0, 120.0, 40.0]]
+	var views := [["b3_overview", Vector3(40, 0, 80), 300.0, 0.0, 70.0], ["b3_town", Vector3(-275, 0, 305), 125.0, 0.0, 50.0],
+		["b3_industry_portal_train", portal + Vector3(30, 0, -40), 110.0, 200.0, 45.0]]
 	await _wait(1.0)
 	for v in views:
 		_cam(battle.grounded(v[1]), v[2], v[3], v[4])
