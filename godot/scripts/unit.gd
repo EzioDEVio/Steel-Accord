@@ -1304,7 +1304,9 @@ func _avoid(want: Vector2, pref: float) -> Vector3:
 							P.append(pp + of - mc); V.append(ov); RR.append(R); REC.append(rec)
 							P.append(pp - of - mc); V.append(ov); RR.append(R); REC.append(rec)
 	if ground:
-		for b: Unit in battle.nbr_blds.get(Vector2i(kx, kz), []):
+		for bv in battle.nbr_blds.get(Vector2i(kx, kz), []):
+			if not is_instance_valid(bv): continue   # sold / destroyed since the neighbour grid was built
+			var b: Unit = bv
 			if b == board_target or b.dead: continue
 			for mc in mcs:
 				var cp: Vector2 = battle.footprint_closest(b, me + mc)
