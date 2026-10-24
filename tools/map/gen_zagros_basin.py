@@ -45,12 +45,12 @@ START_B = (-START_A[0], -START_A[1])
 START_R = 100.0                               # flat radius around each start (=> ~200 m across)
 START_SKIRT = 45.0
 
-MOVEMENT = {
-    "infantry": {"max_slope_deg": 38.0,
+MOVEMENT = {   # road_speed_bonus: extra speed on a paved road (B3 client decision); dirt tracks give dirt_share of it
+    "infantry": {"max_slope_deg": 38.0, "road_speed_bonus": 0.10, "dirt_share": 0.5,
                  "cost": {"sand": 1.0, "gravel": 1.1, "rock": 1.6, "riverbed": 1.2, "scrub": 1.1, "road": 0.9}},
-    "wheeled": {"max_slope_deg": 18.0,
+    "wheeled": {"max_slope_deg": 18.0, "road_speed_bonus": 0.20, "dirt_share": 0.5,
                 "cost": {"sand": 1.35, "gravel": 1.2, "rock": 4.0, "riverbed": 1.5, "scrub": 1.4, "road": 0.55}},
-    "tracked": {"max_slope_deg": 28.0,
+    "tracked": {"max_slope_deg": 28.0, "road_speed_bonus": 0.10, "dirt_share": 0.5,
                 "cost": {"sand": 1.1, "gravel": 1.0, "rock": 2.2, "riverbed": 1.25, "scrub": 1.1, "road": 0.8}},
 }
 BUILDING_MAX_SLOPE = 8.0
@@ -71,15 +71,7 @@ A_ = np.abs(S)                                # distance from the basin axis
 TP = T * np.sign(S + 1e-9)                    # along-strike coordinate in the local side's frame (B = A rotated)
 
 
-# Garrisonable civilian buildings (B2): a contested hospital in the middle of the basin, and a civic centre and an
-# apartment block by each village, plus a mirrored pair of apartment blocks in the basin. Point-symmetric pairs.
-# (Village houses listed under "props" are also turned into garrisonable houses by the game.)
-CIVIC = [
-    {"type": "civ_hospital", "pos": [0.0, 0.0]},
-    {"type": "civ_center", "pos": [-195.0, 330.0]}, {"type": "civ_center", "pos": [195.0, -330.0]},
-    {"type": "civ_apartment", "pos": [-285.0, 280.0]}, {"type": "civ_apartment", "pos": [285.0, -280.0]},
-    {"type": "civ_apartment", "pos": [110.0, 120.0]}, {"type": "civ_apartment", "pos": [-110.0, -120.0]},
-]
+# Garrisonable civilian buildings: see CIVIC_A / infra_layout() (B3 town, industry; hospital at the centre).
 
 
 def w2tp(x, z):
@@ -356,7 +348,7 @@ def build(args):
         ctrl = [tuple(st)] + [tp2w(tw - 20 * k * (1 if name != "east" else -1) + 6 * math.sin(k), sw0 - 28 * k) for k in range(1, 5)]
         ctrl = [c for c in ctrl if w2tp(*c)[1] > 8] + [tp2w(w2tp(*ctrl[-1])[0] - 12, 0.0)]
         tribs_A.append(catmull(ctrl, 8.0))
-    for tpp in (-400.0, -110.0, 330.0):
+    for tpp in (-400.0, -110.0, 440.0):                          # (B3: 330 -> 440, clear of the industrial zone)
         ctrl = [tp2w(tpp + 8 * k * math.sin(k * 1.3), 150.0 - 30 * k) for k in range(6)]
         tribs_A.append(catmull(ctrl, 8.0))
     wadis = [(trunk, 11.0, 2.3)] + [(P, 6.0, 1.4) for P in tribs_A] + [(np.asarray(mirror_poly(P)), 6.0, 1.4) for P in tribs_A]
@@ -415,16 +407,28 @@ def build(args):
             h[:] = h * (1 - w) + t * w
             flat_info[f"{key}{'' if k == 0 else '_mirror'}"] = round(t, 2)
 
+    def op_trect(c, size, skirt, key, tgt=None):
+        """Rectangle in the (t, s) strike frame (rotated 35 deg like the ridges), c = (t, s)."""
+        for k, (tc, sc) in enumerate((c, (-c[0], -c[1]))):
+            dd = np.hypot(np.maximum(0, np.abs(T - tc) - size[0] / 2), np.maximum(0, np.abs(S - sc) - size[1] / 2))
+            t = float(np.median(h[dd <= 0])) if tgt is None else tgt[k]
+            w = 1 - smoothstep(0, skirt, dd)
+            h[:] = h * (1 - w) + t * w
+            flat_info[f"{key}{'' if k == 0 else '_mirror'}"] = round(t, 2)
+
     def flatten_all(targets=None):
         ops = [("disc", START_A, (START_R + 4.0, START_SKIRT), "start")]
         ops += [("rect", c, (sz, 18.0), f"pad{i}") for i, (c, sz) in enumerate(BUILD_PADS_A)]
         ops += [("disc", c, (16.0, 12.0), f"pile{i}") for i, c in enumerate([c for c, _ in PILES_A] + PILES_C_HALF + [(0.0, 0.0)])]
         ops += [("disc", c, (15.0, 12.0), f"derrick{i}") for i, c in enumerate(DERRICKS_A + DERRICKS_C_HALF)]
-        ops += [("disc", VILLAGE_A, (46.0, 22.0), "village")]
+        ops += [("trect", TOWN_TS_A[0], (TOWN_TS_A[1], 20.0), "town")]          # B3: the town replaces the village disc
+        ops += [("trect", INDUSTRY_TS_A[0], (INDUSTRY_TS_A[1], 18.0), "industry")]
         for kind, c, prm, key in ops:
             tg = None if targets is None else (targets[key], targets[key + "_mirror"])
             if kind == "disc":
                 op_disc(c, prm[0], prm[1], key, tg)
+            elif kind == "trect":
+                op_trect(c, prm[0], prm[1], key, tg)
             else:
                 op_rect(c, prm[0], prm[1], key, tg)
         return dict(flat_info)
@@ -433,20 +437,43 @@ def build(args):
     h = symmetrize(h)
 
     # ------------------------------------------------------------ roads: smoothed, grade-limited profile + shoulders
+    # B3: a dry riverbed across the valley at the town's pass-side exit (crossed by the west road on a bridge); carved
+    # after the town platform so the flattening does not fill it
+    VW = catmull(VALLEY_WADI_A, 6.0)
+    for PP in (VW, np.asarray(mirror_poly(VW))):
+        d, _ = poly_dist(PP, 7.0 + 14.0)
+        h -= 1.9 * (1 - smoothstep(7.0 * 0.55, 7.0 + 9.0, d))
+        river = np.maximum(river, 1 - smoothstep(7.0 * 0.5, 7.0 * 1.05, d))
+    wadis = wadis + [(VW, 7.0, 1.9), (np.asarray(mirror_poly(VW)), 7.0, 1.9)]
+    h = symmetrize(h)
+    h_pre = h.copy()                                             # wadi channels intact (bridges re-open them)
     roads = road_polylines(pass_all, gP)
     for rd in roads:
         P = rd["P"]
         s = arclen(P)
         prof = sample_h(h, P)
-        prof = ndi.gaussian_filter1d(prof, 4.0, mode="nearest")
-        g = math.tan(math.radians(9.0))
+        prof = ndi.gaussian_filter1d(prof, 4.0 if rd["cls"] == "main" else 3.0, mode="nearest")
+        g = math.tan(math.radians(9.0 if rd["surface"] == "paved" else 11.0))
         for _ in range(3):                                       # grade limit, both directions
             for i in range(1, len(prof)):
                 prof[i] = np.clip(prof[i], prof[i - 1] - g * (s[i] - s[i - 1]), prof[i - 1] + g * (s[i] - s[i - 1]))
             for i in range(len(prof) - 2, -1, -1):
                 prof[i] = np.clip(prof[i], prof[i + 1] - g * (s[i + 1] - s[i]), prof[i + 1] + g * (s[i + 1] - s[i]))
-        corridor(h, P, s, prof, rd["width"] * 0.5 + 1.5, 0.45, 0.35, rd["width"] * 0.5 + 30.0)
+        if rd["surface"] == "paved":
+            corridor(h, P, s, prof, rd["width"] * 0.5 + 1.5, 0.45, 0.35, rd["width"] * 0.5 + 30.0)
+        else:
+            corridor(h, P, s, prof, rd["width"] * 0.5 + 0.5, 0.5, 0.4, rd["width"] * 0.5 + 16.0)
     flatten_all(targets)                                         # roads must not disturb starts / pads / sites
+    h = symmetrize(h)
+    # rail (both lines), then bridges: re-open the wadis beside each deck; sites re-flattened afterwards
+    rail = build_rail(h)
+    wadis_w = [(P, hw, dp) for P, hw, dp in wadis]
+    bridges = find_bridges(roads, rail, wadis_w)
+    for br in bridges:
+        recarve_bridge(h, h_pre, br)
+    flatten_all(targets)
+    h = symmetrize(h)
+    regrade_rail(h, rail)                                        # smooth the formation where site skirts touched it
     h = symmetrize(h)
 
     # ------------------------------------------------------------ asymmetric cosmetic detail on cliffs only
@@ -455,7 +482,7 @@ def build(args):
     h += 0.7 * cliff * aniso_noise(99, 10.0, 10.0)
     h = np.clip(h, 0.05, HEIGHT_SCALE - 0.05)
     return dict(h=h, river=river, fan=fan_mask, passes=pass_all, goat=gP, roads=roads, flat=flat_info,
-                wadis=wadis, ridge_r=r1 + r2)
+                wadis=wadis, ridge_r=r1 + r2, rail=rail, bridges=bridges)
 
 
 # ====================================================================== sites (A side; mirrored to B)
@@ -490,8 +517,372 @@ def road_polylines(pass_all, goat):
     basin = [(x, z) for x, z in basin if abs(x) <= 596 and abs(z) <= 596]
     out = []
     for name, pts, w in (("central", central, 9.0), ("west", west, 7.0), ("east", east, 7.0), ("basin", basin, 6.0)):
-        out.append(dict(name=name, P=catmull(pts, 6.0), width=w))
+        out.append(dict(name=name, P=catmull(pts, 6.0), width=w, surface="paved", cls="main", markings=True, kerbs=False))
+    # B3: town streets, industrial access and dirt tracks (A side + point mirror)
+    for name, pts, w, surf, cls in EXTRA_ROADS_A:
+        P = catmull(pts, 4.0) if len(pts) > 2 else resample(np.asarray(pts, float), 4.0)
+        for k, PP in enumerate((P, np.asarray(mirror_poly(P)))):
+            out.append(dict(name=f"{name}_{'a' if k == 0 else 'b'}", P=PP, width=w, surface=surf, cls=cls,
+                            markings=False, kerbs=(cls == "street")))
     return out
+
+
+# ====================================================================== B3 infrastructure (A side; B = point mirror)
+# Town in A's valley (axis-aligned street grid: civic buildings are not rotated, their entrance faces +Z = south).
+TOWN_TS_A = ((-60.0, 430.0), (230.0, 120.0))             # flattened town platform, (t, s) frame (clear of ridges)
+INDUSTRY_TS_A = ((322.0, 86.0), (170.0, 56.0))             # flattened industrial zone, (t, s) frame
+EXTRA_ROADS_A = [  # name, control points (world), width m, surface, class
+    ("street_h1", [(-378.0, 300.0), (-226.0, 300.0)], 7.0, "paved", "street"),
+    ("street_h2", [(-356.0, 345.0), (-200.0, 345.0)], 7.0, "paved", "street"),
+    ("street_h3", [(-350.0, 255.0), (-280.0, 255.0)], 6.0, "paved", "street"),
+    ("street_v1", [(-320.0, 232.0), (-320.0, 345.0)], 6.0, "paved", "street"),
+    ("street_v2", [(-262.0, 300.0), (-262.0, 345.0)], 6.0, "paved", "street"),
+    ("street_cc", [(-196.0, 355.0), (-145.0, 355.0)], 6.0, "paved", "street"),
+    ("ind_access", [(236.0, 196.0), (226.0, 214.0), (222.0, 232.0), (222.0, 249.0)], 7.0, "paved", "street"),
+    ("ind_yard", [(176.0, 249.0), (290.0, 249.0)], 7.0, "paved", "street"),
+    ("track_farm_w", [(-378.0, 300.0), (-398.0, 302.0), (-404.0, 316.0)], 4.0, "dirt", "track"),
+    ("track_farm_e", [(-118.0, 416.0), (-140.0, 440.0), (-158.0, 462.0)], 4.0, "dirt", "track"),
+    ("track_derrick_a", [(84.0, 494.0), (100.0, 482.0), (106.0, 474.0)], 4.0, "dirt", "track"),
+    ("track_derrick_c", [(-451.0, -298.0), (-458.0, -312.0), (-463.0, -323.0)], 4.0, "dirt", "track"),
+    ("track_mast", [(-145.0, 355.0), (-132.0, 340.0)], 4.0, "dirt", "track"),
+]
+# rail line A: west tunnel portal -> along the inner-ridge foot -> E-W straight -> N-S freight yard -> east portal
+RAIL_A_CTRL = ([tp2w(t, s) for t, s in ((-470.0, 205.0), (-452.0, 170.0), (-432.0, 144.0), (-400.0, 127.0),
+                                         (-340.0, 124.0), (-280.0, 132.0), (-235.0, 140.0), (-195.0, 136.0),
+                                         (-155.0, 125.0), (-100.0, 122.0), (-50.0, 124.0), (0.0, 128.0))] +
+               [(-35.0, 136.0), (5.0, 163.0), (40.0, 180.0), (80.0, 186.0), (125.0, 186.0), (145.0, 188.0),
+                (158.0, 195.0), (165.0, 207.0), (166.0, 222.0), (166.0, 250.0), (166.0, 280.0), (166.0, 300.0),
+                (166.0, 330.0)])
+VALLEY_WADI_A = [(-372.0, 225.0), (-347.0, 210.0), (-322.0, 195.4), (-297.0, 180.5), (-272.0, 166.0)]
+RAIL_SIDING_A = [(166.0, 206.0), (163.0, 214.0), (161.0, 224.0), (161.0, 260.0), (161.0, 268.0)]
+RAIL_MAX_GRADE = 0.025
+PORTAL_COVER = 10.0             # ground above the rail at the portal face (m)
+
+
+def rail_profile(h, P):
+    """Smooth, grade-limited rail formation height along P (ridge ends ignored by a moving minimum)."""
+    s = arclen(P)
+    hp = sample_h(h, P)
+    low = hp <= np.percentile(hp, 50) + 4.0                      # the ridge ends are interpolated over, not followed
+    prof = np.interp(s, s[low], ndi.minimum_filter1d(hp, size=7, mode="nearest")[low])
+    prof = ndi.gaussian_filter1d(prof, 6.0, mode="nearest")
+    for _ in range(4):
+        for i in range(1, len(prof)):
+            g = RAIL_MAX_GRADE * (s[i] - s[i - 1])
+            prof[i] = np.clip(prof[i], prof[i - 1] - g, prof[i - 1] + g)
+        for i in range(len(prof) - 2, -1, -1):
+            g = RAIL_MAX_GRADE * (s[i + 1] - s[i])
+            prof[i] = np.clip(prof[i], prof[i + 1] - g, prof[i + 1] + g)
+    return s, hp, prof
+
+
+def rail_corridor(h, P, s, prof, near, pad=40.0):
+    """Cut / fill the formation: floor half width 3 m (5 m at the portals); shallow cuts and fills get 1:4 sides,
+    deeper ones steep cutting walls (2.5:1) and 1:1 embankments; the last metres before a portal are a steep slot."""
+    d, par = poly_dist(P, pad)
+    m = d < pad
+    p = np.interp(par[m], s, prof)
+    nr = np.interp(par[m], s, near)
+    hw = 3.0 + 2.0 * nr
+    e = np.maximum(0.0, d[m] - hw)
+    for a, b in ((P[0], P[1]), (P[-1], P[-2])):                 # behind each end: no floor, the slot closes radially
+        o = (a - b) / np.linalg.norm(a - b)
+        beyond = ((X[m] - a[0]) * o[0] + (Z[m] - a[1]) * o[1]) > 0
+        e = np.where(beyond, d[m], e)
+    cut = np.where(e < 8.0, 0.25 * e, 2.0 + 2.5 * (e - 8.0))
+    cut = cut * (1 - nr) + 3.0 * e * nr
+    fill = np.where(e < 8.0, 0.25 * e, 2.0 + 1.0 * (e - 8.0))
+    hm = h[m]
+    hm = np.minimum(hm, p + cut)
+    hm = np.maximum(hm, p - fill)
+    h[m] = hm
+
+
+def build_rail(h):
+    """Grades both rail lines (A + mirror) into h. Returns line dicts (points, portals) and the sidings."""
+    P0 = catmull(RAIL_A_CTRL, 3.0)
+    s, hp, prof = rail_profile(h, P0)
+    mid = len(P0) // 2
+    over = hp - prof
+    iw = next(i for i in range(mid, -1, -1) if over[i] >= PORTAL_COVER)
+    ie = next(i for i in range(mid, len(P0)) if over[i] >= PORTAL_COVER)
+    portals = []
+    for i, j in ((iw, iw + 1), (ie, ie - 1)):
+        f = P0[j] - P0[i]; f = f / np.linalg.norm(f)                 # front of the portal = out of the mountain
+        portals.append(dict(pos=P0[i].tolist(), front=f.tolist(), rail_h=float(prof[i])))
+    # keep 1.5 m of track inside each portal face (dark recess), drop the rest
+    a = P0[iw] - (P0[iw + 1] - P0[iw]) / np.linalg.norm(P0[iw + 1] - P0[iw]) * 1.5
+    b = P0[ie] + (P0[ie] - P0[ie - 1]) / np.linalg.norm(P0[ie] - P0[ie - 1]) * 1.5
+    P = np.vstack([a, P0[iw:ie + 1], b])
+    s2 = arclen(P)
+    prof2 = np.r_[prof[iw], prof[iw:ie + 1], prof[ie]]
+    near = np.clip(1 - np.minimum(s2, s2[-1] - s2) / 28.0, 0, 1)
+    sid = resample(np.asarray(RAIL_SIDING_A, float), 3.0)
+    for PP, sg in ((P, 1), (np.asarray(mirror_poly(P)), -1)):
+        rail_corridor(h, PP, s2, prof2, near)
+    lines = [dict(name="rail_a", P=P, prof=prof2, portals=portals)]
+    mp = [dict(pos=[-p["pos"][0], -p["pos"][1]], front=[-p["front"][0], -p["front"][1]], rail_h=p["rail_h"]) for p in portals]
+    lines.append(dict(name="rail_b", P=np.asarray(mirror_poly(P)), prof=prof2, portals=mp))
+    sidings = [dict(name="siding_a", P=sid), dict(name="siding_b", P=np.asarray(mirror_poly(sid)))]
+    return dict(lines=lines, sidings=sidings)
+
+
+def regrade_rail(h, rail):
+    """Second, gentle pass over the final terrain: re-smooth the formation (sites keep their level; the rail only
+    blends into their skirts)."""
+    for ln in rail["lines"]:
+        P = ln["P"]
+        s, hp, _ = rail_profile(h, P[1:-1])
+        prof = ndi.gaussian_filter1d(hp, 3.0, mode="nearest")
+        for _ in range(4):
+            for i in range(1, len(prof)):
+                g = RAIL_MAX_GRADE * (s[i] - s[i - 1]); prof[i] = np.clip(prof[i], prof[i - 1] - g, prof[i - 1] + g)
+            for i in range(len(prof) - 2, -1, -1):
+                g = RAIL_MAX_GRADE * (s[i + 1] - s[i]); prof[i] = np.clip(prof[i], prof[i + 1] - g, prof[i + 1] + g)
+        prof = np.r_[prof[0], prof, prof[-1]]
+        s2 = arclen(P)
+        near = np.clip(1 - np.minimum(s2, s2[-1] - s2) / 28.0, 0, 1)
+        rail_corridor(h, P, s2, prof, near)
+        ln["prof"] = prof
+
+
+def find_bridges(roads, rail, wadis):
+    """Where a road / the rail crosses a dry wadi at a steep enough angle: one bridge per crossing (A side; mirrored).
+    Returns dicts(kind, pos, dir (along the deck), length, half_w)."""
+    out = []
+    cands = []
+    paths = [("rail_bridge", rail["lines"][0]["P"], 2.6)] + [("road_bridge", rd["P"], rd["width"] * 0.5 + 0.4)
+                                                             for rd in roads if rd["surface"] == "paved"]
+    for kind, P, hw in paths:
+        P = resample(P, 2.0)
+        for W, whw, depth in wadis:
+            W = resample(np.asarray(W, float), 1.0)
+            for i in range(1, len(P) - 1):
+                dd = np.hypot(W[:, 0] - P[i, 0], W[:, 1] - P[i, 1])
+                j = int(np.argmin(dd))
+                if dd[j] > 1.5 or w2tp(*P[i])[1] < 15.0:
+                    continue
+                tr = P[i + 1] - P[i - 1]; tr /= np.linalg.norm(tr)
+                tw = W[min(j + 1, len(W) - 1)] - W[max(j - 1, 0)]; tw /= np.linalg.norm(tw)
+                ang = math.degrees(math.acos(min(1.0, abs(float(tr @ tw)))))
+                if ang < 50.0:
+                    continue
+                if (2 * whw + 6.0) / math.sin(math.radians(ang)) > (34.0 if kind == "road_bridge" else 24.0):
+                    continue                                     # too oblique for the bridge model
+                L = 34.0 if kind == "road_bridge" else 24.0     # = model length (re-carve under the whole deck)
+                cands.append(dict(kind=kind, pos=P[i].tolist(), dir=tr.tolist(), length=L,
+                                  half_w=hw, depth=depth, angle=round(ang, 1)))
+    for c in cands:                                              # one per crossing (merge neighbours)
+        if all(math.hypot(c["pos"][0] - o["pos"][0], c["pos"][1] - o["pos"][1]) > 30.0 for o in out):
+            out.append(c)
+    return out
+
+
+FOOT = {"civ_house_a": (10, 9), "civ_house_b": (12, 10), "civ_apartment": (18, 12), "civ_center": (22, 16),
+        "civ_hospital": (24, 18), "civ_factory": (36, 24), "civ_warehouse": (24, 14), "civ_school": (26, 16),
+        "civ_market": (26, 12), "civ_station": (10, 20)}
+# A-side civilian buildings (garrisonable), each mirrored to B. Positions are footprint centres; every entrance faces +Z.
+CIVIC_A = [
+    # town: high street (z 300) north side, block between the high street and street h2 (z 345), street h3 (z 255)
+    ("civ_market", -292.0, 287.0), ("civ_house_b", -268.0, 288.0), ("civ_house_a", -340.0, 288.5),
+    ("civ_house_b", -360.0, 288.0), ("civ_school", -292.0, 331.0), ("civ_apartment", -347.0, 332.0),
+    ("civ_house_a", -248.0, 334.0), ("civ_house_a", -231.0, 334.0), ("civ_house_a", -337.0, 243.5),
+    ("civ_house_b", -232.0, 362.0), ("civ_apartment", -300.0, 270.0),
+    # walled compounds south of street h2
+    ("civ_house_b", -330.0, 366.0), ("civ_house_a", -295.0, 365.0), ("civ_house_a", -262.0, 363.0),
+    ("civ_center", -170.0, 338.0),
+    # outlying farmsteads (dirt tracks)
+    ("civ_house_b", -410.0, 296.0), ("civ_house_b", -172.0, 472.0),
+    # basin apartment pair (B2), industrial zone
+    ("civ_apartment", 96.0, 140.0),
+    ("civ_station", 184.0, 232.0), ("civ_warehouse", 204.0, 218.0), ("civ_warehouse", 240.0, 234.0),
+    ("civ_factory", 230.0, 268.0),
+]
+COMPOUNDS_A = [(-330.0, 366.0, 26.0, 22.0), (-295.0, 365.0, 22.0, 20.0), (-262.0, 363.0, 20.0, 18.0),
+               (-410.0, 296.0, 24.0, 20.0)]     # walled yards around a house: centre, size; gate in the south wall
+INFRA_A = [  # landmark props: type, x, z, yaw (deg, model front +Z / long axis +Z), scale
+    ("water_tower", -372.0, 322.0, 0.0, 1.0), ("fuel_station", -263.0, 222.0, 0.0, 1.0),
+    ("cell_tower", -388.0, 262.0, 0.0, 1.0), ("radio_mast", -128.0, 334.0, 0.0, 1.0),
+    ("chimney", 258.0, 292.0, 0.0, 1.0), ("silos", 278.0, 292.0, 0.0, 1.0), ("fuel_tanks", 272.0, 268.0, 0.0, 1.0),
+    ("gantry_crane", 151.5, 256.0, 90.0, 1.0), ("container_stack", 150.0, 244.0, 90.0, 1.0),
+    ("container_stack", 150.0, 226.0, 90.0, 1.0), ("rail_platform", 170.5, 232.0, 0.0, 1.0),
+]
+HARDSTAND_A = [  # concrete aprons: (t, s) rectangles in the strike frame or world rectangles ("w", cx, cz, w, d)
+    ("ts", 322.0, 86.0, 150.0, 56.0), ("w", -263.0, 222.0, 26.0, 20.0), ("w", -292.0, 296.5, 30.0, 6.0),
+    ("w", -170.0, 349.0, 26.0, 6.0)]
+TRAIN_A = ["tank_car", "boxcar", "flatcar", "tank_car", "loco"]      # from the east portal outwards
+CAR_LEN = {"loco": 18.0, "tank_car": 13.0, "boxcar": 15.0, "flatcar": 15.0}
+SIDING_CARS_A = [("boxcar", 161.0, 234.0), ("flatcar", 161.0, 251.0)]
+
+
+def recarve_bridge(h, h_pre, br):
+    """Re-open the wadi beside the bridge deck (the road / rail formation filled it): only a deck-wide causeway stays,
+    its vertical sides hidden by the bridge model's spandrel walls."""
+    for sg in (1, -1):
+        c = np.array(br["pos"]) * sg; d = np.array(br["dir"]) * sg
+        al = (X - c[0]) * d[0] + (Z - c[1]) * d[1]
+        ac = np.abs(-(X - c[0]) * d[1] + (Z - c[1]) * d[0])
+        w = (1 - smoothstep(br["length"] / 2 - 5.0, br["length"] / 2, np.abs(al))) * smoothstep(br["half_w"] + 0.4, br["half_w"] + 1.4, ac)
+        w *= ac < br["half_w"] + 30.0
+        low = np.minimum(h, h_pre)
+        h[:] = h - w * (h - low)
+
+
+def yaw_of(d):
+    """Godot rotation_degrees.y that turns a model's local +Z onto world direction d = (dx, dz)."""
+    return round(math.degrees(math.atan2(d[0], d[1])) % 360.0, 1)
+
+
+def along(P, dist):
+    """Point and unit tangent at arc length `dist` along polyline P."""
+    P = np.asarray(P, float); L = arclen(P)
+    dist = float(np.clip(dist, 0, L[-1]))
+    k = int(np.clip(np.searchsorted(L, dist) - 1, 0, len(P) - 2))
+    t = (dist - L[k]) / max(1e-9, L[k + 1] - L[k])
+    d = P[k + 1] - P[k]
+    return P[k] + t * d, d / np.linalg.norm(d)
+
+
+def infra_layout(R):
+    """Civic list, landmark / rail / bridge props, nav blockers and hardstand areas (both sides)."""
+    civic = [{"type": "civ_hospital", "pos": [0.0, 0.0]}]
+    for k in (0, 1):
+        for t, x, z in CIVIC_A:
+            p = (x, z) if k == 0 else mirror((x, z))
+            civic.append({"type": t, "pos": [round(p[0], 1), round(p[1], 1)], "yaw_deg": 0.0})
+    props, blockers, hard = [], [], []
+
+    def add2(t, x, z, yaw, sc=1.0):
+        for (px, pz, py) in ((x, z, yaw), (-x, -z, (yaw + 180.0) % 360.0)):
+            props.append(dict(type=t, pos=[round(px, 2), round(pz, 2)], yaw_deg=round(py, 1), scale=sc))
+
+    def block2(name, pts, r):
+        for k, PP in enumerate((pts, mirror_poly(pts))):
+            blockers.append(dict(name=f"{name}_{'a' if k == 0 else 'b'}", points=[[round(x, 1), round(z, 1)] for x, z in PP], radius_m=r))
+    for t, x, z, yaw, sc in INFRA_A:
+        add2(t, x, z, yaw, sc)
+    block2("platform", [(170.5, 213.0), (170.5, 251.0)], 2.0)
+    # compound walls: 4 m segments (local +Z along the wall), 4 m gate in the south wall; blockers follow the walls
+    for i, (cx, cz, w, d) in enumerate(COMPOUNDS_A):
+        x0, x1, z0, z1 = cx - w / 2, cx + w / 2, cz - d / 2, cz + d / 2
+        runs = [((x0, z0), (x1, z0)), ((x1, z0), (x1, z1)), ((x1, z1), (cx + 2.5, z1)), ((cx - 2.5, z1), (x0, z1)), ((x0, z1), (x0, z0))]
+        for a, b in runs:
+            a = np.array(a); b = np.array(b); L = np.linalg.norm(b - a); dv = (b - a) / L
+            n = max(1, int(round(L / 4.0)))
+            for j in range(n):
+                c = a + dv * (L * (j + 0.5) / n)
+                add2("compound_wall", c[0], c[1], yaw_of(dv), round(L / n / 4.0, 3))
+            block2(f"wall{i}", [tuple(a), tuple(b)], 0.8)
+    # industrial fence along the basin-road side (s = 46), gate at the access road
+    fence_pts = [tp2w(t, 46.0) for t in np.arange(262.0, 400.1, 6.0)]
+    gate = np.array(tp2w(307.0, 46.0))
+    segs, cur = [], []
+    for p in fence_pts:
+        if np.hypot(*(np.array(p) - gate)) < 7.0:
+            if len(cur) > 1:
+                segs.append(cur)
+            cur = []
+        else:
+            cur.append(p)
+    if len(cur) > 1:
+        segs.append(cur)
+    for si, sg in enumerate(segs):
+        for a, b in zip(sg[:-1], sg[1:]):
+            a = np.array(a); b = np.array(b)
+            add2("fence", (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, yaw_of(b - a), 1.0)
+        block2(f"fence{si}", sg, 0.6)
+    # rail: tunnel portals, bridges, the static train at the east portal, wagons on the siding
+    line = R["rail"]["lines"][0]
+    P = line["P"]
+    for pt in line["portals"]:
+        add2("tunnel_portal", pt["pos"][0], pt["pos"][1], yaw_of(pt["front"]))
+    for br in R["bridges"]:
+        add2(br["kind"], br["pos"][0], br["pos"][1], yaw_of(br["dir"]))
+    L = arclen(P)[-1]
+    dist = L - 1.5 - 2.5                                         # 2.5 m in front of the east portal face
+    train = []
+    for kind in TRAIN_A:
+        c, tan = along(P, dist - CAR_LEN[kind] / 2)
+        front = -tan if kind == "loco" else tan                  # loco leads away from the tunnel
+        add2(kind, c[0], c[1], yaw_of(front))
+        train.append(c.tolist())
+        dist -= CAR_LEN[kind] + 1.2
+    tr_line = [along(P, L - 4.0)[0].tolist(), along(P, dist + 1.2)[0].tolist()]
+    tr_pts = [along(P, s)[0] for s in np.linspace(dist + 1.2, L - 4.0, 12)]
+    block2("train", [tuple(p) for p in tr_pts], 2.2)
+    for kind, x, z in SIDING_CARS_A:
+        add2(kind, x, z, 0.0)
+        block2(f"siding_{kind}{int(z)}", [(x, z - CAR_LEN[kind] / 2), (x, z + CAR_LEN[kind] / 2)], 2.0)
+    for pt in line["portals"]:                                  # nobody walks into the dark tunnel mouth
+        f = np.array(pt["front"]); c = np.array(pt["pos"]) + f * 0.5; sd = np.array([-f[1], f[0]])
+        block2("portal", [tuple(c - sd * 5.0), tuple(c + sd * 5.0)], 1.5)
+    for hs in HARDSTAND_A:
+        for k in (0, 1):
+            sg = 1 if k == 0 else -1
+            if hs[0] == "ts":
+                hard.append(dict(frame="ts", center=[hs[1] * sg, hs[2] * sg], size=[hs[3], hs[4]]))
+            else:
+                hard.append(dict(frame="world", center=[hs[1] * sg, hs[2] * sg], size=[hs[3], hs[4]]))
+    zones = {"town_a": [-280.0, 300.0], "town_b": [280.0, -300.0], "industry_a": [215.0, 245.0], "industry_b": [-215.0, -245.0],
+             "portal_a_east": line["portals"][1]["pos"], "portal_a_west": line["portals"][0]["pos"],
+             "train_a": train[len(train) // 2]}
+    return dict(civic=civic, props=props, blockers=blockers, hardstand=hard, zones=zones)
+
+
+NATURAL = {"rock_cluster", "scrub", "date_palm"}
+ON_TRACK = {"tunnel_portal", "road_bridge", "rail_bridge", "loco", "tank_car", "boxcar", "flatcar", "rail_platform",
+            "gantry_crane", "fence", "compound_wall"}
+
+
+def validate_layout(mapj):
+    """Every civic building and blocking landmark: clear of roads, rail, sites, pads, starts, pass corridors and of each
+    other. Returns a list of problem strings (empty = clean)."""
+    probs = []
+    segs = []
+    for rd in mapj["roads"]:
+        segs.append((f"road {rd['name']}", np.asarray(rd["points"], float), rd["width_m"] * 0.5 + 1.5))
+    for ln in mapj["rail"]["lines"] + mapj["rail"]["sidings"]:
+        segs.append((f"rail {ln['name']}", np.asarray(ln["points"], float), 4.5))
+    for c in mapj["corridors"]:
+        segs.append((f"corridor {c['name']}", np.asarray(c["points"], float), c["half_width_m"] + 3.0))
+
+    def seg_dist(P, x0, x1, z0, z1):
+        """Min distance from polyline P to the rectangle (sampled)."""
+        Q = resample(P, 1.0)
+        dx = np.maximum(0, np.maximum(x0 - Q[:, 0], Q[:, 0] - x1)); dz = np.maximum(0, np.maximum(z0 - Q[:, 1], Q[:, 1] - z1))
+        return float(np.min(np.hypot(dx, dz)))
+    rects = []
+    for c in mapj["civic"]:
+        w, d = FOOT[c["type"]]
+        rects.append((c["type"], c["pos"], w / 2, d / 2))
+    for p in mapj["props"]:
+        pt = PROP_TYPES[p["type"]]
+        if p["type"] in ON_TRACK or p["type"] in NATURAL or not pt.get("blocks"):
+            continue
+        r = 0.5 * max(pt["footprint_m"]) * p.get("scale", 1.0)
+        rects.append((p["type"], p["pos"], r, r))
+    for k, (nm, (x, z), hx, hz) in enumerate(rects):
+        x0, x1, z0, z1 = x - hx, x + hx, z - hz, z + hz
+        for lab, P, clr in segs:
+            dd = seg_dist(P, x0, x1, z0, z1)
+            if dd < clr:
+                probs.append(f"{nm} at ({x:.0f},{z:.0f}) {dd:.1f} m from {lab} (needs {clr:.1f})")
+        for s in mapj["supply_piles"] + mapj["oil_derricks"]:
+            if abs(s["pos"][0] - x) < hx + 14 and abs(s["pos"][1] - z) < hz + 14:
+                probs.append(f"{nm} at ({x:.0f},{z:.0f}) too close to site {s['id']}")
+        for p in mapj["build_pads"]:
+            (px, pz), (pw, pd) = p["center"], p["size"]
+            if abs(px - x) < hx + pw / 2 + 3 and abs(pz - z) < hz + pd / 2 + 3:
+                probs.append(f"{nm} at ({x:.0f},{z:.0f}) overlaps build pad {p['center']}")
+        for st in mapj["starts"]:
+            if math.hypot(st["pos"][0] - x, st["pos"][1] - z) < START_R + 20 + max(hx, hz):
+                probs.append(f"{nm} at ({x:.0f},{z:.0f}) inside start area {st['team']}")
+        for (nm2, (x2, z2), hx2, hz2) in rects[k + 1:]:
+            if abs(x2 - x) < hx + hx2 + 3.0 and abs(z2 - z) < hz + hz2 + 3.0:
+                probs.append(f"{nm} at ({x:.0f},{z:.0f}) within 3 m of {nm2} at ({x2:.0f},{z2:.0f})")
+        if abs(x) + hx > HALF - 20 or abs(z) + hz > HALF - 20:
+            probs.append(f"{nm} at ({x:.0f},{z:.0f}) outside the playable area")
+    return probs
 
 
 # ====================================================================== analysis helpers
@@ -504,13 +895,69 @@ def slope_deg(h):
 
 
 def road_mask(roads):
-    """Same falloff as terrain_map.gd _bake_roads (full inside 0.35 w, zero beyond 0.6 w)."""
+    """Road weight for movement costs: same falloff as terrain_map.gd for paved roads (full inside 0.35 w, zero beyond
+    0.6 w); dirt tracks count half (runtime: max(paved, 0.5 x dirt))."""
     m = np.zeros((N, N))
     for rd in roads:
         P = np.asarray(rd["points"], float); w = rd["width_m"]
         d, _ = poly_dist(P, w)
-        m = np.maximum(m, np.clip(1 - (d - w * 0.35) / (w * 0.25), 0, 1))
+        v = np.clip(1 - (d - w * 0.35) / (w * 0.25), 0, 1)
+        m = np.maximum(m, v * (0.5 if rd.get("surface", "paved") == "dirt" else 1.0))
     return m
+
+
+SURF_RES = 1201                     # surface.png: 1 m per pixel, pixel (i, j) = world (x -600 + j, z -600 + i)
+
+
+def write_surface(out, roads, rail_j, hard):
+    """surface.png (RGBA8, 1 m/px): R paved road (1 across the carriageway, soft 3 m shoulder falloff), G dirt track,
+    B rail ballast, A concrete hardstand. Rendering reads it directly; gameplay reads it resampled to the height grid."""
+    g = np.linspace(-HALF, HALF, SURF_RES)
+    GX, GZ = np.meshgrid(g, g)
+    img = np.zeros((SURF_RES, SURF_RES, 4))
+
+    def pdist(P, pad):
+        P = np.asarray(P, float)
+        dist = np.full(GX.shape, np.inf)
+        for k in range(len(P) - 1):
+            a, b = P[k], P[k + 1]
+            x0, x1 = min(a[0], b[0]) - pad, max(a[0], b[0]) + pad
+            z0, z1 = min(a[1], b[1]) - pad, max(a[1], b[1]) + pad
+            j0 = max(0, int(x0 + HALF)); j1 = min(SURF_RES, int(x1 + HALF) + 2)
+            i0 = max(0, int(z0 + HALF)); i1 = min(SURF_RES, int(z1 + HALF) + 2)
+            if j1 <= j0 or i1 <= i0:
+                continue
+            px = GX[i0:i1, j0:j1]; pz = GZ[i0:i1, j0:j1]
+            d = b - a; ll = max(1e-9, d @ d)
+            t = np.clip(((px - a[0]) * d[0] + (pz - a[1]) * d[1]) / ll, 0, 1)
+            dd = np.hypot(px - a[0] - t * d[0], pz - a[1] - t * d[1])
+            sub = dist[i0:i1, j0:j1]
+            np.minimum(sub, dd, out=sub)
+        return dist
+    for rd in roads:
+        w = rd["width_m"]
+        P = catmull(rd["points"], 2.0) if len(rd["points"]) > 2 else resample(np.asarray(rd["points"], float), 2.0)
+        d = pdist(P, w * 0.5 + 4.0)
+        if rd.get("surface", "paved") == "paved":
+            v = np.clip(1 - (d - w * 0.5) / 3.0, 0, 1)
+            img[..., 0] = np.maximum(img[..., 0], v)
+        else:
+            v = np.clip(1 - (d - w * 0.5 + 0.5) / 1.8, 0, 1)
+            img[..., 1] = np.maximum(img[..., 1], v)
+    for ln in rail_j["lines"] + rail_j["sidings"]:
+        d = pdist(ln["points"], 6.0)
+        img[..., 2] = np.maximum(img[..., 2], np.clip(1 - (d - 2.2) / 2.3, 0, 1))
+    for hs in hard:
+        cx, cz = hs["center"]; w, dd = hs["size"]
+        if hs["frame"] == "ts":
+            u = GX * UX + GZ * UZ; v = GX * NX + GZ * NZ
+        else:
+            u, v = GX, GZ
+        e = np.hypot(np.maximum(0, np.abs(u - cx) - w / 2), np.maximum(0, np.abs(v - cz) - dd / 2))
+        img[..., 3] = np.maximum(img[..., 3], np.clip(1 - e / 1.5, 0, 1))
+    img8 = (np.clip(img, 0, 1) * 255 + 0.5).astype(np.uint8)
+    Image.fromarray(img8, "RGBA").save(os.path.join(out, "surface.png"))
+    write_import(os.path.join(out, "surface.png.import"))
 
 
 def grid_index(p):
@@ -632,10 +1079,31 @@ def main():
         for k, p in enumerate((c, mirror(c))):
             derricks.append(dict(id=f"derrick_c{2 * i + k}", pos=[r1(p[0]), r1(p[1])], income=100, every_s=10,
                                  capture_s=8, radius_m=12, contested=True))
-    roads = [dict(name=rd["name"], width_m=rd["width"], points=[[r1(x), r1(z)] for x, z in resample(rd["P"], 14.0)])
+    roads = [dict(name=rd["name"], width_m=rd["width"], surface=rd["surface"], cls=rd["cls"], markings=rd["markings"],
+                  kerbs=rd["kerbs"], points=[[r1(x), r1(z)] for x, z in resample(rd["P"], 14.0 if rd["cls"] == "main" else 6.0)])
              for rd in R["roads"]]
     rmask = road_mask(roads)
-    props = scatter_props(hq, slq, Wq, rmask, R, pads, piles, derricks)
+    lay = infra_layout(R)
+    rail_j = {"gauge_m": 1.435, "formation_half_width_m": 3.0,
+              "lines": [dict(name=ln["name"], points=[[round(x, 2), round(z, 2)] for x, z in resample(ln["P"], 3.0)],
+                             portals=[dict(pos=[round(p["pos"][0], 2), round(p["pos"][1], 2)],
+                                           front=[round(p["front"][0], 4), round(p["front"][1], 4)]) for p in ln["portals"]])
+                        for ln in R["rail"]["lines"]],
+              "sidings": [dict(name=sd["name"], points=[[round(x, 2), round(z, 2)] for x, z in sd["P"]]) for sd in R["rail"]["sidings"]]}
+    props = scatter_props(hq, slq, Wq, rmask, R, pads, piles, derricks, lay, rail_j)
+    props = lay["props"] + props
+    pyl = sorted([p for p in props if p["type"] == "pylon"], key=lambda p: w2tp(*p["pos"])[0])
+    power_lines = [[p["pos"] for p in pyl]]
+    corridors = []
+    for name, Pp in R["passes"].items():
+        hw = PASS_FLOOR[name][0]
+        for k, PP in enumerate((Pp, np.asarray(mirror_poly(Pp)))):
+            corridors.append(dict(name=f"pass_{name}_{'a' if k == 0 else 'b'}", half_width_m=hw,
+                                  points=[[r1(x), r1(z)] for x, z in resample(PP, 8.0)]))
+    for k, PP in enumerate((R["goat"], np.asarray(mirror_poly(R["goat"])))):
+        corridors.append(dict(name=f"goat_trail_{'a' if k == 0 else 'b'}", half_width_m=4.5,
+                              points=[[r1(x), r1(z)] for x, z in resample(PP, 8.0)]))
+    write_surface(args.out, roads, rail_j, lay["hardstand"])
 
     mapj = {
         "name": "Zagros Basin",
@@ -656,9 +1124,18 @@ def main():
         "supply_piles": piles,
         "oil_derricks": derricks,
         "roads": roads,
+        "surface_file": "surface.png",
+        "surface_channels": {"r": "paved road (soft shoulder falloff)", "g": "dirt track", "b": "rail ballast",
+                             "a": "concrete hardstand"},
+        "rail": rail_j,
         "props": props,
-        "civic": CIVIC,
+        "civic": lay["civic"],
         "prop_types": PROP_TYPES,
+        "blockers": lay["blockers"],
+        "hardstand": lay["hardstand"],
+        "power_lines": power_lines,
+        "corridors": corridors,
+        "zones": lay["zones"],
         "movement": MOVEMENT,
         "building_max_slope_deg": BUILDING_MAX_SLOPE,
         "notes": ("Fictional sector inspired by the character of Zagros foothills and a dry basin. SYNTHETIC terrain "
@@ -674,6 +1151,8 @@ def main():
     # ------------------------------------------------------------ verification
     rep = verify(hq, slq, Wq, rmask, mapj, R)
     rep["flatness"] = flat_checks(hq, slq, mapj)
+    rep["layout_problems"] = validate_layout(dict(mapj, civic=[c for c in mapj["civic"] if c["type"] != "civ_hospital"]))
+    rep["rail"] = rail_checks(hq, slq, mapj)
     with open(os.path.join(args.out, "fairness_report.json"), "w") as f:
         json.dump(rep, f, indent=1)
     txt = report_text(rep)
@@ -696,13 +1175,49 @@ PROP_TYPES = {
     "pylon": {"glb": "res://assets/units3d/props/pylon.glb", "footprint_m": [5.0, 5.0], "blocks": True},
     "wall": {"glb": None, "footprint_m": [6.0, 0.6], "blocks": True,
              "note": "reserved; no asset yet, not placed on this map"},
+    # B3 infrastructure (tools/art/env_infra_3d.py). Long props (walls, fences, bridges, rail cars, platform) run along
+    # local +Z; their navigation blocking comes from map.json "blockers" polylines, not from a footprint circle.
+    "water_tower": {"glb": "res://assets/units3d/infra/water_tower.glb", "footprint_m": [8.0, 8.0], "blocks": True},
+    "fuel_station": {"glb": "res://assets/units3d/infra/fuel_station.glb", "footprint_m": [20.0, 14.0], "blocks": True, "block_r": 6.0},
+    "cell_tower": {"glb": "res://assets/units3d/infra/cell_tower.glb", "footprint_m": [5.0, 5.0], "blocks": True},
+    "radio_mast": {"glb": "res://assets/units3d/infra/radio_mast.glb", "footprint_m": [5.0, 5.0], "blocks": True},
+    "chimney": {"glb": "res://assets/units3d/infra/chimney.glb", "footprint_m": [6.0, 6.0], "blocks": True},
+    "silos": {"glb": "res://assets/units3d/infra/silos.glb", "footprint_m": [12.0, 12.0], "blocks": True},
+    "fuel_tanks": {"glb": "res://assets/units3d/infra/fuel_tanks.glb", "footprint_m": [14.0, 10.0], "blocks": True},
+    "gantry_crane": {"glb": "res://assets/units3d/infra/gantry_crane.glb", "footprint_m": [8.0, 24.0], "blocks": False},
+    "container_stack": {"glb": "res://assets/units3d/infra/container_stack.glb", "footprint_m": [5.2, 12.4], "blocks": True, "block_r": 4.5},
+    "rail_platform": {"glb": "res://assets/units3d/infra/rail_platform.glb", "footprint_m": [4.0, 40.0], "blocks": False},
+    "compound_wall": {"glb": "res://assets/units3d/infra/compound_wall.glb", "footprint_m": [0.4, 4.0], "blocks": False},
+    "fence": {"glb": "res://assets/units3d/infra/fence.glb", "footprint_m": [0.2, 6.0], "blocks": False},
+    "tunnel_portal": {"glb": "res://assets/units3d/infra/tunnel_portal.glb", "footprint_m": [18.0, 4.0], "blocks": False},
+    "road_bridge": {"glb": "res://assets/units3d/infra/road_bridge.glb", "footprint_m": [12.0, 34.0], "blocks": False},
+    "rail_bridge": {"glb": "res://assets/units3d/infra/rail_bridge.glb", "footprint_m": [7.0, 24.0], "blocks": False},
+    "loco": {"glb": "res://assets/units3d/infra/loco.glb", "footprint_m": [3.2, 18.0], "blocks": False},
+    "tank_car": {"glb": "res://assets/units3d/infra/tank_car.glb", "footprint_m": [3.0, 13.0], "blocks": False},
+    "boxcar": {"glb": "res://assets/units3d/infra/boxcar.glb", "footprint_m": [3.0, 15.0], "blocks": False},
+    "flatcar": {"glb": "res://assets/units3d/infra/flatcar.glb", "footprint_m": [3.0, 15.0], "blocks": False},
 }
 
 
-def scatter_props(h, sl, W, rmask, R, pads, piles, derricks):
+def scatter_props(h, sl, W, rmask, R, pads, piles, derricks, lay, rail_j):
     rng = np.random.default_rng(7)
     keep_out = np.zeros((N, N), bool)
     keep_out |= rmask > 0.05
+    for ln in rail_j["lines"] + rail_j["sidings"]:
+        d, _ = poly_dist(np.asarray(ln["points"]), 12.0)
+        keep_out |= d < 7.0
+    for c in lay["civic"]:
+        w, dd = FOOT[c["type"]]
+        keep_out |= (np.abs(X - c["pos"][0]) < w / 2 + 3) & (np.abs(Z - c["pos"][1]) < dd / 2 + 3)
+    for p in lay["props"]:
+        fp = PROP_TYPES[p["type"]]["footprint_m"]; r = 0.5 * max(fp) * p.get("scale", 1.0) + 2.0
+        keep_out |= np.hypot(X - p["pos"][0], Z - p["pos"][1]) < r
+    for b in lay["blockers"]:
+        d, _ = poly_dist(np.asarray(b["points"], float), 8.0)
+        keep_out |= d < b["radius_m"] + 2.0
+    for hs in lay["hardstand"]:
+        u, v = (T, S) if hs["frame"] == "ts" else (X, Z)
+        keep_out |= (np.abs(u - hs["center"][0]) < hs["size"][0] / 2 + 2) & (np.abs(v - hs["center"][1]) < hs["size"][1] / 2 + 2)
     keep_out |= ndi.binary_dilation(rmask > 0.05, iterations=3)
     for c in (START_A, START_B):
         keep_out |= np.hypot(X - c[0], Z - c[1]) < START_R + 25
@@ -737,20 +1252,12 @@ def scatter_props(h, sl, W, rmask, R, pads, piles, derricks):
         i, j = grid_index((x, z))
         return min(max(i, 0), N - 1), min(max(j, 0), N - 1)
 
-    # village: houses along the west valley road around VILLAGE_A, oriented to the road
-    vx, vz = VILLAGE_A
-    road_dir = math.degrees(math.atan2(330.0 - 300.0, -150.0 - (-235.0)))
-    lay = [(-26, -14), (-8, -20), (12, -17), (-22, 12), (0, 16), (20, 12), (34, -4)]
-    for k, (du, dv) in enumerate(lay):
-        a = math.radians(-35.0)
-        x = vx + du * math.cos(a) - dv * math.sin(a); z = vz + du * math.sin(a) + dv * math.cos(a)
-        yaw = (-(-35.0) + (180 if dv > 0 else 0) + rng.uniform(-6, 6)) % 360
-        add("village_house", x, z, yaw, rng.uniform(0.95, 1.08), 5.5)
-    for k in range(9):                                            # palms around the village well / wadi
-        ang = rng.uniform(0, 2 * math.pi); rr = rng.uniform(28, 52)
-        x, z = vx + rr * math.cos(ang), vz + rr * math.sin(ang)
+    # town greenery: date palms in the compounds' yards and along the town edge (houses are civic buildings now)
+    vx, vz = -275.0, 305.0
+    for k in range(40):
+        x, z = vx + rng.uniform(-125, 125), vz + rng.uniform(-85, 85)
         i, j = cell(x, z)
-        if not keep_out[i, j] and free(x, z, 2.0):
+        if not keep_out[i, j] and free(x, z, 3.0):
             add("date_palm", x, z, rng.uniform(0, 360), rng.uniform(0.85, 1.15), 2.0)
     # ruins: an old walled compound near the centre (A half: south-west of the centre pile)
     for (x, z, yaw) in ((-104.0, 24.0, 25.0), (-126.0, 38.0, 115.0), (-96.0, 46.0, 300.0)):
@@ -910,6 +1417,24 @@ def flat_checks(h, sl, mapj):
 CONTESTED_MIRROR = {"pile_c1": "pile_c2", "pile_c2": "pile_c1", "derrick_c0": "derrick_c1", "derrick_c1": "derrick_c0"}
 
 
+def rail_checks(h, sl, mapj):
+    """Rail formation grade along each line (from the final quantised heightfield) and the cover over each portal."""
+    out = {}
+    for ln in mapj["rail"]["lines"]:
+        P = np.asarray(ln["points"], float)
+        P = P[2:-2]                                               # the samples behind the portal faces are inside
+        hh = sample_h(h, P); s = arclen(P)
+        g = np.abs(np.diff(hh)) / np.maximum(np.diff(s), 1e-6)
+        cover = []
+        for pt in ln["portals"]:
+            f = np.array(pt["front"]); c = np.array(pt["pos"])
+            behind = sample_h(h, np.array([c - f * 6.0]))[0]; at = sample_h(h, np.array([c + f * 1.0]))[0]
+            cover.append(round(float(behind - at), 1))
+        out[ln["name"]] = {"length_m": round(float(s[-1]), 0), "max_grade_pct": round(float(g.max() * 100), 2),
+                           "p99_grade_pct": round(float(np.percentile(g, 99) * 100), 2), "ground_rise_6m_behind_portals_m": cover}
+    return out
+
+
 def fairness_max_diff(rep):
     worst = 0.0
     for cls, fair in rep["fairness"].items():
@@ -962,6 +1487,12 @@ def report_text(rep):
     L.append("FLATNESS (starts: 100 m radius; pads: full rectangle):")
     for k, v in rep["flatness"].items():
         L.append(f"  {k}: {v}")
+    L.append("")
+    L.append(f"RAIL: {rep['rail']}")
+    L.append(f"LAYOUT (civic buildings + blocking landmarks vs roads / rail / sites / pads / starts / pass corridors): "
+             f"{len(rep['layout_problems'])} problems (the hospital is placed by the game next to the centre pile)")
+    for pr in rep["layout_problems"]:
+        L.append("  " + pr)
     return "\n".join(L) + "\n"
 
 

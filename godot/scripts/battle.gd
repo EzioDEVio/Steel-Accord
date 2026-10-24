@@ -384,13 +384,20 @@ func find_path(from: Vector3, to: Vector3, move_class := "tracked") -> PackedVec
 	return PackedVector3Array([from, to])
 
 
-## Terrain speed factor for a ground unit at its position (roads help wheels; rough ground and slopes slow).
+## Terrain speed factor for a ground unit at its position: rough ground and slopes slow; on a road a unit drives at
+## 1 + road_speed_bonus of its base speed (map.json movement rules: wheeled +20 %, tracked / infantry +10 %; dirt
+## tracks give dirt_share = half of that). Same rules for both sides.
 func terrain_speed_mult(u: Unit) -> float:
 	if terrain == null: return 1.0
 	var r: Dictionary = move_rules.get(u.move_class(), {})
 	var p := u.position
 	var s := terrain.slope_deg_at(p.x, p.z)
-	var m := 1.0 / sqrt(maxf(terrain.material_cost(p.x, p.z, r.get("cost", {})), 0.2))
+	var off := 1.0 / sqrt(maxf(terrain.ground_cost(p.x, p.z, r.get("cost", {})), 0.2))
+	var sf := terrain.surface_at(p.x, p.z)
+	var paved := clampf(sf.r * 1.5, 0.0, 1.0)
+	var dirt := clampf(sf.g * 1.5, 0.0, 1.0) * (1.0 - paved)
+	var bonus := float(r.get("road_speed_bonus", 0.0))
+	var m := off * (1.0 - paved - dirt) + (1.0 + bonus) * paved + (1.0 + bonus * float(r.get("dirt_share", 0.5))) * dirt
 	m *= 1.0 - float(r.get("slope_slow", 0.3)) * clampf(s / float(r.get("max_slope_deg", 30.0)), 0.0, 1.0)
 	return clampf(m, 0.4, 1.25)
 
@@ -1786,13 +1793,16 @@ func _civic_site(k: String, pos: Vector3) -> Vector3:
 			for site in terrain.data.get("supply_piles", []) + terrain.data.get("oil_derricks", []):
 				var sp := map_point(site)
 				if absf(sp.x - p.x) < half.x + 14.0 and absf(sp.z - p.z) < half.y + 14.0: clear = false; break
-			for q in _civic_placed:
-				if absf(q.x - p.x) < half.x + 8.0 and absf(q.z - p.z) < half.y + 8.0: clear = false; break
+			for q in _civic_placed:          # [centre, half]: keep a 3 m gap between footprints
+				if absf(q[0].x - p.x) < half.x + q[1].x + 3.0 and absf(q[0].z - p.z) < half.y + q[1].y + 3.0: clear = false; break
+			# stay off carriageways, dirt tracks and the rail bed (their soft edges may touch)
+			var inf := terrain.infra_in(p, half)
+			if inf.x > 0.6 or inf.y > 0.5 or inf.z > 0.45: clear = false
 			if st.y <= 14.0 and clear and map_bounds.grow(-20).has_point(Vector2(p.x, p.z)): break
 			var a := float(tries) * 2.4
 			p = pos + Vector3(cos(a), 0, sin(a)) * (4.0 + tries * 1.5)
 	var site := prepare_site(k, p)
-	_civic_placed.append(site)
+	_civic_placed.append([site, half])
 	return site
 
 
@@ -1839,6 +1849,8 @@ func _prop_path(kind: String) -> String:
 ## Places map.json props on the terrain. Each prop kind becomes one MultiMesh per mesh part (hundreds of scrub
 ## bushes cost a few draw calls); "block_r" adds a navigation obstacle.
 var civic_spawns: Array = []    # [kind, position] placed once navigation exists
+var infra: MapInfra             # roads / rail / wires built from map.json (heightfield maps)
+var prop_kinds: Dictionary = {} # prop kind -> [Transform3D] as placed
 
 
 func _build_terrain_map() -> void:
@@ -1878,7 +1890,7 @@ func _build_terrain_map() -> void:
 		var pt: Dictionary = d.get("prop_types", {}).get(kind, {})
 		if br == 0.0 and pt.get("blocks", false):
 			var fp: Array = pt.get("footprint_m", [2.0, 2.0])
-			br = maxf(float(fp[0]), float(fp[1])) * 0.5 * sc
+			br = float(pt.get("block_r", maxf(float(fp[0]), float(fp[1])) * 0.5)) * sc
 		if br > 0.0: obstacles_2d.append(Vector3(p.x, p.z, br))
 	for kind in per_kind:
 		var scene: Node3D = (load(_prop_path(kind)) as PackedScene).instantiate()
@@ -1901,6 +1913,11 @@ func _build_terrain_map() -> void:
 		scene.queue_free()
 	if not missing.is_empty(): push_warning("map props without a model: %s" % ", ".join(missing.keys()))
 	print("MAP props: %s" % ", ".join(per_kind.keys().map(func(k): return "%s x%d" % [k, per_kind[k].size()])))
+	prop_kinds = per_kind
+	# roads, railway track and power-line conductors generated from map.json (scripts/map_infra.gd)
+	infra = MapInfra.new()
+	add_child(infra)
+	infra.build(terrain)
 
 
 const DERRICK_MODEL := "res://assets/units3d/props/oil_derrick.glb"
@@ -2020,7 +2037,11 @@ func make_minimap_texture() -> ImageTexture:
 			c = c.lerp(Color(0.40, 0.42, 0.25), sp.b)
 			c = c.lerp(Color(0.72, 0.68, 0.60), sp.a)
 			c = c.lerp(Color(0.45, 0.40, 0.35), clampf(sp.r + terrain.slope_deg_at(x, z) / 40.0, 0.0, 1.0))
-			c = c.lerp(Color(0.33, 0.30, 0.26), clampf(terrain.road_at(x, z) * 1.4, 0.0, 1.0))
+			var sf := terrain.surface_at(x, z)
+			c = c.lerp(Color(0.66, 0.64, 0.60), clampf(sf.a * 1.2, 0.0, 1.0) * 0.6)      # hardstand
+			c = c.lerp(Color(0.62, 0.54, 0.42), clampf(sf.g * 1.6, 0.0, 1.0) * 0.8)      # dirt tracks
+			c = c.lerp(Color(0.24, 0.22, 0.21), clampf(sf.b * 1.6, 0.0, 1.0))            # railway
+			c = c.lerp(Color(0.30, 0.28, 0.25), clampf(sf.r * 1.6, 0.0, 1.0))            # paved roads
 			var shade := clampf(terrain.normal_at(x, z).dot(light) * 1.25, 0.35, 1.15)
 			img.set_pixel(i, j, Color(c.r * shade, c.g * shade, c.b * shade))
 	return ImageTexture.create_from_image(img)

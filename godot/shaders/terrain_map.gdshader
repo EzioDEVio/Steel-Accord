@@ -17,7 +17,7 @@ render_mode diffuse_burley;
 #include "res://shaders/fog.gdshaderinc"
 
 uniform sampler2D splat : filter_linear_mipmap, repeat_disable;     // mipmapped copy (rendering only)
-uniform sampler2D roads : filter_linear, repeat_disable;
+uniform sampler2D roads : filter_linear, repeat_disable;            // surface layers: R paved, G dirt track, B ballast, A hardstand
 uniform sampler2D n_macro : filter_linear, repeat_disable;          // R ~350 m, G ~100 m, B ~30 m, A ~60 m (warp)
 uniform sampler2D n_detail : filter_linear_mipmap, repeat_enable;   // R ~6 m, G ~2 m, B ~0.7 m, A ~3 m  (at 19 m/tile)
 uniform sampler2D n_normal : hint_normal, filter_linear_mipmap, repeat_enable;
@@ -106,7 +106,8 @@ void fragment() {
 	vec4 sp = textureLod(splat, uv + warp / map_rect.zw, 0.0);
 	// thin rock lines on bench risers alias on the 2 m grid, so the colour reads rock partly from a blurred mip (strata from the smoothed height draw the bands instead)
 	sp.r = mix(sp.r, textureLod(splat, uv + warp / map_rect.zw, 1.0).r, 0.5);
-	float road = texture(roads, uv).r;
+	vec4 surf = texture(roads, uv);
+	float road = surf.r;
 	vec4 s3 = smooth_normal(p, 3.0), s8 = smooth_normal(p, 8.0);   // the wide one averages across a whole bench
 	vec3 sn = normalize(s3.xyz * 0.35 + s8.xyz * 0.65);
 	float hs = mix(s3.w, s8.w, 0.6);                         // smoothed height: strata follow contours, not facets
@@ -152,9 +153,26 @@ void fragment() {
 	c = mix(c, c * vec3(1.04, 0.99, 0.93), smoothstep(0.35, 0.75, M.a) * 0.6);
 	c *= mix(1.0, 0.9, smoothstep(0.35, 0.85, slope));        // shade steep ground slightly (rough AO)
 
+	// paved roads: the carriageway itself is the road_surface strip mesh; here the worn, dusty shoulders either side
 	float rd = smoothstep(0.2, 0.75, road + (H.b - 0.5) * 0.12 + (grain - 0.5) * 0.06);
 	c = mix(c, dirt, rd);
 	c = mix(c, ruts, smoothstep(0.85, 1.0, road) * smoothstep(0.45, 0.6, mix(H.b, F.b, 0.5)) * 0.5);
+	// dirt tracks: compacted pale earth, darker wheel-worn streaks (no direction needed: grain + 0.7 m noise)
+	float dt = smoothstep(0.25, 0.7, surf.g + (H.b - 0.5) * 0.2 + (grain - 0.5) * 0.1);
+	vec3 track = mix(vec3(0.62, 0.55, 0.44), vec3(0.70, 0.63, 0.51), mix(H.b, grain, 0.6));
+	track = mix(track, ruts * 1.1, smoothstep(0.55, 0.75, F.b) * smoothstep(0.7, 1.0, surf.g) * 0.35);
+	c = mix(c, track, dt);
+	// rail formation: cinder-stained shoulder around the ballast strip mesh
+	float bl = smoothstep(0.15, 0.85, surf.b + (H.r - 0.5) * 0.25);
+	c = mix(c, vec3(0.40, 0.38, 0.35) * (0.9 + 0.2 * grain), bl * 0.85);
+	// concrete hardstand (yards, forecourts, market apron): 5 m slabs with joints, oil and dust stains
+	float hs_w = smoothstep(0.3, 0.75, surf.a + (H.g - 0.5) * 0.15);
+	vec2 jg = abs(fract(p / 5.0) - 0.5) * 5.0;
+	float joint = 1.0 - smoothstep(0.03, 0.09, min(jg.x, jg.y));
+	vec3 conc = mix(vec3(0.60, 0.58, 0.54), vec3(0.68, 0.66, 0.61), H.g) * (0.92 + 0.12 * grain);
+	conc *= 1.0 - 0.18 * joint - 0.12 * smoothstep(0.62, 0.8, H.a * 0.6 + M.b * 0.5);
+	c = mix(c, conc, hs_w);
+	rd = max(rd, max(dt * 0.5, hs_w));
 
 	// map boundary: darken the strip outside the playable rectangle
 	vec2 e = min(uv, 1.0 - uv);

@@ -84,6 +84,17 @@ const CIVIC := {
 		"desc": "Community centre. Up to 10 infantry can occupy it and fire from the windows."},
 	"civ_hospital": {"name": "Hospital", "size": Vector2(24, 18), "hp": 4000.0, "capacity": 10, "heal": 0.03, "sight": 65.0,
 		"desc": "Hospital. Up to 10 infantry can occupy it; occupants recover 3 % of their health per second."},
+	# B3 (Zagros town and industrial zone)
+	"civ_factory": {"name": "Factory", "size": Vector2(36, 24), "hp": 4800.0, "capacity": 10, "heal": 0.0, "sight": 70.0,
+		"desc": "Sawtooth-roof works with a two-storey office. Up to 10 infantry can hold the office and the hall's high windows."},
+	"civ_warehouse": {"name": "Warehouse", "size": Vector2(24, 14), "hp": 3000.0, "capacity": 8, "heal": 0.0, "sight": 60.0,
+		"desc": "Storage shed. Up to 8 infantry can occupy it and fire from the high window strips."},
+	"civ_school": {"name": "School", "size": Vector2(26, 16), "hp": 3400.0, "capacity": 10, "heal": 0.0, "sight": 65.0,
+		"desc": "Two-storey school with a walled yard. Up to 10 infantry can occupy it and fire from the windows."},
+	"civ_market": {"name": "Covered Market", "size": Vector2(26, 12), "hp": 2600.0, "capacity": 8, "heal": 0.0, "sight": 55.0,
+		"desc": "Bazaar arcade. Up to 8 infantry can occupy it and fire from the roof and rear windows."},
+	"civ_station": {"name": "Rail Station", "size": Vector2(10, 20), "hp": 2400.0, "capacity": 6, "heal": 0.0, "sight": 60.0,
+		"desc": "Booking hall beside the freight yard. Up to 6 infantry can occupy it and fire from the windows."},
 }
 
 
