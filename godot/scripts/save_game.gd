@@ -21,13 +21,15 @@ const UNIT_FIELDS := ["hp", "state", "goal", "queue", "path", "path_i", "repath_
 	"rw_start", "rw_end", "park_heading", "taxi_phase", "haul_depot", "haul_phase", "haul_t", "cargo", "idle_t", "heal_t",
 	"last_fire_t", "board_target", "unload_pending", "para_alt", "garrison", "gar_slot"]
 const BUILDING_FIELDS := ["hp", "progress", "built", "prod_queue", "prod_left", "rally", "has_rally", "builder_seen_t", "ever_seen",
-	"repairing", "repair_debt", "repair_blocked", "drop_t", "research_id", "research_left", "servicing", "w_reload"]
+	"repairing", "repair_debt", "repair_blocked", "drop_t", "research_id", "research_left", "servicing", "w_reload", "wall_run", "gar_target",
+	"retaliate", "retaliate_t"]
 const AI_FIELDS := ["think_t", "waves", "attacking", "capturing", "scout_t", "scout_uid", "retreating", "losses_seen", "last_attack_t",
 	"known", "wave_n0", "attack_size", "garrisoning"]
 
 
 # ------------------------------------------------------------------ capture
 static func _enc(v: Variant) -> Variant:
+	if typeof(v) == TYPE_OBJECT and not is_instance_valid(v): return null     # a unit freed after it died
 	if v is Unit: return {"__u": (v as Unit).uid}
 	if v is Object: return null
 	if v is Array:
@@ -52,6 +54,8 @@ static func _unit_rec(b: Node, u: Unit) -> Dictionary:
 	if u is Building:
 		var bb := u as Building
 		r["bkind"] = bb.bkind
+		r["yaw"] = bb.yaw            # placement rotation and wall segment length (set at construction, before nav blocking)
+		r["sx"] = bb.seg_scale
 		r["pads"] = bb.pads.map(func(p): return int(p.uid))
 	elif not u.haul_pile.is_empty(): r["haul_pile"] = b.piles.find(u.haul_pile)
 	return r
@@ -69,7 +73,8 @@ static func capture(b: Node) -> Dictionary:
 		"derrick_income": b.derrick_income.duplicate(), "drop_income": b.drop_income.duplicate(), "kills": b.kills, "losses": b.losses,
 		"promotions": b.promotions, "cry_t": b.cry_t.duplicate(), "flatten_log": b.flatten_log.duplicate(true),
 		"derricks": b.derricks.map(func(e): return _enc(e)), "piles": b.piles.map(func(p): return int(p.cash)),
-		"rubble": b.rubble.map(func(r): return {"pos": r.pos, "kind": r.kind, "team": r.team, "half": r.half, "seed": r.get("seed", 1)})}
+		"rubble": b.rubble.map(func(r): return {"pos": r.pos, "kind": r.kind, "team": r.team, "half": r.half, "seed": r.get("seed", 1), "yaw": r.get("yaw", 0.0), "sx": r.get("sx", 1.0)}),
+		"wall_jobs": b.wall_jobs.duplicate(true), "wall_run_next": b.wall_run_next}
 	var us: Array = []
 	for u in b.units:
 		if u.dead or not is_instance_valid(u): continue
@@ -160,7 +165,7 @@ static func _wipe(b: Node) -> void:
 		for p in u.passengers: all.append(p)
 	for u in all:
 		if not is_instance_valid(u): continue
-		if u is Building and not u.dead: b.nav_set_structure(u.position, u.half + Vector2(1.0, 1.0), false)
+		if u is Building and not u.dead: (u as Building).nav_block(false)
 		u.queue_free()
 	b.units.clear()
 	b.by_id.clear()
@@ -185,7 +190,7 @@ static func _make(b: Node, r: Dictionary) -> Unit:
 		var k: String = r.bkind
 		u = Building.new()
 		b.add_child(u)
-		(u as Building).setup_structure(b, k, int(r.team), int(r.uid), r.pos, bool(r.f.get("built", true)))
+		(u as Building).setup_structure(b, k, int(r.team), int(r.uid), r.pos, bool(r.f.get("built", true)), float(r.get("yaw", 0.0)), float(r.get("sx", 1.0)))
 	else:
 		u = Unit.new()
 		b.add_child(u)
@@ -205,7 +210,8 @@ static func restore(b: Node, data: Dictionary) -> void:
 			b.terrain.flatten(e[0], e[1], e[0].y, 8.0)
 	b.flatten_log = bt.get("flatten_log", []).duplicate(true)
 	for r in bt.get("rubble", []):
-		b.add_rubble_at(r.pos, r.kind, int(r.team), r.half, int(r.seed))
+		b.add_rubble_at(r.pos, r.kind, int(r.team), r.half, int(r.seed), float(r.get("yaw", 0.0)))
+		b.rubble[b.rubble.size() - 1]["sx"] = float(r.get("sx", 1.0))
 	var recs: Array = data.units.duplicate()
 	recs.sort_custom(func(a, c): return int(a.uid) < int(c.uid))
 	var made := {}      # uid -> [Unit, record]
@@ -244,6 +250,8 @@ static func restore(b: Node, data: Dictionary) -> void:
 			"derrick_income", "drop_income", "cry_t"]:
 		if bt.has(k): b.set(k, bt[k].duplicate(true))
 	b.kills = int(bt.get("kills", 0)); b.losses = int(bt.get("losses", 0)); b.promotions = int(bt.get("promotions", 0))
+	b.wall_jobs = bt.get("wall_jobs", {}).duplicate(true); b.wall_run_next = int(bt.get("wall_run_next", 1))
+	b._update_wall_posts()
 	if bt.has("explored") and (bt.explored as PackedByteArray).size() == b.explored.size(): b.explored = bt.explored
 	var piles_cash: Array = bt.get("piles", [])
 	for i in mini(piles_cash.size(), b.piles.size()):

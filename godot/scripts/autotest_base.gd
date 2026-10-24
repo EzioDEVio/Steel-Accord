@@ -57,6 +57,12 @@ func _until(cond: Callable, max_t: float) -> bool:
 
 
 func _run() -> void:
+	if "buildshots" in battle.args:
+		await _run_build_shots()
+		return
+	if "build" in battle.args:
+		await _run_build()
+		return
 	if "qa" in battle.args:
 		await _run_qa()
 		return
@@ -617,4 +623,390 @@ func _finish() -> void:
 	for c in checks: f.store_line("%s %s %s" % [c[0], "PASS" if c[1] else "FAIL", c[2]])
 	f.store_line("commands logged: %d" % battle.command_log.size())
 	f.close()
+	get_tree().quit()
+
+
+# ================================================================== B3 construction: rotation, walls, garrison orders
+# Run: godot --headless --path godot --fixed-fps 30 -- basetest build noai nation1=iran out=/dir
+# (add a display and drop --headless to also write the evidence screenshots)
+func _keyx(k: Key, shift := false) -> void:
+	for pressed in [true, false]:
+		var e := InputEventKey.new()
+		e.keycode = k; e.physical_keycode = k; e.pressed = pressed; e.shift_pressed = shift
+		Input.parse_input_event(e)
+
+
+## Real input: dozer selected, build button, cursor on `at`, `turns` presses of R (negative: Shift+R), then either a
+## click or a press-drag-release toward `drag_to`. Returns the new structure(s) of kind k.
+func _place_input(k: String, at: Vector3, turns := 0, drag_to := Vector3.INF, focus := Vector3.INF) -> Array:
+	var dz := _dozer()
+	battle.camera.focus(at if focus == Vector3.INF else focus)
+	await _frames(2)
+	await _sel([dz])
+	await _frames(2)
+	var btn: Button = battle.hud.econ.buttons.get(k)
+	if btn == null or btn.disabled:
+		printerr("TESTDBG build button %s missing/disabled" % k)
+		return []
+	_press_button(btn)
+	await _frames(2)
+	var sp := _screen(at)
+	battle.commander.mouse_override = sp
+	_move_mouse(sp)
+	await _frames(3)
+	for i in absi(turns):
+		_keyx(KEY_R, turns < 0)
+		await _frames(1)
+	var before: Array = battle.structures(0, k, false)
+	if drag_to == Vector3.INF:
+		_click(MOUSE_BUTTON_LEFT, sp)
+	else:
+		_mouse(MOUSE_BUTTON_LEFT, true, sp)
+		await _frames(2)
+		var sp2 := _screen(drag_to)
+		for i in 8:
+			var q := sp.lerp(sp2, (i + 1) / 8.0)
+			battle.commander.mouse_override = q
+			_move_mouse(q, (sp2 - sp) / 8.0)
+			await _frames(2)
+		drag_hint = battle.commander.place_hint() if battle.commander.mode.begins_with("place:") else ""
+		_mouse(MOUSE_BUTTON_LEFT, false, sp2)
+	await _wait_sim(0.2)
+	battle.commander.mouse_override = Vector2(-1, -1)
+	var made: Array = battle.structures(0, k, false).filter(func(b): return not (b in before))
+	if made.is_empty():
+		printerr("TESTDBG place %s at %s refused: %s" % [k, str(at), battle.commander.ghost_reason])
+	battle.commander.set_mode("")
+	return made
+
+
+var drag_hint := ""
+
+
+## Path crosses the segment a-b (top view)?
+func _path_crosses(path: PackedVector3Array, a: Vector3, b: Vector3) -> bool:
+	for i in path.size() - 1:
+		if Geometry2D.segment_intersects_segment(Vector2(path[i].x, path[i].z), Vector2(path[i + 1].x, path[i + 1].z), Vector2(a.x, a.z), Vector2(b.x, b.z)) != null:
+			return true
+	return false
+
+
+func _plen(path: PackedVector3Array) -> float:
+	var l := 0.0
+	for i in path.size() - 1: l += Vector2(path[i + 1].x - path[i].x, path[i + 1].z - path[i].z).length()
+	return l
+
+
+func _all_blocked(a: Vector3, b: Vector3) -> Array:
+	var gaps: Array = []
+	var n := int(a.distance_to(b) / 0.5)
+	for i in n + 1:
+		var q := a.lerp(b, float(i) / n)
+		for cls in battle.navs:
+			if not (battle.navs[cls] as GridNav).blocked_at(q): gaps.append("%s@%.1f" % [cls, a.distance_to(q)])
+	return gaps
+
+
+func _run_build() -> void:
+	await _wait_sim(0.5)
+	var ccp: Vector3 = battle.structures(0, "command_center")[0].position
+	battle.cash[0] += 60000
+	battle.add_structure("power_plant", 0, ccp + Vector3(-40, 0, -6), true)
+	battle.add_structure("barracks", 0, ccp + Vector3(40, 0, -16), true)
+	await _wait_sim(0.3)
+	# --- 1. rotation while placing: R, Shift+R and press-drag (through the real input pipeline)
+	battle.commander.place_yaw = 0.0
+	var p1: Array = await _place_input("power_plant", ccp + Vector3(-110, 0, -60), 1)
+	battle.commander.place_yaw = 0.0
+	var p2: Array = await _place_input("power_plant", ccp + Vector3(-60, 0, -60), -1)
+	battle.commander.place_yaw = 0.0
+	var p3: Array = await _place_input("power_plant", ccp + Vector3(-10, 0, -60), 0, ccp + Vector3(10, 0, -60))
+	var y1: float = rad_to_deg(p1[0].yaw) if p1.size() == 1 else 999.0
+	var y2: float = rad_to_deg(p2[0].yaw) if p2.size() == 1 else 999.0
+	var y3: float = rad_to_deg(p3[0].yaw) if p3.size() == 1 else 999.0
+	_log("place_rotate_R_keys", absf(y1 - 45.0) < 0.5 and absf(y2 + 45.0) < 0.5 and p1.size() == 1 and absf(rad_to_deg(p1[0].rotation.y) - 45.0) < 0.5,
+		"R -> %.1f deg, Shift+R -> %.1f deg (node rotation %.1f)" % [y1, y2, rad_to_deg(p1[0].rotation.y) if p1.size() == 1 else 0.0])
+	_log("place_rotate_drag", absf(y3 - 90.0) < 3.0, "drag toward +X -> %.1f deg (expected 90)" % y3)
+	if p1.is_empty() or p3.is_empty():
+		_finish(); return
+	var pp1: Building = p1[0]
+	# --- 2. navigation follows the oriented footprint
+	var c1: Vector3 = pp1.position
+	var corner := Building.local_to_world(c1, pp1.yaw, Vector2(8.5, 7.5))              # inside the rotated box, outside the old axis box
+	var old_corner := c1 + Vector3(9.8, 0, 8.8)                                        # inside the old (grown) axis box, outside the rotated one
+	var g: GridNav = battle.gnav
+	var cells_ok: bool = g.blocked_at(c1) and g.blocked_at(corner) and not g.blocked_at(old_corner) \
+		and absf(corner.x - c1.x) > 10.5
+	var dirv := Building.local_to_world(Vector3.ZERO, pp1.yaw, Vector2(1, 0))         # along the rotated edge
+	var lane := Building.local_to_world(c1, pp1.yaw, Vector2(0, 12.6))
+	var path: PackedVector3Array = battle.find_path(lane - dirv * 35.0, lane + dirv * 35.0, "tracked")
+	var inside_rot := 0; var inside_old := 0
+	for i in path.size() - 1:
+		for k in 281:
+			var q := path[i].lerp(path[i + 1], k / 280.0)
+			if pp1.contains_xz(q, 0.0): inside_rot += 1
+			if absf(q.x - c1.x) < 10.0 and absf(q.z - c1.z) < 9.0: inside_old += 1
+	_log("nav_rotated_footprint", cells_ok and inside_rot == 0 and inside_old > 0 and path.size() <= 3,
+		"cells: centre/rot-corner blocked, old-box corner free=%s; path %d pts, samples inside rotated box %d, inside old axis box %d" % [
+			str(cells_ok), path.size(), inside_rot, inside_old])
+	# --- 3. placement rejected where only the rotated footprint overlaps
+	battle.commander.place_yaw = 0.0
+	var hpos := c1 + Vector3(16, 0, 0)
+	var why_rot: String = battle.placement_problem(0, "hesco", hpos, 0.0)
+	var free_far: String = battle.placement_problem(0, "hesco", c1 + Vector3(26, 0, 0), 0.0)
+	var hb: Array = await _place_input("hesco", hpos)
+	_log("placement_rejects_rotated_overlap", why_rot.begins_with("Blocked") and free_far == "" and hb.is_empty(),
+		"hesco 16 m east of the 45-degree plant: '%s' (input placement made %d); 26 m east: '%s'" % [why_rot, hb.size(), free_far])
+	# --- 4. concrete wall drawn between two Defence Towers: N connected segments, no gaps
+	var wc := Vector3.INF          # centre of a clear 70 x 60 m patch for the wall test (the map has random boulders)
+	for cand in [Vector3(-55, 0, 112), Vector3(-45, 0, 104), Vector3(-65, 0, 118), Vector3(-35, 0, 96), Vector3(55, 0, 120), Vector3(-80, 0, 100)]:
+		if battle.gnav.box_free_static(cand + Vector3(-12, 0, -8), Vector2(36, 30)) and battle.gnav.box_free(cand, Vector2(26, 18)):
+			wc = cand; break
+	if wc == Vector3.INF:
+		wc = Vector3(-55, 0, 112)     # boulder check too strict: fall back to the default patch
+	var ta: Building = battle.add_structure("defense_tower", 0, wc + Vector3(-20, 0, 0), true)
+	var tb: Building = battle.add_structure("defense_tower", 0, wc + Vector3(20, 0, 0), true)
+	await _wait_sim(0.3)
+	var cash_w: int = battle.cash[0]
+	var walls: Array = await _place_input("concrete_wall", ta.position + Vector3(1.5, 0, 1), 0, tb.position + Vector3(-1, 0, -1.5), wc)
+	var hint := drag_hint
+	walls.sort_custom(func(a, b): return a.position.x < b.position.x)
+	var same_run: bool = not walls.is_empty() and walls.all(func(w): return w.wall_run == walls[0].wall_run)
+	var gaps := _all_blocked(ta.position, tb.position)
+	var faces_north: bool = not walls.is_empty() and (Basis(Vector3.UP, walls[0].yaw) * Vector3(0, 0, 1)).z < -0.9
+	_log("wall_line_between_towers", walls.size() == 6 and same_run and gaps.is_empty() and battle.cash[0] == cash_w - 6 * 75 and faces_north and "$450" in hint,
+		"segments=%d (scale %.2f), one run=%s, nav gaps between tower centres: %s, paid $%d, faces enemy=%s, hint '%s'" % [walls.size(),
+			walls[0].seg_scale if not walls.is_empty() else 0.0, str(same_run), str(gaps.slice(0, 6)), cash_w - battle.cash[0], str(faces_north), hint])
+	var built := await _until(func(): return walls.all(func(w): return w.built), 120.0)
+	_log("dozer_builds_whole_wall_line", built, "built %d/%d t=%.0f" % [walls.filter(func(w): return w.built).size(), walls.size(), battle.sim_time])
+	var south := wc + Vector3(0, 0, 16); var north := wc + Vector3(0, 0, -16)
+	var pth: PackedVector3Array = battle.find_path(south, north, "infantry")
+	var blocked_ok: bool = not _path_crosses(pth, ta.position, tb.position) and _plen(pth) > 45.0
+	# hesco line from tower A going north-west: snaps to the tower, faces away from the base
+	battle.commander.place_yaw = 0.0
+	var hend := ta.position + Vector3(-28, 0, -24)
+	for cand in [Vector3(-28, 0, -24), Vector3(-30, 0, 20), Vector3(-24, 0, -30), Vector3(-36, 0, 0), Vector3(-20, 0, 30)]:
+		if str(battle.wall_plan(0, "hesco", ta.position, ta.position + cand).problem) == "": hend = ta.position + cand; break
+	var hes: Array = await _place_input("hesco", ta.position + Vector3(-1, 0, -1), 0, hend, ta.position.lerp(hend, 0.4))
+	var hgaps := _all_blocked(ta.position, ta.position + (hend - ta.position).normalized() * 12.0)
+	var hmid: Vector3 = ta.position.lerp(hend, 0.5) - ccp
+	var hface: bool = not hes.is_empty() and (Basis(Vector3.UP, hes[0].yaw) * Vector3(0, 0, 1)).dot(Vector3(hmid.x, 0, hmid.z).normalized()) > 0.2
+	_log("hesco_line_joins_tower", hes.size() >= 3 and hgaps.is_empty() and hface, "segments=%d yaw=%.0f deg, nav gaps tower->line: %s, faces away from base=%s" % [hes.size(),
+		rad_to_deg(hes[0].yaw) if not hes.is_empty() else 0.0, str(hgaps.slice(0, 4)), str(hface)])
+	# a unit cannot path through the wall; destroying one segment opens a gap it walks through
+	var rf: Unit = battle._spawn("rifleman", 0, south, 0.0)
+	await _wait_sim(0.3)
+	if walls.size() >= 3: walls[2].take_damage(1e9, null)
+	await _wait_sim(0.3)
+	var pth2: PackedVector3Array = battle.find_path(south, north, "infantry")
+	battle.issue({"type": "move", "ids": [rf.uid], "points": [north]})
+	await _until(func(): return rf.flat_dist(north) < 3.0, 25.0)
+	_log("wall_blocks_until_breached", blocked_ok and _path_crosses(pth2, ta.position, tb.position) and rf.flat_dist(north) < 3.0,
+		"intact: path %.0f m, crosses=%s | one segment destroyed: path %.0f m crosses=%s, rifleman reached the far side=%s" % [_plen(pth),
+			str(_path_crosses(pth, ta.position, tb.position)), _plen(pth2), str(_path_crosses(pth2, ta.position, tb.position)), str(rf.flat_dist(north) < 3.0)])
+	battle.camera.yaw = 0.0
+	battle.camera.zoom = 75.0; battle.camera._apply(); battle.camera.focus(wc + Vector3(-10, 0, -2))
+	await _shot("wall_towers_hesco")
+	# --- 5. rotated airfield (structure placed directly, 90 degrees)
+	var af: Building = battle.add_structure("airfield", 0, ccp + Vector3(90, 0, -75), true, PI / 2.0)
+	await _wait_sim(0.3)
+	# --- 6. occupied building: flag of the occupier's nation in its team colour; occupants attack on command
+	var house: Building = battle.add_civic("civ_house_a", Vector3(125, 0, 200), false)
+	var sq: Array = []
+	for i in 3: sq.append(battle._spawn("rifleman", 0, house.position + Vector3(-14 + i * 2.5, 0, 8), 0.0))
+	await _wait_sim(0.3)
+	battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
+	await _until(func(): return house.passengers.size() == 3, 30.0)
+	await _wait_sim(0.5)
+	var fl: Node3D = house.flag_node
+	var nf: Node = fl.get_node_or_null("NationFlag") if fl else null
+	var want0 := str(Nations.DEFS.get(battle.nation_of(0), {}).get("flag", ""))
+	var pen_ok: bool = fl != null and (fl.get_meta("team_color") as Color).is_equal_approx(UnitDefs.team_color(0))
+	var on_roof: bool = fl != null and fl.position.y > 2.5
+	_log("garrison_flag_shown", house.team == 0 and nf != null and nf.scene_file_path == want0 and pen_ok and on_roof and fl.is_visible_in_tree(),
+		"owner=%d flag=%s (want %s) pennant team colour=%s, pole base %.1f m above ground" % [house.team, nf.scene_file_path if nf else "none", want0, str(pen_ok), fl.position.y if fl else -1.0])
+	battle.camera.zoom = 55.0; battle.camera._apply(); battle.camera.focus(house.position + Vector3(0, 0, 4))
+	await _shot("garrison_flag_team0")
+	# ordered attack: select the house, click the chosen (farther) enemy; it is hit before the nearer one
+	var ea: Unit = battle._spawn("rifleman", 1, Vector3(136, 0, 140), PI)
+	var eb: Unit = battle._spawn("rifleman", 1, Vector3(142, 0, 140), PI)
+	ea.order_stop(); eb.order_stop()
+	await _wait_sim(0.5)
+	battle.commander._set_selection([house]); await _frames(3)
+	var has_tiles: bool = battle.hud.econ.buttons.has("gattack") and battle.hud.econ.buttons.has("gstop") and not battle.hud.econ.buttons["gattack"].disabled
+	battle.camera.focus(Vector3(140, 0, 160)); await _frames(3)
+	var picked: Unit = battle.commander.unit_at(_screen(eb.world_center()))
+	_click(MOUSE_BUTTON_LEFT, _screen(eb.world_center()))
+	await _wait_sim(0.4)
+	if house.gar_target != eb: printerr("TESTDBG gattack: picked=%s seen=%s own_garrison=%s" % [picked.kind if picked else "none", str(battle.seen.get(eb.uid, false)), str(battle.commander.own_garrison())])
+	var ordered: bool = house.gar_target == eb
+	ea.position = house.position + Vector3(0, 0, -20); ea.reset_physics_interpolation()
+	eb.position = house.position + Vector3(27, 0, -12); eb.reset_physics_interpolation()
+	ea.order_stop(); eb.order_stop()
+	var first := {}
+	var t0: float = battle.sim_time
+	while battle.sim_time - t0 < 15.0 and (eb.hp >= eb.def.hp or not first.has("b")):
+		if not first.has("a") and ea.hp < ea.def.hp: first["a"] = battle.sim_time - t0
+		if not first.has("b") and (eb.hp < eb.def.hp or eb.dead): first["b"] = battle.sim_time - t0
+		await _wait_sim(0.1)
+	_log("garrison_ordered_attack", has_tiles and ordered and first.has("b") and float(first.get("a", 99.0)) > float(first.b),
+		"Attack/Stop tiles=%s, order set by clicking=%s, first hit on ordered target %.1f s, on the nearer enemy %s" % [str(has_tiles), str(ordered),
+			float(first.get("b", -1.0)), ("%.1f s" % first.a) if first.has("a") else "not before"])
+	await _until(func(): return ea.dead and eb.dead, 20.0)
+	# return fire: an unarmed vehicle is closest, a rifleman shooting the building is farther; occupants turn on the shooter
+	battle.issue({"type": "garrison_stop", "team": 0, "id": house.uid})
+	var dzr: Unit = battle._spawn("dozer", 1, house.position + Vector3(0, 0, -16), PI)
+	dzr.order_stop()
+	await _wait_sim(3.0)
+	var shooter: Unit = battle._spawn("rifleman", 1, house.position + Vector3(-31, 0, -9), PI)
+	shooter.order_attack(house)
+	var hit := await _until(func(): return shooter.dead or shooter.hp < shooter.def.hp, 12.0)
+	_log("garrison_returns_fire", hit and not dzr.dead, "shooter hp %.0f/%.0f dead=%s, dozer hp %.0f/%.0f" % [shooter.hp, shooter.def.hp, str(shooter.dead), dzr.hp, dzr.def.hp])
+	if not shooter.dead: shooter.take_damage(1e9, null)
+	dzr.take_damage(1e9, null)
+	# --- 7. save / load keeps rotations, wall segments and the garrison
+	await _wait_sim(0.5)
+	var rec := {}
+	for b in battle.units:
+		if b is Building and not b.dead: rec[b.uid] = [b.yaw, b.seg_scale, b.position]
+	var probe := Building.local_to_world(c1, pp1.yaw, Vector2(8.5, 7.5))
+	var house_id: int = house.uid
+	var af_id: int = af.uid
+	var data := SaveGame.capture(battle)
+	SaveGame.write(SaveGame.DIR + "/build_test.sav", data)
+	SaveGame.restore(battle, SaveGame.read(SaveGame.DIR + "/build_test.sav"))
+	await _frames(2)
+	var bad: Array = []
+	for id in rec:
+		var b: Unit = battle.by_id.get(id)
+		if b == null or not (b is Building): bad.append("%d missing" % id); continue
+		var bb := b as Building
+		if absf(bb.yaw - float(rec[id][0])) > 0.001 or absf(bb.seg_scale - float(rec[id][1])) > 0.001 or absf(bb.rotation.y - bb.yaw) > 0.001:
+			bad.append("%s yaw %.2f->%.2f" % [bb.bkind, rec[id][0], bb.yaw])
+	var house2: Building = battle.by_id.get(house_id)
+	_log("save_load_keeps_yaw", bad.is_empty() and rec.size() > 10 and battle.gnav.blocked_at(probe) and house2 != null and house2.passengers.size() == 3,
+		"%d structures compared, mismatches: %s; rotated corner still blocks nav=%s; house occupants %d" % [rec.size(), str(bad.slice(0, 4)),
+			str(battle.gnav.blocked_at(probe)), house2.passengers.size() if house2 else -1])
+	house = house2
+	af = battle.by_id.get(af_id)
+	# capture: the occupants leave, the other side moves in; the flag changes to their nation and colour
+	battle.issue({"type": "unload", "team": 0, "ids": [house.uid]})
+	await _until(func(): return house.passengers.is_empty(), 10.0)
+	for u in battle.units:
+		if u.team == 0 and u.kind == "rifleman" and u.flat_dist(house.position) < 30.0: u.take_damage(1e9, null)
+	await _wait_sim(0.5)
+	var empty_flag: bool = house.flag_node == null
+	var obs: Unit = battle._spawn("rifleman", 0, house.position + Vector3(0, 0, 50), PI)     # a player soldier watching the house
+	obs.order_stop()
+	var red: Array = []
+	for i in 2: red.append(battle._spawn("rifleman", 1, house.position + Vector3(-12 + i * 2.5, 0, 9), 0.0))
+	await _wait_sim(0.3)
+	battle.issue({"type": "board", "team": 1, "ids": red.map(func(u): return u.uid), "target": house.uid})
+	await _until(func(): return house.passengers.size() == 2, 30.0)
+	await _wait_sim(0.5)
+	var fl1: Node3D = house.flag_node
+	var nf1: Node = fl1.get_node_or_null("NationFlag") if fl1 else null
+	var want1 := str(Nations.DEFS.get(battle.nation_of(1), {}).get("flag", ""))
+	var pen1: bool = fl1 != null and (fl1.get_meta("team_color") as Color).is_equal_approx(UnitDefs.team_color(1))
+	_log("garrison_flag_changes_on_capture", empty_flag and house.team == 1 and nf1 != null and nf1.scene_file_path == want1 and pen1 and house.visible and fl1.is_visible_in_tree(),
+		"empty: no flag=%s; captured by team %d: flag=%s (want %s), pennant team colour=%s, seen by player=%s" % [str(empty_flag), house.team,
+			nf1.scene_file_path if nf1 else "none", want1, str(pen1), str(house.visible)])
+	battle.camera.focus(house.position + Vector3(0, 0, 4))
+	await _shot("garrison_flag_captured")
+	battle._lose_passengers(house)
+	battle._set_owner(house, -1)
+	# --- 8. jets from the rotated airfield: taxi, take off along the runway, return and land on their pad
+	await _press_button_if(af, "f16")
+	await _until(func(): return _team(["f16"]).size() >= 1, 40.0)
+	var jets: Array = _team(["f16"])
+	var jet: Unit = jets[0] if not jets.is_empty() else null
+	var rw_dir := Vector3.ZERO
+	var rw_local := Vector3.ZERO
+	if af.runway.size() == 2:
+		rw_dir = (af.runway[1] - af.runway[0]) * Vector3(1, 0, 1)
+		rw_local = (af.to_local(af.runway[1]) - af.to_local(af.runway[0])) * Vector3(1, 0, 1)
+	var bad_ground := []
+	var air_t := -1.0
+	var lift_dir := Vector3.ZERO
+	if jet:
+		battle.issue({"type": "move", "ids": [jet.uid], "points": [af.position + Vector3(0, 0, -160)]})
+		var tj: float = battle.sim_time
+		var prev := jet.position
+		while battle.sim_time - tj < 60.0 and air_t < 0.0:
+			await _wait_sim(0.2)
+			if not jet.airborne:
+				var lp: Vector3 = af.to_local(jet.position)
+				if lp.x > -30.0 and lp.x < -4.5 and lp.z > -9.0 and lp.z < 10.0: bad_ground.append("(%.0f,%.0f)" % [lp.x, lp.z])
+				if not af.contains_xz(jet.position, 25.0): bad_ground.append("off-field")
+			elif air_t < 0.0:
+				air_t = battle.sim_time - tj; lift_dir = (jet.position - prev) * Vector3(1, 0, 1)
+			prev = jet.position
+	var along: float = lift_dir.normalized().dot(rw_dir.normalized()) if lift_dir.length() > 0.01 and rw_dir.length() > 0.01 else 0.0
+	var turned := rw_dir.length() > 1.0 and absf(rw_dir.normalized().dot(rw_local.normalized())) < 0.2
+	_log("rotated_airfield_takeoff", jet != null and air_t > 0.0 and bad_ground.is_empty() and along > 0.8 and turned,
+		"airfield yaw 90: runway world dir (%.2f, %.2f) vs model dir (%.2f, %.2f) turned=%s, airborne after %.1f s, lift-off heading along runway %.2f, ground positions off the paving: %s" % [
+			rw_dir.normalized().x, rw_dir.normalized().z, rw_local.normalized().x, rw_local.normalized().z, str(turned), air_t, along, str(bad_ground.slice(0, 4))])
+	if jet:
+		await _wait_sim(6.0)
+		battle.issue({"type": "return", "ids": [jet.uid]})
+		await _until(func(): return jet.dead or jet.state == Unit.S.LANDED, 90.0)
+		_log("rotated_airfield_landing", not jet.dead and jet.state == Unit.S.LANDED and jet.flat_dist(jet.home) < 1.0,
+			"state=%d distance to its pad %.2f m" % [jet.state, jet.flat_dist(jet.home)])
+	battle.camera.zoom = 120.0; battle.camera._apply(); battle.camera.focus(af.position)
+	await _shot("rotated_airfield")
+	_finish()
+
+
+## Evidence screenshots for B3 construction (rendered run): the scenes are set up through the same commands the player
+## issues (place_wall / board), then construction is completed directly so the run stays short on a software renderer.
+## Run: godot --path godot --fixed-fps 30 --resolution 1920x1080 -- basetest buildshots noai nation1=iran out=/dir
+func _run_build_shots() -> void:
+	await _wait_sim(0.3)
+	var ccp: Vector3 = battle.structures(0, "command_center")[0].position
+	battle.cash[0] += 60000
+	battle.add_structure("power_plant", 0, ccp + Vector3(-40, 0, -6), true)
+	battle.add_structure("barracks", 0, ccp + Vector3(40, 0, -16), true)
+	var wc := Vector3(-55, 0, 112)
+	var ta: Building = battle.add_structure("defense_tower", 0, wc + Vector3(-20, 0, 0), true)
+	var tb: Building = battle.add_structure("defense_tower", 0, wc + Vector3(20, 0, 0), true)
+	var dz := _dozer()
+	battle.issue({"type": "place_wall", "team": 0, "id": "concrete_wall", "a": ta.position, "b": tb.position, "builder": dz.uid})
+	var hend := ta.position + Vector3(-30, 0, 20)
+	for cand in [Vector3(-28, 0, -24), Vector3(-30, 0, 20), Vector3(-24, 0, -30), Vector3(-36, 0, 0)]:
+		if str(battle.wall_plan(0, "hesco", ta.position, ta.position + cand).problem) == "": hend = ta.position + cand; break
+	battle.issue({"type": "place_wall", "team": 0, "id": "hesco", "a": ta.position, "b": hend, "builder": dz.uid})
+	await _wait_sim(0.3)
+	var n := 0
+	for b in battle.structures(0, "", false):
+		if b.is_wall() and not b.built:
+			b.progress = 1.0; b.hp = b.bdef.hp; b.built = true; b._set_reveal(false); n += 1
+	print("SHOTDBG walls completed directly: %d" % n)
+	battle.issue({"type": "move", "ids": [dz.uid], "points": [ccp + Vector3(-20, 0, -30)]})
+	var cam: RTSCamera = battle.camera
+	cam.zoom = 70.0; cam.pitch_deg = 48.0; cam._apply(); cam.focus(wc + Vector3(-12, 0, 4))
+	if not "skipwall" in battle.args:
+		await _wait_sim(1.0)
+		await _shot("b3_wall_towers_hesco")
+	# occupied house flying the player's flag, then captured by the other side
+	var house: Building = battle.add_civic("civ_house_a", Vector3(60, 0, 150), false)
+	var sq: Array = []
+	for i in 3: sq.append(battle._spawn("rifleman", 0, house.position + Vector3(-3 + i * 2.0, 0, 8), 0.0))
+	await _wait_sim(0.2)
+	battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
+	await _until(func(): return house.passengers.size() == 3, 20.0)
+	await _wait_sim(0.5)
+	cam.zoom = 46.0; cam._apply(); cam.focus(house.position + Vector3(0, 0, 2))
+	await _wait_sim(0.3)
+	await _shot("b3_garrison_flag_usa")
+	battle._lose_passengers(house); battle._set_owner(house, -1)
+	var obs: Unit = battle._spawn("rifleman", 0, house.position + Vector3(0, 0, 50), PI)
+	obs.order_stop()
+	var red: Array = []
+	for i in 2: red.append(battle._spawn("rifleman", 1, house.position + Vector3(-3 + i * 2.0, 0, 8), 0.0))
+	await _wait_sim(0.2)
+	battle.issue({"type": "board", "team": 1, "ids": red.map(func(u): return u.uid), "target": house.uid})
+	await _until(func(): return house.passengers.size() == 2, 20.0)
+	await _wait_sim(0.5)
+	await _shot("b3_garrison_flag_captured_iran")
+	print("RESULT shots flag_team=%d" % house.flag_team)
 	get_tree().quit()

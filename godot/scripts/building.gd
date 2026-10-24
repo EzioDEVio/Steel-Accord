@@ -30,15 +30,27 @@ var drop_t := 25.0          # first supply drop 25 s after completion
 var research_id := ""        # upgrade being researched here (Upgrades.DEFS)
 var research_left := 0.0
 var _depth_px := 0.0
+var yaw := 0.0               # facing chosen at placement (radians about +Y; 0 = model front toward +Z, as authored)
+var seg_scale := 1.0         # walls: length factor of this segment (a drawn line is split into equal segments)
+var wall_run := 0            # walls: segments drawn in one drag share a run id
+var gar_target: Unit = null  # occupied civic building: enemy the occupants were ordered to attack
+var retaliate: Unit = null   # occupied civic building: last enemy that damaged it (occupants return fire)
+var retaliate_t := -99.0
+var flag_node: Node3D = null # occupied civic building: flagpole with the occupier's flag (presentation)
+var flag_team := -9
 
 const STRUCTURE_SHADER := preload("res://shaders/structure.gdshader")
 
 
-func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vector3, start_built: bool) -> void:
+func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vector3, start_built: bool, yaw_r := 0.0, sx := 1.0) -> void:
 	battle = b; bkind = building_kind; bdef = BuildingDefs.DEFS[building_kind]; team = t; uid = id
 	kind = building_kind
 	domain = "ground"
-	half = bdef.size * 0.5
+	yaw = wrapf(yaw_r, -PI, PI)
+	seg_scale = sx if is_wall() else 1.0
+	half = Vector2(bdef.size.x * 0.5 * seg_scale, bdef.size.y * 0.5)
+	rotation.y = yaw
+	heading = yaw
 	def = {"name": Nations.label(b.nation_of(t), building_kind, bdef.name), "hp": bdef.hp, "radius": maxf(half.x, half.y) * 0.8, "height": 6.0, "sight": bdef.sight,
 		"speed": 0.0, "accel": 0.0, "turn_deg": 0.0, "weapons": bdef.get("weapons", []), "structure": true,
 		"icon": "", "armor": "structure", "visual": "structure"}
@@ -52,9 +64,10 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 		w_ammo.append(-1)
 	body = Node3D.new()
 	add_child(body)
+	body.scale.x = seg_scale
 	position = pos
 	home = pos
-	rally = pos + front_dir() * (half.y + 10.0)
+	rally = pos + front_dir() * (reach_along(front_dir()) + 10.0)
 	art = UsArt.building(bdef.art)
 	if not art.is_empty():
 		def.icon = art.get("icon", "")
@@ -73,12 +86,88 @@ func setup_structure(b: Node, building_kind: String, t: int, id: int, pos: Vecto
 			for p in pad_positions(pos, bdef):
 				pads.append({"pos": p, "uid": -1})
 			_build_pads()
-	battle.nav_set_structure(position, half + Vector2(1.0, 1.0), true)
+	nav_block(true)
 
 
-## Structures face the map centre (their doors, exits and the airfield apron are on that side).
+## Marks (or clears) this structure's oriented footprint, grown by 1 m, on the navigation grids.
+func nav_block(on: bool) -> void:
+	battle.nav_set_structure(position, half + Vector2(1.0, 1.0), on, yaw)
+
+
 func is_civic() -> bool:
 	return bdef.get("civic", false)
+
+
+func is_wall() -> bool:
+	return bdef.get("wall", false)
+
+
+# ---- oriented footprint (the structure's local X / Z axes are rotated by `yaw` about +Y)
+## World point -> footprint-local (x, z) relative to `center` for a box rotated by yaw_r.
+static func to_local_xz(center: Vector3, yaw_r: float, p: Vector3) -> Vector2:
+	var dx := p.x - center.x; var dz := p.z - center.z
+	var c := cos(yaw_r); var s := sin(yaw_r)
+	return Vector2(dx * c - dz * s, dx * s + dz * c)
+
+
+static func local_to_world(center: Vector3, yaw_r: float, l: Vector2) -> Vector3:
+	var c := cos(yaw_r); var s := sin(yaw_r)
+	return Vector3(center.x + l.x * c + l.y * s, center.y, center.z - l.x * s + l.y * c)
+
+
+## Half extents of the axis-aligned box that encloses a rotated footprint (terrain checks and flattening).
+static func aabb_half(h: Vector2, yaw_r: float) -> Vector2:
+	var c := absf(cos(yaw_r)); var s := absf(sin(yaw_r))
+	return Vector2(h.x * c + h.y * s, h.x * s + h.y * c)
+
+
+## Separating-axis test between two oriented footprints.
+static func obb_overlap(c1: Vector3, h1: Vector2, y1: float, c2: Vector3, h2: Vector2, y2: float) -> bool:
+	var axes := [Vector2(cos(y1), -sin(y1)), Vector2(sin(y1), cos(y1)), Vector2(cos(y2), -sin(y2)), Vector2(sin(y2), cos(y2))]
+	var d := Vector2(c2.x - c1.x, c2.z - c1.z)
+	for a: Vector2 in axes:
+		var r1 := h1.x * absf(axes[0].dot(a)) + h1.y * absf(axes[1].dot(a))
+		var r2 := h2.x * absf(axes[2].dot(a)) + h2.y * absf(axes[3].dot(a))
+		if absf(d.dot(a)) >= r1 + r2: return false
+	return true
+
+
+## The four footprint corners in world space (minimap, debugging).
+static func corners(center: Vector3, h: Vector2, yaw_r: float) -> Array:
+	return [local_to_world(center, yaw_r, Vector2(-h.x, -h.y)), local_to_world(center, yaw_r, Vector2(h.x, -h.y)),
+		local_to_world(center, yaw_r, Vector2(h.x, h.y)), local_to_world(center, yaw_r, Vector2(-h.x, h.y))]
+
+
+func local_xz(p: Vector3) -> Vector2:
+	return to_local_xz(position, yaw, p)
+
+
+func contains_xz(p: Vector3, margin := 0.0) -> bool:
+	var l := local_xz(p)
+	return absf(l.x) < half.x + margin and absf(l.y) < half.y + margin
+
+
+## Ground units overlapping the footprint (plus radius r) are moved out along the shallowest local axis.
+func push_out(p: Vector3, r: float) -> Vector3:
+	var l := local_xz(p)
+	var ex := half.x + r - absf(l.x)
+	var ez := half.y + r - absf(l.y)
+	if ex <= 0.0 or ez <= 0.0: return p
+	if ex < ez: l.x += signf(l.x if l.x != 0.0 else 1.0) * ex
+	else: l.y += signf(l.y if l.y != 0.0 else 1.0) * ez
+	var w := local_to_world(position, yaw, l)
+	return Vector3(w.x, p.y, w.z)
+
+
+## Distance from the centre to the footprint edge along a world direction (support of the oriented box).
+func reach_along(dir: Vector3) -> float:
+	var l := to_local_xz(Vector3.ZERO, yaw, Vector3(dir.x, 0, dir.z))
+	return absf(l.x) * half.x + absf(l.y) * half.y
+
+
+## The two ends of a wall segment (world, on its centre line).
+func wall_ends() -> Array:
+	return [local_to_world(position, yaw, Vector2(-half.x, 0)), local_to_world(position, yaw, Vector2(half.x, 0))]
 
 
 ## Firing position for occupant i (model ports, else points round the roof edge).
@@ -88,8 +177,10 @@ func port(i: int) -> Vector3:
 	return position + Vector3(cos(a) * half.x * 0.9, model_h * 0.6, sin(a) * half.y * 0.9)
 
 
+## Default exit / rally side: toward the map centre for an unrotated structure, turned with the structure's yaw.
 func front_dir() -> Vector3:
-	return Vector3(0, 0, -1) if position.z > 0.0 else Vector3(0, 0, 1)
+	var d := Vector3(0, 0, -1) if position.z > 0.0 else Vector3(0, 0, 1)
+	return Basis(Vector3.UP, yaw) * d
 
 
 const PAD_SIZE := 16.0
@@ -145,12 +236,12 @@ func _build_pads() -> void:
 		var slab := MeshInstance3D.new()
 		var b := BoxMesh.new(); b.size = Vector3(PAD_SIZE, 0.25, PAD_SIZE); b.material = con
 		slab.mesh = b
-		slab.position = p.pos - position + Vector3(0, 0.08, 0)
+		slab.position = to_local(p.pos) + Vector3(0, 0.08, 0)
 		add_child(slab)
 		var ring_m := MeshInstance3D.new()
 		var t := TorusMesh.new(); t.inner_radius = 5.2; t.outer_radius = 5.7; t.material = mark
 		ring_m.mesh = t; ring_m.scale = Vector3(1, 0.02, 1)
-		ring_m.position = p.pos - position + Vector3(0, 0.22, 0)
+		ring_m.position = to_local(p.pos) + Vector3(0, 0.22, 0)
 		add_child(ring_m)
 
 
@@ -177,7 +268,23 @@ func _build_model(path: String) -> void:
 		for si in m.mesh.get_surface_count():
 			mesh_list.append([m, si, m.get_active_material(si)])
 	model_h = maxf(top, 3.0)
+	if is_wall(): tint_team(model3d)
 	if not built: _set_reveal(true)
+
+
+## Walls: the model's team-marker surfaces (material "SA_Team") take the owner's colour.
+func tint_team(n: Node) -> void:
+	var tm := StandardMaterial3D.new()
+	tm.albedo_color = UnitDefs.team_color(team); tm.roughness = 0.7; tm.resource_name = "team_tint"
+	for mi in n.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m.mesh == null: continue
+		for si in m.mesh.get_surface_count():
+			var sm := m.mesh.surface_get_material(si)
+			if sm and sm.resource_name.begins_with("SA_Team"):
+				m.set_surface_override_material(si, tm)
+				for e in mesh_list:
+					if e[0] == m and e[1] == si: e[2] = tm
 
 
 # ---- named nodes inside structure models (see docs/M1_STRUCTURES_*.md)
@@ -315,7 +422,8 @@ func _set_reveal(on: bool) -> void:
 			m.set_surface_override_material(e[1], sm)
 			reveal_mats.append(sm)
 		else:
-			m.set_surface_override_material(e[1], null)
+			var keep: Material = e[2]
+			m.set_surface_override_material(e[1], keep if keep and keep.resource_name == "team_tint" else null)
 	if not on: reveal_mats.clear()
 
 
@@ -402,8 +510,8 @@ func _process(_dt: float) -> void:
 		to_cam.y = 0.0
 		if to_cam.length() > 0.01:
 			to_cam = to_cam.normalized()
-			var reach := absf(to_cam.x) * half.x + absf(to_cam.z) * half.y
-			card.position = to_cam * reach * 0.9 + Vector3(0, 0.2, 0)
+			var reach := reach_along(to_cam)
+			card.global_position = global_position + to_cam * reach * 0.9 + Vector3(0, 0.2, 0)
 	card_mat.set_shader_parameter("progress", progress)
 	card_mat.set_shader_parameter("highlight", 1.0 if selected else 0.0)
 
@@ -411,7 +519,7 @@ func _process(_dt: float) -> void:
 func _make_ring() -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var b := BoxMesh.new()
-	b.size = Vector3(bdef.size.x + 2.0, 0.1, bdef.size.y + 2.0)
+	b.size = Vector3(half.x * 2.0 + 2.0, 0.1, half.y * 2.0 + 2.0)
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = Color(0.35, 1.0, 0.45, 0.35) if team == 0 else Color(1.0, 0.3, 0.25, 0.35)
@@ -434,9 +542,8 @@ func muzzle_pos() -> Vector3:
 
 
 func footprint_dist(p: Vector3) -> float:
-	var dx := maxf(0.0, absf(p.x - position.x) - half.x)
-	var dz := maxf(0.0, absf(p.z - position.z) - half.y)
-	return Vector2(dx, dz).length()
+	var l := local_xz(p)
+	return Vector2(maxf(0.0, absf(l.x) - half.x), maxf(0.0, absf(l.y) - half.y)).length()
 
 
 # ------------------------------------------------------------------ simulation
@@ -551,6 +658,8 @@ func free_pad() -> int:
 
 func take_damage(amount: float, from: Unit) -> void:
 	if dead: return
+	if is_civic() and not passengers.is_empty() and from and is_instance_valid(from) and not from.dead and from.team >= 0 and from.team != team:
+		retaliate = from; retaliate_t = battle.sim_time     # occupants return fire (battle._update_garrisons)
 	hp -= amount
 	if hp <= 0.0:
 		hp = 0.0
@@ -562,8 +671,9 @@ func die() -> void:
 	set_selected(false)
 	if card_mat: card_mat.set_shader_parameter("burnt", 1.0)
 	if build_snd: build_snd.queue_free(); build_snd = null
-	battle.nav_set_structure(position, half + Vector2(1.0, 1.0), false)
+	nav_block(false)
 	outline.visible = false
+	set_flag_team(-1)
 	repairing = false
 	battle.on_unit_died(self)
 	if not sold and built:
@@ -571,3 +681,84 @@ func die() -> void:
 		if card: card.visible = false
 		if model3d: model3d.visible = false
 	visible = false if sold else visible
+
+
+# ---- occupation flag (civic buildings): a short pole on the roof flying the occupier's national flag, with a pennant
+# in the occupier's team colour under it. Presentation only; battle._update_civic_flags decides which side is shown.
+const FLAG_SCALE := 0.62
+var _roof_local := Vector3.INF
+
+
+func set_flag_team(t: int) -> void:
+	if t == flag_team: return
+	flag_team = t
+	if flag_node and is_instance_valid(flag_node): flag_node.queue_free()
+	flag_node = null
+	if t < 0 or dead: return
+	var root := Node3D.new()
+	root.name = "OccupationFlag"
+	root.position = roof_point()
+	add_child(root)
+	var path := str(Nations.DEFS.get(battle.nation_of(t), {}).get("flag", ""))
+	if path != "" and ResourceLoader.exists(path):
+		var f: Node3D = (load(path) as PackedScene).instantiate()
+		f.scale = Vector3.ONE * FLAG_SCALE
+		f.name = "NationFlag"
+		root.add_child(f)
+		battle.play_loop(f, "wave")
+	else:   # no flag model for this nation: a plain pole (the pennant still shows the side)
+		var pole := MeshInstance3D.new()
+		var cm := CylinderMesh.new(); cm.top_radius = 0.04; cm.bottom_radius = 0.05; cm.height = 5.0
+		pole.mesh = cm; pole.position.y = 2.5
+		root.add_child(pole)
+	var col: Color = UnitDefs.team_color(t)
+	var im := ImmediateMesh.new()
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col; m.emission_enabled = true; m.emission = col; m.emission_energy_multiplier = 0.35
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED; m.roughness = 0.8
+	im.surface_begin(Mesh.PRIMITIVE_TRIANGLES, m)
+	for v in [Vector3(0.05, 3.85, 0), Vector3(0.05, 3.0, 0), Vector3(1.75, 3.42, 0)]:
+		im.surface_set_normal(Vector3(0, 0, 1)); im.surface_add_vertex(v)
+	im.surface_end()
+	var pen := MeshInstance3D.new()
+	pen.mesh = im; pen.name = "TeamPennant"
+	root.add_child(pen)
+	root.set_meta("team_color", col)
+	flag_node = root
+
+
+## Where the occupation flag stands (structure-local): the model's "FlagPole" empty when it has one, otherwise the
+## highest model surface under a spot near a rear corner of the roof (measured once from the meshes).
+func roof_point() -> Vector3:
+	if _roof_local != Vector3.INF: return _roof_local
+	var fp: Node3D = model3d.find_child("FlagPole", true, false) as Node3D if model3d else null
+	if fp:
+		_roof_local = to_local(fp.global_position)
+		return _roof_local
+	_roof_local = Vector3(-half.x * 0.55, model_h, -half.y * 0.5)
+	for cand in [Vector2(-0.55, -0.5), Vector2(0.55, -0.5), Vector2(-0.5, 0.35), Vector2(0.0, 0.0)]:
+		var lp := Vector3(cand.x * half.x, 0, cand.y * half.y)
+		var h := _model_top_at(lp)
+		if h > 0.5:
+			_roof_local = Vector3(lp.x, h, lp.z)
+			break
+	return _roof_local
+
+
+func _model_top_at(lp: Vector3) -> float:
+	if model3d == null: return -1.0
+	var inv := global_transform.affine_inverse()
+	var top := -1.0
+	var from := Vector3(lp.x, 200.0, lp.z)
+	for mi in model3d.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if String(m.name).begins_with("Light_") or m.mesh == null: continue
+		var xf: Transform3D = inv * m.global_transform
+		var f := m.mesh.get_faces()
+		for i in range(0, f.size(), 3):
+			var a: Vector3 = xf * f[i]; var b: Vector3 = xf * f[i + 1]; var c: Vector3 = xf * f[i + 2]
+			if lp.x < minf(a.x, minf(b.x, c.x)) or lp.x > maxf(a.x, maxf(b.x, c.x)): continue
+			if lp.z < minf(a.z, minf(b.z, c.z)) or lp.z > maxf(a.z, maxf(b.z, c.z)): continue
+			var hit: Variant = Geometry3D.ray_intersects_triangle(from, Vector3.DOWN, a, b, c)
+			if hit != null: top = maxf(top, (hit as Vector3).y)
+	return top

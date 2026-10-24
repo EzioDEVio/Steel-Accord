@@ -22,13 +22,13 @@ func _run() -> void:
 	for u in battle.units:
 		var d := absf(u.position.y - battle.ground_h(u.position.x, u.position.z))
 		if u is Building:
-			var st := tm.footprint_stats(u.position, u.half)
+			var st := tm.footprint_stats(u.position, Building.aabb_half(u.half, u.yaw))     # rotated: flattened box
 			d = absf(u.position.y - st.z) + st.x * 0.0
 		if d > worst: worst = d; worst_name = u.kind
 	_log("units_grounded", worst < 0.25, "max |y - ground| = %.3f m (%s)" % [worst, worst_name])
 	var flat_bad := 0
 	for bld in battle.structures(0) + battle.structures(1):
-		var st := tm.footprint_stats(bld.position, bld.half)
+		var st := tm.footprint_stats(bld.position, Building.aabb_half(bld.half, bld.yaw))
 		if st.x > 0.6: flat_bad += 1
 	_log("structures_on_flattened_ground", flat_bad == 0, "structures with >0.6 m height range under the footprint: %d" % flat_bad)
 	var pworst := 0.0; var pn: int = battle.prop_roots.size()
@@ -214,6 +214,15 @@ func _run() -> void:
 		battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
 		var inside := await _until(func(): return house.passengers.size() == 3, 45.0)
 		_log("garrison_enter", inside and house.team == 0 and battle.alive_count(0) > 0, "occupants %d/%d, building side %d" % [house.passengers.size(), int(house.def.transport.capacity), house.team])
+		await _wait_sim(0.4)
+		var fl: Node3D = house.flag_node
+		var nf: Node = fl.get_node_or_null("NationFlag") if fl else null
+		var want := str(Nations.DEFS.get(battle.nation_of(0), {}).get("flag", ""))
+		var fy: float = fl.position.y if fl else -1.0
+		_log("garrison_flag_on_roof", nf != null and nf.scene_file_path == want and fy > 2.0 and fy <= house.model_h + 0.05 and fl.is_visible_in_tree()
+			and (fl.get_meta("team_color") as Color).is_equal_approx(UnitDefs.team_color(0)),
+			"%s: flag %s (want %s), pole base %.2f m (model top %.2f m)%s" % [house.bkind, nf.scene_file_path if nf else "none", want, fy, house.model_h,
+				", FlagPole empty" if house.model3d and house.model3d.find_child("FlagPole", true, false) else ", roof from mesh"])
 		var foe: Unit = battle._spawn("rifleman", 1, house.position + Vector3(38, 0, 20), 0.0)
 		foe.order_stop()
 		var f_hp0: float = foe.hp

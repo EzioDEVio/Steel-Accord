@@ -10,6 +10,10 @@
 # Command modes (set by command-card buttons or hotkeys) consume the next left click:
 #   attack-move (A), guard (G), force-fire (F), waypoint (W), support power (button only).
 # Other: S stop, X scatter, R return-to-base (jets), Ctrl+A select all, Ctrl+1..9 / 1..9 groups, Esc cancel.
+# Placing a structure: R / Shift+R turn it 45 degrees; press on the spot and drag to face it toward the drag
+# direction (release builds). Walls (HESCO, concrete): press and drag draws a line of segments (snaps to towers and
+# wall ends); the cost of the whole line shows before release.
+# Occupied building selected: click (or right-click) an enemy, or A then click, to make the occupants attack it; S stops.
 class_name Commander
 extends Node
 
@@ -38,6 +42,11 @@ var hover: Unit = null
 var _last_click_t := -1.0
 var _last_group := -1
 var _last_group_t := -1.0
+var place_yaw := 0.0                 # facing of the structure being placed (radians; kept between placements)
+var place_anchor := Vector3.INF      # where the placement button went down (drag: facing / wall line from here)
+var place_drag := false
+var wall_plan := {}                  # current wall line preview (battle.wall_plan)
+var wall_ghosts: Array = []
 
 # kept for tests / HUD compatibility
 var attack_mode: bool:
@@ -50,6 +59,8 @@ func _unhandled_input(e: InputEvent) -> void:
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
 				dragging = true; drag_from = mb.position; drag_to = mb.position
+				if mode.begins_with("place:") and ghost:
+					place_anchor = ghost_pos; place_drag = false
 			elif dragging:
 				dragging = false
 				drag_to = mb.position
@@ -76,10 +87,14 @@ func _unhandled_input(e: InputEvent) -> void:
 
 func _key(k: InputEventKey) -> void:
 	var has_sel := not live_selection().is_empty()
+	if mode.begins_with("place:") and k.keycode == KEY_R:
+		rotate_placement(-1 if k.shift_pressed else 1)
+		return
 	match k.keycode:
 		KEY_A:
 			if k.ctrl_pressed: select_all()
 			elif has_sel: set_mode("attack_move")
+			elif own_garrison(): set_mode("gattack")
 		KEY_G:
 			if has_sel: set_mode("guard")
 		KEY_F:
@@ -88,6 +103,7 @@ func _key(k: InputEventKey) -> void:
 			if has_sel: set_mode("waypoint")
 		KEY_S:
 			if has_sel: cmd_stop()
+			elif own_garrison(): cmd_garrison_stop()
 		KEY_X:
 			if has_sel: cmd_scatter()
 		KEY_R:
@@ -137,6 +153,8 @@ func _key(k: InputEventKey) -> void:
 
 func set_mode(m: String) -> void:
 	mode = m
+	place_anchor = Vector3.INF; place_drag = false
+	_clear_wall_ghosts()
 	if ghost:
 		ghost.queue_free(); ghost = null
 	if m.begins_with("place:"):
@@ -208,7 +226,32 @@ func _make_ghost(k: String) -> void:
 	var foot := MeshInstance3D.new()
 	foot.mesh = b; foot.name = "Foot"; foot.position.y = 0.15
 	ghost.add_child(foot)
+	# facing arrow on the front edge (local +Z): shows which way the structure will face
+	var am := ImmediateMesh.new()
+	am.surface_begin(Mesh.PRIMITIVE_TRIANGLES, fm)
+	var aw := minf(d.size.x * 0.3, 4.0)
+	for v in [Vector3(-aw, 0.3, d.size.y * 0.5 + 0.5), Vector3(aw, 0.3, d.size.y * 0.5 + 0.5), Vector3(0, 0.3, d.size.y * 0.5 + 0.5 + aw * 1.1)]:
+		am.surface_add_vertex(v)
+	am.surface_end()
+	var arrow := MeshInstance3D.new()
+	arrow.mesh = am; arrow.name = "Arrow"
+	ghost.add_child(arrow)
+	var m3 := str(d.get("model3d", ""))
 	var art := UsArt.building(d.art)
+	ghost_model_mat = null
+	if m3 != "" and ResourceLoader.exists(m3):
+		# the real model, see-through and tinted: shows the footprint and the rotation exactly
+		var mdl: Node3D = (load(m3) as PackedScene).instantiate()
+		mdl.name = "Model"
+		ghost_model_mat = StandardMaterial3D.new()
+		ghost_model_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		ghost_model_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		ghost_model_mat.albedo_color = Color(0.4, 1.0, 0.5, 0.33)
+		for mi in mdl.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).material_override = ghost_model_mat
+			(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ghost.add_child(mdl)
+		art = {}
 	if not art.is_empty():
 		var tex: Texture2D = load(art.main)
 		var q := QuadMesh.new()
@@ -230,6 +273,7 @@ func _make_ghost(k: String) -> void:
 
 
 var mouse_override := Vector2(-1, -1)   # automated tests position the virtual cursor here
+var ghost_model_mat: StandardMaterial3D
 
 
 func _process(_dt: float) -> void:
@@ -238,23 +282,125 @@ func _process(_dt: float) -> void:
 	var g: Variant = camera.ground_at(mp)
 	if g == null: return
 	var k: String = ghost.get_meta("kind")
-	ghost_pos = Vector3(snappedf(g.x, 2.0), 0, snappedf(g.z, 2.0))
+	var d: Dictionary = BuildingDefs.DEFS[k]
+	var is_wall: bool = d.get("wall", false)
+	if place_anchor != Vector3.INF:
+		# button held: the structure stays where it went down; dragging turns it (walls: draws a line)
+		ghost_pos = place_anchor
+		var dv: Vector3 = g - place_anchor
+		dv.y = 0.0
+		if dragging and drag_from.distance_to(drag_to) > 8.0 and dv.length() > 1.5: place_drag = true
+		if place_drag and dv.length() > 1.5 and not is_wall:
+			place_yaw = atan2(dv.x, dv.z)
+		if place_drag and is_wall:
+			wall_plan = battle.wall_plan(team, k, place_anchor, Vector3(g.x, 0, g.z))
+	else:
+		ghost_pos = Vector3(snappedf(g.x, 2.0), 0, snappedf(g.z, 2.0))
 	ghost_pos.y = battle.ground_h(ghost_pos.x, ghost_pos.z)
 	ghost.position = ghost_pos
+	ghost.rotation.y = place_yaw
+	var wall_line: bool = is_wall and place_drag
+	ghost.visible = not wall_line
 	var c := ghost.get_node_or_null("Card") as Node3D
 	if c:
 		var to_cam: Vector3 = camera.cam.global_position - ghost_pos
 		to_cam.y = 0.0
 		to_cam = to_cam.normalized()
-		var hs: Vector2 = BuildingDefs.DEFS[k].size * 0.5
-		c.position = to_cam * (absf(to_cam.x) * hs.x + absf(to_cam.z) * hs.y) * 0.9
-	ghost_reason = battle.placement_problem(team, k, ghost_pos)
+		var lt := Building.to_local_xz(Vector3.ZERO, place_yaw, to_cam)
+		var hs: Vector2 = d.size * 0.5
+		c.global_position = ghost_pos + to_cam * (absf(lt.x) * hs.x + absf(lt.y) * hs.y) * 0.9
+		c.global_rotation = Vector3.ZERO
+	if wall_line:
+		ghost_reason = str(wall_plan.get("problem", ""))
+	else:
+		if not wall_ghosts.is_empty(): _clear_wall_ghosts()
+		ghost_reason = battle.placement_problem(team, k, ghost_pos, place_yaw)
 	if dozers().is_empty(): ghost_reason = "Select a Dozer"
 	ghost_ok = ghost_reason == ""
 	var col := Color(0.4, 1.0, 0.5) if ghost_ok else Color(1.0, 0.35, 0.3)
 	if ghost_mat: ghost_mat.set_shader_parameter("ghost_color", col)
+	if ghost_model_mat: ghost_model_mat.albedo_color = Color(col.r, col.g, col.b, 0.33)
 	var fm := ((ghost.get_node("Foot") as MeshInstance3D).mesh as BoxMesh).material as StandardMaterial3D
 	fm.albedo_color = Color(col.r, col.g, col.b, 0.35)
+	if wall_line: _show_wall_ghosts(d, col)
+
+
+## Wall line preview: one see-through block per planned segment.
+func _show_wall_ghosts(d: Dictionary, col: Color) -> void:
+	var segs: Array = wall_plan.get("segs", [])
+	while wall_ghosts.size() < segs.size():
+		var mi := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.no_depth_test = true; m.render_priority = 10
+		bm.material = m
+		mi.mesh = bm
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		battle.add_child(mi)
+		wall_ghosts.append(mi)
+	for i in wall_ghosts.size():
+		var mi: MeshInstance3D = wall_ghosts[i]
+		mi.visible = i < segs.size()
+		if not mi.visible: continue
+		var sg: Dictionary = segs[i]
+		var bm := mi.mesh as BoxMesh
+		var hgt := 2.2 if d.size.y > 3.0 else 3.2
+		bm.size = Vector3(d.size.x * float(sg.sx) - 0.15, hgt, d.size.y)
+		(bm.material as StandardMaterial3D).albedo_color = Color(col.r, col.g, col.b, 0.38 if i % 2 == 0 else 0.3)
+		mi.position = battle.grounded(sg.pos) + Vector3(0, hgt * 0.5, 0)
+		mi.rotation.y = float(sg.yaw)
+
+
+func _clear_wall_ghosts() -> void:
+	for mi in wall_ghosts:
+		if is_instance_valid(mi): mi.queue_free()
+	wall_ghosts.clear()
+	wall_plan = {}
+
+
+## R / Shift+R while placing: turn the structure by 45 degrees.
+func rotate_placement(steps: int) -> void:
+	place_yaw = wrapf(snappedf(place_yaw, PI / 4.0) + steps * PI / 4.0, -PI, PI)
+	if battle.hud: battle.hud.flash_message("Facing %d°" % int(round(rad_to_deg(place_yaw))))
+
+
+## Placement hint for the cursor label (HUD).
+func place_hint() -> String:
+	var k := mode.substr(6)
+	var nm: String = battle.bname(team, k).to_upper()
+	if place_drag and not wall_plan.is_empty() and BuildingDefs.DEFS[k].get("wall", false):
+		var n: int = wall_plan.get("segs", []).size()
+		var j: Array = wall_plan.get("joints", [])
+		return "%s LINE - %d segment%s, $%d%s - %s" % [nm, n, "" if n == 1 else "s", int(wall_plan.get("cost", 0)),
+			(", joins %d" % j.size()) if not j.is_empty() else "", "release to build" if ghost_ok else ghost_reason]
+	var facing := "facing %d° (R / Shift+R turn, drag to face%s)" % [int(round(rad_to_deg(place_yaw))),
+		"; walls: drag draws a line" if BuildingDefs.DEFS[k].get("wall", false) else ""]
+	return "PLACE %s %s - %s" % [nm, facing, "click to build" if ghost_ok else ghost_reason]
+
+
+## Mouse released while placing: build here (click), here facing the drag direction (drag), or a wall line.
+func _place_release(mb: InputEventMouseButton) -> void:
+	var k := mode.substr(6)
+	var was_drag := place_drag
+	var line := wall_plan.duplicate()
+	place_anchor = Vector3.INF; place_drag = false
+	var dz := dozers()
+	if was_drag and BuildingDefs.DEFS[k].get("wall", false):
+		_clear_wall_ghosts()
+		if ghost_ok and not dz.is_empty() and not line.is_empty():
+			battle.issue({"type": "place_wall", "team": team, "id": k, "a": line.a, "b": line.b, "builder": dz[0].uid})
+			FX.order_marker(battle, (line.a + line.b) * 0.5, Color(1, 0.8, 0.3, 0.9))
+			if not mb.shift_pressed: set_mode("")
+		elif battle.hud: battle.hud.flash_message("Cannot build here: " + ghost_reason)
+		return
+	if ghost_ok and not dz.is_empty():
+		battle.issue({"type": "place", "team": team, "id": k, "pos": ghost_pos, "yaw": place_yaw, "builder": dz[0].uid})
+		FX.order_marker(battle, ghost_pos, Color(1, 0.8, 0.3, 0.9))
+		if not mb.shift_pressed: set_mode("")
+	elif battle.hud:
+		battle.hud.flash_message("Cannot build here: " + ghost_reason)
 
 
 func live_selection() -> Array:
@@ -318,7 +464,7 @@ func building_at(screen: Vector2) -> Building:
 		var b: Building = u
 		for k in 4:
 			var q: Vector3 = g - away * (float(k) * maxf(b.half.x, b.half.y) * 0.45)
-			if absf(q.x - b.position.x) < b.half.x + 1.0 and absf(q.z - b.position.z) < b.half.y + 1.0:
+			if b.contains_xz(q, 1.0):
 				return b
 	return null
 
@@ -327,6 +473,9 @@ func building_at(screen: Vector2) -> Building:
 func _left_release(mb: InputEventMouseButton) -> void:
 	var p := mb.position
 	var is_click := drag_from.distance_to(drag_to) < 6.0
+	if mode.begins_with("place:"):
+		_place_release(mb)
+		return
 	if mode != "":
 		if is_click: _apply_mode(p, mb)
 		return
@@ -380,13 +529,17 @@ func _left_release(mb: InputEventMouseButton) -> void:
 		if gr != null:
 			var rb: Dictionary = battle.rubble_at(gr, team)
 			if not rb.is_empty():
-				var why: String = battle.placement_problem(team, rb.kind, rb.pos)
+				var why: String = battle.placement_problem(team, rb.kind, rb.pos, float(rb.get("yaw", 0.0)), float(rb.get("sx", 1.0)))
 				if why == "":
-					battle.issue({"type": "place", "team": team, "id": rb.kind, "pos": rb.pos, "builder": dozers()[0].uid})
+					battle.issue({"type": "place", "team": team, "id": rb.kind, "pos": rb.pos, "yaw": float(rb.get("yaw", 0.0)), "sx": float(rb.get("sx", 1.0)), "builder": dozers()[0].uid})
 					FX.order_marker(battle, rb.pos, Color(1, 0.8, 0.3, 0.9))
 				elif battle.hud:
 					battle.hud.flash_message("Cannot rebuild %s: %s" % [BuildingDefs.DEFS[rb.kind].name, why])
 				return
+	# own occupied building selected: click an enemy -> the occupants attack it
+	if scheme == "classic" and own_garrison() and live_selection().is_empty() and u != null and u.team != team and u.team >= 0:
+		cmd_garrison_attack(u)
+		return
 	# selected structure: click ground (classic) sets its rally point
 	if scheme == "classic" and sel_building and live_selection().is_empty() and u == null:
 		_set_rally(p)
@@ -410,6 +563,10 @@ func _set_rally(p: Vector2) -> void:
 func _right_click(mb: InputEventMouseButton) -> void:
 	if mode != "":
 		set_mode(""); return
+	if own_garrison() and live_selection().is_empty():
+		var eu := unit_at(mb.position)
+		if eu and eu.team != team and eu.team >= 0:
+			cmd_garrison_attack(eu); return
 	if scheme == "alternate" and sel_building and live_selection().is_empty():
 		_set_rally(mb.position); return
 	if scheme == "classic":
@@ -426,11 +583,17 @@ func _apply_mode(p: Vector2, mb: InputEventMouseButton) -> void:
 	if m.begins_with("place:"):
 		var dz := dozers()
 		if ghost_ok and not dz.is_empty():
-			battle.issue({"type": "place", "team": team, "id": m.substr(6), "pos": ghost_pos, "builder": dz[0].uid})
+			battle.issue({"type": "place", "team": team, "id": m.substr(6), "pos": ghost_pos, "yaw": place_yaw, "builder": dz[0].uid})
 			FX.order_marker(battle, ghost_pos, Color(1, 0.8, 0.3, 0.9))
 		else:
 			if battle.hud: battle.hud.flash_message("Cannot build here: " + ghost_reason)
 			set_mode(m)   # keep placing
+		return
+	if m == "gattack":
+		if u and u.team != team and u.team >= 0 and own_garrison(): cmd_garrison_attack(u)
+		else:
+			if battle.hud: battle.hud.flash_message("Click an enemy for the occupants to attack")
+			set_mode(m)
 		return
 	if m.begins_with("power:"):
 		if g != null:
@@ -569,6 +732,25 @@ func cmd_unload() -> void:
 	if sel_building and is_instance_valid(sel_building) and sel_building.is_transport() and not sel_building.passengers.is_empty() and sel_building.team == team:
 		trs.append(sel_building)
 	if not trs.is_empty(): battle.issue({"type": "unload", "team": team, "ids": trs.map(func(x): return x.uid)})
+
+
+## The selected structure when it is one of our occupied civic buildings.
+func own_garrison() -> Building:
+	var b := sel_building
+	if b and is_instance_valid(b) and not b.dead and b.is_civic() and b.team == team and not b.passengers.is_empty(): return b
+	return null
+
+
+func cmd_garrison_attack(u: Unit) -> void:
+	var b := own_garrison()
+	if b == null or u == null: return
+	battle.issue({"type": "garrison_attack", "team": team, "id": b.uid, "target": u.uid})
+	FX.order_marker(battle, u.global_position, Color(1, 0.25, 0.2, 0.9))
+
+
+func cmd_garrison_stop() -> void:
+	var b := own_garrison()
+	if b: battle.issue({"type": "garrison_stop", "team": team, "id": b.uid})
 
 
 func cmd_return() -> void:

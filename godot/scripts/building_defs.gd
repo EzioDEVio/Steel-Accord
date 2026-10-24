@@ -59,8 +59,15 @@ const BASE_DEFS := {
 	},
 	"hesco": {
 		"name": "HESCO Barrier", "art": "hesco", "model3d": "res://assets/units3d/hesco/hesco.glb", "cost": 100, "build_time": 4.0, "power": 0,
-		"hp": 1200.0, "size": Vector2(8, 4), "sight": 20.0, "produces": [], "requires": [],
-		"desc": "Earth-filled barrier that blocks vehicles and infantry.",
+		"hp": 1200.0, "size": Vector2(8, 4), "sight": 20.0, "produces": [], "requires": [], "wall": true,
+		"desc": "Earth-filled barrier that blocks vehicles and infantry. Drag to draw a line; lines join Defense Towers and other walls. Cost is per 8 m segment.",
+	},
+	"concrete_wall": {
+		"name": "Concrete Wall", "art": "", "icon": "res://assets/ui/structures/concrete_wall_icon.png",
+		"model3d": "res://assets/units3d/concrete_wall/concrete_wall.glb", "post_model": "res://assets/units3d/concrete_wall/concrete_wall_post.glb",
+		"cost": 75, "build_time": 3.0, "power": 0, "hp": 2400.0, "size": Vector2(6, 2), "sight": 20.0, "produces": [],
+		"requires": ["barracks"], "wall": true,
+		"desc": "Precast concrete T-wall. Blocks vehicles and infantry (not fire). Drag to draw a line; lines join Defense Towers and other walls into one barrier. Cost is per 6 m segment.",
 	},
 	"radar": {
 		"name": "Radar", "art": "radar", "model3d": "res://assets/units3d/radar/radar.glb", "cost": 500, "build_time": 15.0, "power": -2,
@@ -107,7 +114,7 @@ static func _civic_defs() -> Dictionary:
 	return out
 
 
-const BUILD_MENU := ["power_plant", "barracks", "supply_depot", "war_factory", "airfield", "defense_tower", "hesco", "radar", "drop_zone"]
+const BUILD_MENU := ["power_plant", "barracks", "supply_depot", "war_factory", "airfield", "defense_tower", "hesco", "concrete_wall", "radar", "drop_zone"]
 
 ## Production cost / time for units (unit stats live in UnitDefs). PROVISIONAL.
 const UNIT_COST := {
