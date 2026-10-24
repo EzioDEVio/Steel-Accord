@@ -483,7 +483,7 @@ func _execute(cmd: Dictionary) -> void:
 		var u: Unit = by_id.get(ids[i])
 		if u == null or u.dead: continue
 		u.board_target = null          # any other order cancels a pending boarding
-		if cmd.type in ["move", "attack_move"]: movers.append(u)
+		if cmd.type == "move": movers.append(u)     # formation speed for plain moves; attack-move keeps unit speeds
 		if u.state in [Unit.S.LANDED, Unit.S.RETURN] and u.domain == "heli" and cmd.type in ["move", "attack_move", "attack", "force_ground", "guard", "scatter"]:
 			u.state = Unit.S.IDLE
 		elif u.state == Unit.S.LANDED and cmd.type in ["move", "attack_move", "attack", "force_ground", "guard"]:

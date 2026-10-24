@@ -77,6 +77,8 @@ var back_n := 0                # walk-back attempts postponed by passing traffic
 var av_ang := 0.0              # last avoidance heading offset (hysteresis against left/right dithering)
 var alt_layer := -1            # aircraft altitude layer (-1: from the unit id)
 var board_slot := 0            # boarding infantry: approach slot around the transport
+var climb_t := 0.0             # jet: climbing over a conflicting jet (s left)
+var climb_y := 0.0             # jet: absolute height to clear it by
 var board_t := 0.0             # boarding infantry: seconds spent pressed against a crowded transport
 var _body_r := -1.0
 
@@ -1244,7 +1246,8 @@ func _avoid(want: Vector2, pref: float) -> Vector3:
 	if domain == "jet" or pref <= 0.0: return Vector3(want.x, want.y, pref)
 	# full evaluation every other tick (staggered by unit id); in between the last correction is reused relative to
 	# the current preferred direction (avoidance reacts within 1/15 s)
-	if (battle.tick_n + uid) % 2 == 1:
+	var every := 3 if pref < 6.0 else 2      # slow units (infantry) re-evaluate every 3rd tick, faster ones every 2nd
+	if (battle.tick_n + uid) % every != 0:
 		var d0 := want.rotated(av_last.x) if av_last.x != 0.0 else want
 		return Vector3(d0.x, d0.y, pref * av_last.y)
 	var me := Vector2(position.x, position.z)
@@ -1323,7 +1326,7 @@ func _avoid(want: Vector2, pref: float) -> Vector3:
 	# the preferred velocity first: if it is free there is nothing to do
 	var tp := _ttc_min(P, V, RR, REC, want * pref, vme, n, H)
 	if tp >= H:
-		av_ang *= 0.8; av_last = Vector2(0.0, 1.0); av_wait = maxf(0.0, av_wait - 4.0 / 30.0)
+		av_ang *= 0.8; av_last = Vector2(0.0, 1.0); av_wait = maxf(0.0, av_wait - 2.0 * float(every) / 30.0)
 		return Vector3(want.x, want.y, pref)
 	var nav: GridNav = battle.navs.get(move_class(), battle.gnav) if ground else null
 	var best := Vector3(want.x, want.y, pref)
@@ -1371,8 +1374,8 @@ func _avoid(want: Vector2, pref: float) -> Vector3:
 	var ang := want.angle_to(Vector2(best.x, best.y))
 	av_ang = ang if absf(ang) > 0.05 else av_ang * 0.8
 	av_last = Vector2(ang if absf(ang) > 0.01 else 0.0, best.z / pref)
-	if best.z < pref * 0.3: av_wait += 2.0 / 30.0      # evaluated every other tick
-	else: av_wait = maxf(0.0, av_wait - 4.0 / 30.0)
+	if best.z < pref * 0.3: av_wait += float(every) / 30.0
+	else: av_wait = maxf(0.0, av_wait - 2.0 * float(every) / 30.0)
 	return best
 
 
@@ -1511,7 +1514,7 @@ func _jet_tick(dt: float) -> void:
 		return
 	if not has_ammo() and state != S.RETURN:
 		_clear(); state = S.RETURN; goal = home; ret_phase = 0
-	altitude = move_toward(altitude, cruise_alt(), dt * maxf(4.0, speed_cur * 0.3))
+	altitude = move_toward(altitude, maxf(cruise_alt(), climb_y - position.y) if climb_t > 0.0 else cruise_alt(), dt * (45.0 if climb_t > 0.0 else maxf(6.0, speed_cur * 0.3)))
 	var steer := goal
 	var throttle: float = def.speed
 	var min_v: float = def.min_speed
@@ -1668,6 +1671,7 @@ func _jet_separate(steer: Vector3, dt: float) -> Vector3:
 	var v := Vector2(vel.x, vel.z)
 	var push := Vector2.ZERO
 	var my_y := position.y + altitude
+	climb_t = maxf(0.0, climb_t - dt)
 	for o: Unit in battle.air_jets:
 		if o == self or o.dead or not o.airborne: continue
 		var p := Vector2(o.position.x, o.position.z) - me
@@ -1682,6 +1686,10 @@ func _jet_separate(steer: Vector3, dt: float) -> Vector3:
 		if ml < need:
 			var away := -miss / ml if ml > 0.01 else Vector2(-v.y, v.x).normalized() * (1.0 if uid > o.uid else -1.0)
 			push += away * (need - ml) / need
+			# over hills each jet follows its own terrain look-ahead, so layers can close up: the higher id climbs over
+			if uid > o.uid and absf(dv) < 4.0:
+				climb_t = 1.5
+				climb_y = maxf(climb_y if climb_t > 0.0 else -INF, o.position.y + o.altitude + 4.5)
 	if push == Vector2.ZERO: return steer
 	var sd := Vector2(steer.x, steer.z) - me
 	var dir := (sd.normalized() if sd.length() > 0.1 else Vector2(-sin(heading), -cos(heading))) + push * 2.0
