@@ -95,11 +95,11 @@ func _run_qa() -> void:
 	await _until(func(): return wf != null and wf.built, 45.0)
 	await _qa_checks(ccp, bk, wf)
 	await _qa_m1(ccp)
-	await _qa_air(ccp)
 	await _qa_m7(ccp)
 	await _qa_m8(ccp)
 	await _qa_ai_retreat(ccp)
 	await _qa_save_load(ccp)
+	await _qa_air(ccp)           # last, so the earlier checks keep their timeline
 	_finish()
 
 
@@ -634,6 +634,14 @@ func _qa_air(ccp: Vector3) -> void:
 		var rs: PackedStringArray = str(battle.args.res).split("x")
 		DisplayServer.window_set_size(Vector2i(int(rs[0]), int(rs[1]))); get_tree().root.size = Vector2i(int(rs[0]), int(rs[1]))
 	battle.cash[0] += 50000
+	if battle.base_ai and not ("aironly" in battle.args):
+		# end of the full QA run: the AI's waves may have overrun the test base by now. The air checks test the air
+		# systems, so pause the enemy and clear its units from around the base and the test areas.
+		battle.base_ai = null
+		for u in battle.units:
+			if u.team == 1 and not u.dead and not (u is Building) and u.flat_dist(ccp) < 420.0: u.take_damage(1e9, null)
+		battle.game_over = false
+		await _wait_sim(0.5)
 	var afs: Array = battle.structures(0, "airfield")
 	var af: Building = afs[0] if not afs.is_empty() else battle.add_structure("airfield", 0, ccp + Vector3(90, 0, -20), true)
 	await _wait_sim(0.3)

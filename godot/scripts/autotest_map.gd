@@ -197,7 +197,6 @@ func _run() -> void:
 	_log("aircraft_clear_terrain", min_clear.ah64 > 4.0 and min_clear.f16 > 4.0 and peak > 20.0,
 		"lowest clearance above the ground: AH-64 %.1f m, F-16 %.1f m (highest ground overflown %.0f m)" % [min_clear.ah64, min_clear.f16, peak])
 	heli.take_damage(99999.0, null); jet.take_damage(99999.0, null)
-	await _map_air()
 	# ---- civilian buildings: placed, grounded, neutral; infantry occupy them, fire from inside, heal in the hospital,
 	# get out when the building falls; an occupied building survives save / load
 	var civ: Array = battle.units.filter(func(u): return u is Building and (u as Building).is_civic() and not u.dead)
@@ -313,6 +312,7 @@ func _run() -> void:
 				"airfield %s; war factory %s; builder %s; C-130 %s" % [str(air_ir), str(wf_ir), dz[0].kind if not dz.is_empty() else "none", battle.c130_model(1)])
 		var flag: Node = battle.get_node_or_null("Flag_team1")
 		_log("nation_flag", flag != null, "team 1 flag: %s" % (str(flag.scene_file_path) if flag else "none"))
+	await _map_air()          # B3 scripted flights over the ridges (last: its strikes must not disturb the checks above)
 	if DisplayServer.get_name() != "headless":
 		await _shots()
 	_finish()
