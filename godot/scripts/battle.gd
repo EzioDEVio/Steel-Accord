@@ -127,7 +127,7 @@ func _ready() -> void:
 	var diff: Dictionary = Game.DIFFICULTY.get(Game.settings.difficulty, Game.DIFFICULTY["Normal"])
 	if scenario == "army":
 		ai = EnemyAI.new(self, 1, 30.0 if _automated() else float(diff.attack_after))
-	elif not "noai" in args:
+	elif not "noai" in args and not ("basetest" in args and "qa" in args):   # the QA run checks player systems without a live AI
 		base_ai = BaseAI.new(self, 1, str(args.get("diff", Game.settings.difficulty)))
 		if "ai0" in args: base_ai0 = BaseAI.new(self, 0, str(args.get("diff0", args.get("diff", Game.settings.difficulty))))
 	pause_menu = PauseMenu.new()

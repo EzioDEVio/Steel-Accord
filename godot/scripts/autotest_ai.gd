@@ -98,7 +98,7 @@ func _watch() -> void:
 				var k := {}
 				var veh := 0.0; var tot := 0.0
 				for id in ai.attacking:
-					var u: Unit = battle.by_id.get(id)
+					var u: Unit = battle.by_id.get(id) if is_instance_valid(battle.by_id.get(id)) else null
 					if u == null: continue
 					k[u.kind] = int(k.get(u.kind, 0)) + 1
 					tot += _val(u.kind)
@@ -129,7 +129,7 @@ func _rec_wave(ai) -> void:
 	var veh := 0.0; var tot := 0.0
 	var ids: Array = ai.attacking + ai.feint
 	for id in ids:
-		var u: Unit = battle.by_id.get(id)
+		var u: Unit = battle.by_id.get(id) if is_instance_valid(battle.by_id.get(id)) else null
 		if u == null or u.dead: continue
 		var v: float = _val(u.kind)
 		tot += v

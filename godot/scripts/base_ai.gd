@@ -121,6 +121,13 @@ func _ev(text: String) -> void:
 	if events.size() > 400: events.pop_front()
 
 
+## Unit by uid, or null when it is gone (dead units are freed after their fade-out but may linger in by_id).
+func _u(id: Variant) -> Unit:
+	var o: Variant = battle.by_id.get(id)
+	if o == null or not is_instance_valid(o): return null
+	return o as Unit
+
+
 func _cc() -> Node:
 	var c: Array = battle.structures(team, "command_center")
 	return c[0] if not c.is_empty() else null
@@ -394,7 +401,7 @@ func _capture_derricks() -> void:
 	for e in battle.derricks:
 		if e.owner == team: capturing.erase(e.id)
 	for id in capturing.keys():
-		capturing[id] = capturing[id].filter(func(x): return battle.by_id.has(x) and not battle.by_id[x].dead)
+		capturing[id] = capturing[id].filter(func(x): return _u(x) != null and not _u(x).dead)
 	var inf := _mine(func(u): return u.def.get("visual") == "infantry" and u.state == Unit.S.IDLE and not (u.uid in attacking))
 	var busy := {}
 	for id in capturing:
@@ -448,7 +455,7 @@ func _look() -> void:
 	# forget: units not seen for 150 s, or whose last position we can see now without them there
 	for id in enemy_seen.keys():
 		var r: Array = enemy_seen[id]
-		var u: Unit = battle.by_id.get(id)
+		var u: Unit = _u(id)
 		if battle.sim_time - float(r[2]) > 150.0:
 			enemy_seen.erase(id); continue
 		if float(r[2]) < battle.sim_time - 0.01 and (u == null or u.dead or not (u in _in_sight)):
@@ -466,7 +473,7 @@ func _threat_at(p: Vector3, r: float) -> float:
 		if (e[1] as Vector3).distance_to(p) <= r and role_of_def(UnitDefs.def_of(e[0])) != "":
 			v += value_of_kind(e[0])
 	for id in known:
-		var b: Unit = battle.by_id.get(id)
+		var b: Unit = _u(id)
 		if b == null or b.dead: continue
 		if (known[id] as Vector3).distance_to(p) <= r and not (b as Building).bdef.get("weapons", []).is_empty():
 			v += float((b as Building).bdef.cost) * 2.0
@@ -479,10 +486,10 @@ func _aa_at(p: Vector3, r: float) -> int:
 	for id in enemy_seen:
 		var e: Array = enemy_seen[id]
 		if (e[1] as Vector3).distance_to(p) > r: continue
-		var u: Unit = battle.by_id.get(id)
+		var u: Unit = _u(id)
 		if u and _is_aa_threat(u): n += 1
 	for id in known:
-		var b: Unit = battle.by_id.get(id)
+		var b: Unit = _u(id)
 		if b and not b.dead and (known[id] as Vector3).distance_to(p) <= r and _is_aa_threat(b): n += 1
 	return n
 
@@ -500,7 +507,7 @@ func _enemy_target(from: Vector3) -> Vector3:
 	var best := Vector3.INF
 	var bd := INF
 	for id in known.keys():
-		var u: Unit = battle.by_id.get(id)
+		var u: Unit = _u(id)
 		if u == null or u.dead:
 			known.erase(id)
 			continue
@@ -524,7 +531,7 @@ func _pick_objective(from: Vector3, exclude := Vector3.INF) -> Vector3:
 	var bs := -1.0
 	var cands: Array = []
 	for id in known.keys():
-		var b: Unit = battle.by_id.get(id)
+		var b: Unit = _u(id)
 		if b == null or b.dead: known.erase(id); continue
 		cands.append([known[id], float(OBJ_WEIGHT.get((b as Building).bkind, 1.0))])
 	for e in battle.derricks:
@@ -547,7 +554,7 @@ const SCOUT_KINDS := ["hmmwv", "hmmwv_50cal", "ir_boragh", "mrap", "rifleman", "
 
 
 func _scout() -> void:
-	var s: Unit = battle.by_id.get(scout_uid)
+	var s: Unit = _u(scout_uid)
 	if s and not s.dead:
 		if s.state == Unit.S.IDLE and s.queue.is_empty(): scout_uid = -1      # trip finished: back into the army
 		return
@@ -574,10 +581,10 @@ func _scout() -> void:
 ## Occupy civilian buildings near our base with spare infantry (one building at a time, three soldiers).
 func _garrison() -> void:
 	for id in garrisoning.keys():
-		var b: Unit = battle.by_id.get(id)
+		var b: Unit = _u(id)
 		if b == null or b.dead or b.team == 1 - team:
 			garrisoning.erase(id); continue
-		garrisoning[id] = garrisoning[id].filter(func(x): return battle.by_id.has(x) and not battle.by_id[x].dead and battle.by_id[x].board_target != null)
+		garrisoning[id] = garrisoning[id].filter(func(x): return _u(x) != null and not _u(x).dead and _u(x).board_target != null)
 		if garrisoning[id].is_empty(): garrisoning.erase(id)
 	if not garrisoning.is_empty(): return
 	var cc := _cc()
@@ -611,7 +618,7 @@ func _centroid(us: Array) -> Vector3:
 
 
 func _alive_ids(ids: Array) -> Array:
-	return ids.filter(func(id): return battle.by_id.has(id) and not battle.by_id[id].dead)
+	return ids.filter(func(id): return _u(id) != null and not _u(id).dead)
 
 
 func _army() -> void:
@@ -693,13 +700,13 @@ func _gather(pool: Array) -> void:
 func _comp_text(ids: Array) -> String:
 	var k := {}
 	for id in ids:
-		var u: Unit = battle.by_id.get(id)
+		var u: Unit = _u(id)
 		if u: k[u.kind] = int(k.get(u.kind, 0)) + 1
 	return str(k)
 
 
 func _tf_units() -> Array:
-	return attacking.map(func(id): return battle.by_id.get(id)).filter(func(u): return u != null and not u.dead)
+	return attacking.map(func(id): return _u(id)).filter(func(u): return u != null and not u.dead)
 
 
 ## Next waypoint toward the objective (70 m legs) and a formation order: armour in front, infantry and anti-tank
@@ -798,7 +805,7 @@ func _bombard(us: Array, c: Vector3) -> void:
 	var tgt: Unit = null
 	var bd := INF
 	for id in known:
-		var b: Unit = battle.by_id.get(id)
+		var b: Unit = _u(id)
 		if b == null or b.dead: continue
 		var d := c.distance_to(known[id])
 		if d > rng_m * 0.95 or d < 50.0: continue
@@ -855,7 +862,7 @@ func _reinforce(pool: Array) -> void:
 
 func _feint_tick() -> void:
 	if feint.is_empty(): return
-	var us: Array = feint.map(func(id): return battle.by_id.get(id)).filter(func(u): return u != null and not u.dead)
+	var us: Array = feint.map(func(id): return _u(id)).filter(func(u): return u != null and not u.dead)
 	# a feint that has done its job (main force engaged) or is being shot up goes home
 	var hurt := us.filter(func(u): return u.hp < u.def.hp * 0.5).size()
 	if tf_stage == "engage" or hurt * 2 > us.size() or attacking.is_empty():
@@ -912,7 +919,7 @@ func _retreat(fighters: Array) -> void:
 	var home: Vector3 = cc.position + Vector3(0, 0, 40.0 * _fwd()) if cc else battle.start_pos[team]
 	var wfs: Array = battle.structures(team, "war_factory")
 	for id in retreating.keys():
-		var u: Unit = battle.by_id.get(id)
+		var u: Unit = _u(id)
 		if u == null or u.dead or u.hp >= u.def.hp * 0.9 or battle.sim_time - float(retreating[id]) > 75.0: retreating.erase(id)
 	var back: Array = []
 	for u in fighters:
@@ -920,7 +927,7 @@ func _retreat(fighters: Array) -> void:
 			back.append(u)
 	if wave_n0 > 0 and not attacking.is_empty() and attacking.size() < wave_n0 * 0.4 and battle.sim_time - last_attack_t > 20.0:
 		for id in attacking:
-			var u: Unit = battle.by_id.get(id)
+			var u: Unit = _u(id)
 			if u and not u.dead and not (u in back): back.append(u)
 		attack_size = mini(attack_size + 2, 16)
 		wave_n0 = 0
@@ -941,8 +948,8 @@ func _retreat(fighters: Array) -> void:
 ## jets fly strike sorties from their pads (attack a target, return to rearm when empty).
 func _air() -> void:
 	for id in air_tasks.keys():
-		var a: Unit = battle.by_id.get(id)
-		var t: Unit = battle.by_id.get(air_tasks[id])
+		var a: Unit = _u(id)
+		var t: Unit = _u(air_tasks[id])
 		if a == null or a.dead:
 			air_tasks.erase(id); continue
 		if t == null or t.dead or a.state in [Unit.S.IDLE, Unit.S.RETURN, Unit.S.LANDED]:
@@ -968,7 +975,7 @@ func _air() -> void:
 		_ev("air strike: %s -> %s at (%d, %d)" % [a.kind, tk, int(tgt.position.x), int(tgt.position.z)])
 	# count sorties that actually fired
 	for id in air_tasks:
-		var a: Unit = battle.by_id.get(id)
+		var a: Unit = _u(id)
 		if a and int(battle.shots_by.get(id, 0)) > 0 and not a.has_meta("ai_fired_%d" % air_tasks[id]):
 			a.set_meta("ai_fired_%d" % air_tasks[id], true)
 			stats.air_strikes += 1
@@ -990,7 +997,7 @@ func _air_target(a: Unit) -> Unit:
 	for e in _in_sight:
 		if not e.dead and not (e is Building): cands.append(e)
 	for id in known:
-		var b: Unit = battle.by_id.get(id)
+		var b: Unit = _u(id)
 		if b and not b.dead: cands.append(b)
 	var max_aa := int(P.aa_avoid) - (1 if a.domain == "heli" else 0)
 	for e in cands:
@@ -1065,7 +1072,7 @@ func _power_target(cls: String, p: Dictionary) -> Vector3:
 			for e in _in_sight:
 				if not e.dead and not e.is_air(): cands.append(e.position)
 			for id in known:
-				var b: Unit = battle.by_id.get(id)
+				var b: Unit = _u(id)
 				if b and not b.dead: cands.append(known[id])
 			if cls == "drones":
 				for e in battle.derricks:
@@ -1099,7 +1106,7 @@ func _cluster_value(p: Vector3, r: float) -> float:
 		if e.dead or e.is_air() or e.position.distance_to(p) > r: continue
 		v += value_of(e) * 1.3 if not (e is Building) else _struct_strike_value(e)
 	for id in known:
-		var b: Unit = battle.by_id.get(id)
+		var b: Unit = _u(id)
 		if b == null or b.dead or b in _in_sight: continue
 		if (known[id] as Vector3).distance_to(p) <= r: v += _struct_strike_value(b)
 	return v
