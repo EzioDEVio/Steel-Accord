@@ -140,7 +140,7 @@ func lod(pos: Vector3, margin := 6.0) -> int:
 ## prio 0 essential, 1 normal, 2 detail (not on Low, not far away).
 func _count(n: float, prio: int, l: int) -> int:
 	if prio >= 2 and (not Q.detail or l >= 2): return 0
-	var c := n * float(Q.density) * [1.0, 0.65, 0.4, 0.3][l]
+	var c: float = n * float(Q.density) * float([1.0, 0.65, 0.4, 0.3][l])
 	var room := int(Q.particles) - live_particles
 	if room <= 0: return 0
 	if c > room: c = room if prio == 0 else room * 0.5
