@@ -217,7 +217,7 @@ func _bench() -> void:
 	for f in fu: avg += f
 	avg /= maxf(1.0, fu.size())
 	var p95: float = fu[int(fu.size() * 0.95)] if not fu.is_empty() else 0.0
-	var alive := battle.units.filter(func(u): return not u.dead).size()
+	var alive: int = battle.units.filter(func(u): return not u.dead).size()
 	var extra := ""
 	var dd: Node = battle.get_node_or_null("FXDirector")
 	if dd: extra = " fx_peak_particles=%d cap=%d fx_peak_lights=%d fx_stats=%s" % [peak_p, cap, dd.stats.peak_lights, str(dd.stats)]
