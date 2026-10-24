@@ -116,6 +116,10 @@ func _watch() -> void:
 		for i in range(pn, ai.stats.powers.size()):
 			var pr: Array = ai.stats.powers[i]
 			var v := _enemy_value_near(t, pr[3], 30.0) if pr[2] != "reveal" else -1.0
+			if pr[2] == "drop":   # a drop is aimed at a derrick to seize or a flank of the fight
+				v = _enemy_value_near(t, pr[3], 70.0)
+				for e in battle.derricks:
+					if e.pos.distance_to(pr[3]) < 25.0 and e.owner != t: v = maxf(v, 1000.0)
 			power_rec.append([t, pr[0], pr[1], pr[2], pr[3], v])
 			_tl("T%d   power %s check: enemy value within 30 m of the target (ground truth) = %d" % [t, pr[1], int(v)])
 		_pw_n[t] = ai.stats.powers.size()

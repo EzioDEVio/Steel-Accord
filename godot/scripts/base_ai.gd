@@ -53,6 +53,10 @@ var prod_n := 0                # production counter (deterministic rotation insi
 var bombarded := false         # artillery has opened up on the current objective
 var defending := false
 var last_recon_t := -999.0
+var tf_best := INF             # closest the task force has been to its objective (progress watchdog)
+var tf_prog_t := 0.0           # sim time of the last progress
+var tf_stuck := 0
+var place_fail := {}           # structure kind -> sim time until which placement is not retried
 
 # Diagnostics for tests and the match timeline (not saved; they never feed back into decisions).
 var events: Array = []         # [sim time, text]
@@ -234,22 +238,27 @@ func _construct(anchor: Vector3) -> void:
 		if count >= int(need[e[0]]): continue
 		var k: String = e[0]
 		if k == "airfield" and role_kinds.jet.is_empty() and role_kinds.heli.is_empty(): continue
+		if battle.sim_time < float(place_fail.get(k, -1.0)): continue      # no room found recently: build the next item
 		if battle.cash[team] < int(BuildingDefs.DEFS[k].cost) + int(P.reserve): return   # keep a small reserve for units
 		if not battle.requirements_met(team, k): return
-		_place_near(dz, anchor, k, float(e[1]), float(e[2]))
+		if not _place_near(dz, anchor, k, float(e[1]), float(e[2])): place_fail[k] = battle.sim_time + 30.0
 		return
 
 
-func _place_near(dz: Unit, anchor: Vector3, k: String, x: float, f: float) -> void:
+func _place_near(dz: Unit, anchor: Vector3, k: String, x: float, f: float) -> bool:
 	var pos := _slot(anchor, x, f)
-	var n_try := 40 if battle.terrain else 16      # hills: search wider for flat ground
+	var big: bool = (BuildingDefs.DEFS[k].size as Vector2).x > 40.0
+	var n_try := (70 if big else 40) if battle.terrain else 16      # hills: search wider for flat ground
+	var step := 3.5 if big else 2.0
 	for tries in n_try:
 		if battle.placement_problem(team, k, pos) == "": break
 		var a := tries * 0.9
-		pos = _slot(anchor, x + cos(a) * (6.0 + tries * 2.0), f + sin(a) * (6.0 + tries * 2.0))
+		pos = _slot(anchor, x + cos(a) * (6.0 + tries * step), f + sin(a) * (6.0 + tries * step))
 	if battle.placement_problem(team, k, pos) == "":
 		battle.issue({"type": "place", "team": team, "id": k, "pos": pos, "builder": dz.uid})
 		_ev("builds %s" % k)
+		return true
+	return false
 
 
 func _slot(anchor: Vector3, x: float, f: float) -> Vector3:
@@ -338,6 +347,8 @@ func _produce(cc: Node) -> void:
 			if deficit > best_def: best_def = deficit; best_r = r
 		if best_r == "": continue
 		var opts: Array = role_kinds[best_r].filter(func(e): return e[0] == b.bkind).map(func(e): return e[1])
+		var quick: Array = opts.filter(func(x): return float(UnitDefs.def_of(x).get("speed", 10.0)) >= 6.0)
+		if not quick.is_empty(): opts = quick         # towed guns cannot keep up with a task force
 		var k: String = opts[prod_n % opts.size()]
 		if b.bkind == "airfield" and battle.produce_problem(b, k) == "No free pad": continue
 		reqs.append([best_def, b, k, best_r])
@@ -674,6 +685,7 @@ func _gather(pool: Array) -> void:
 	tf_t = battle.sim_time
 	tf_leg = Vector3.INF
 	bombarded = false
+	tf_stuck = 0; tf_best = INF; tf_prog_t = battle.sim_time
 	_ev("wave %d launched: %s value %d vs est. defence %d -> objective (%d, %d)" % [waves, _comp_text(attacking), int(my_val), int(defence), int(obj.x), int(obj.z)])
 	_next_leg()
 
@@ -733,6 +745,26 @@ func _advance() -> void:
 	var c := _centroid(us)
 	_bombard(us, c)
 	if P.focus: _focus_fire(us, c)
+	# progress watchdog: a task force that neither closes on its objective nor fights for 100 s is stuck (blocked
+	# route, unreachable target): first try another objective, then call the wave off and regroup
+	var d_obj := c.distance_to(tf_obj)
+	var fighting := us.filter(func(u): return u.target != null).size() * 3 >= us.size()
+	if d_obj < tf_best - 15.0 or fighting:
+		tf_best = minf(tf_best, d_obj); tf_prog_t = battle.sim_time
+	elif battle.sim_time - tf_prog_t > 100.0:
+		tf_stuck += 1
+		tf_prog_t = battle.sim_time; tf_best = INF
+		var alt := _pick_objective(c, tf_obj)
+		if tf_stuck <= 1 and alt != Vector3.INF:
+			_ev("wave %d makes no progress; switches objective to (%d, %d)" % [waves, int(alt.x), int(alt.z)])
+			tf_obj = alt; tf_stage = "move"; bombarded = false
+			_next_leg()
+		else:
+			_ev("wave %d makes no progress; called off to regroup" % waves)
+			var ids: Array = us.map(func(u): return u.uid)
+			battle.issue({"type": "move", "team": team, "ids": ids, "points": battle.spread(ids, _rally())})
+			attacking = []; tf_stage = ""; wave_n0 = 0; last_attack_t = battle.sim_time
+		return
 	if tf_stage == "move":
 		if tf_leg == Vector3.INF: _next_leg(); return
 		var near := us.filter(func(u): return u.flat_dist(tf_leg) < 40.0 or u.target != null).size()
@@ -748,6 +780,7 @@ func _advance() -> void:
 			tf_obj = nobj
 			tf_stage = "move"
 			bombarded = false
+			tf_stuck = 0; tf_best = INF; tf_prog_t = battle.sim_time
 			_ev("wave %d pushes on to (%d, %d)" % [waves, int(nobj.x), int(nobj.z)])
 			_next_leg()
 		elif nobj != Vector3.INF:
@@ -1058,17 +1091,22 @@ func _power_target(cls: String, p: Dictionary) -> Vector3:
 	return Vector3.INF
 
 
-## Value of known enemy things within r of p: units in sight now and remembered structures.
+## Value of known enemy things within r of p: units in sight now (weighted up: armies are what strikes are for) and
+## remembered structures (weighted by how much losing them hurts; a Command Center soaks bombs).
 func _cluster_value(p: Vector3, r: float) -> float:
 	var v := 0.0
 	for e in _in_sight:
 		if e.dead or e.is_air() or e.position.distance_to(p) > r: continue
-		v += value_of(e) if not (e is Building) else float((e as Building).bdef.cost)
+		v += value_of(e) * 1.3 if not (e is Building) else _struct_strike_value(e)
 	for id in known:
 		var b: Unit = battle.by_id.get(id)
 		if b == null or b.dead or b in _in_sight: continue
-		if (known[id] as Vector3).distance_to(p) <= r: v += float((b as Building).bdef.cost)
+		if (known[id] as Vector3).distance_to(p) <= r: v += _struct_strike_value(b)
 	return v
+
+
+func _struct_strike_value(b: Unit) -> float:
+	return float((b as Building).bdef.cost) * float(OBJ_WEIGHT.get((b as Building).bkind, 1.0)) * 0.5
 
 
 func _own_near(p: Vector3, r: float) -> bool:

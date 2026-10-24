@@ -24,7 +24,7 @@ const BUILDING_FIELDS := ["hp", "progress", "built", "prod_queue", "prod_left", 
 	"repairing", "repair_debt", "repair_blocked", "drop_t", "research_id", "research_left", "servicing", "w_reload"]
 const AI_FIELDS := ["think_t", "waves", "attacking", "capturing", "scout_t", "scout_uid", "retreating", "losses_seen", "last_attack_t",
 	"known", "wave_n0", "attack_size", "garrisoning", "enemy_seen", "seen_derricks", "tf_obj", "tf_leg", "tf_stage", "tf_t", "feint",
-	"air_tasks", "next_power_t", "save_t", "prod_n", "bombarded", "defending"]
+	"air_tasks", "next_power_t", "save_t", "prod_n", "bombarded", "defending", "last_recon_t", "tf_best", "tf_prog_t", "tf_stuck", "place_fail"]
 
 
 # ------------------------------------------------------------------ capture
