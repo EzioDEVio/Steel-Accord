@@ -29,6 +29,7 @@ const PIP_FRAC := 0.3
 
 func _ready() -> void:
 	layer = 20 if full else 4
+	process_mode = Node.PROCESS_MODE_ALWAYS   # keeps its layout and framing while the game is paused
 	frame = Panel.new()
 	var st := StyleBoxFlat.new()
 	st.bg_color = Color(0.03, 0.04, 0.05, 0.92)

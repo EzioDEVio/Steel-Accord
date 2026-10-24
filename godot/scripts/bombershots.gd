@@ -14,6 +14,7 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("out="): out = a.substr(4)
 	DirAccess.make_dir_recursive_absolute(out)
+	printerr("BOMBERSHOTS start map=", battle.map_id)
 	_run()
 
 
@@ -23,12 +24,30 @@ func _wait_sim(t: float) -> void:
 		await get_tree().physics_frame
 
 
+var full_size := Vector2i(1920, 1080)
+
+
+## Software rendering on the shared test machine is slow: run the waits in a small window at 4x speed and switch to
+## the full capture size only for the shots.
+func _fast(on: bool) -> void:
+	Engine.time_scale = 4.0 if on else 1.0
+	var sz := Vector2i(480, 270) if on else full_size
+	DisplayServer.window_set_size(sz)
+	get_tree().root.size = sz
+
+
 func _shot(tag: String, img: Image = null) -> void:
+	if DisplayServer.get_name() == "headless":
+		printerr("SHOT(headless, skipped) ", tag, " t=", battle.sim_time)
+		return
+	var was_fast := Engine.time_scale > 1.0
+	if was_fast: _fast(false)
 	for i in 4: await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	var im: Image = img if img else get_viewport().get_texture().get_image()
 	im.save_png("%s/%s.png" % [out, tag])
-	print("SHOT ", tag, " ", im.get_size())
+	printerr("SHOT ", tag, " ", im.get_size())
+	if was_fast: _fast(true)
 
 
 func _flight(id: String, i := 0) -> Dictionary:
@@ -57,9 +76,8 @@ func _rts() -> void:
 
 func _run() -> void:
 	var rs: PackedStringArray = str(battle.args.get("res", "1920x1080")).split("x")
-	var want := Vector2i(int(rs[0]), int(rs[1]))
-	DisplayServer.window_set_size(want)
-	get_tree().root.size = want
+	full_size = Vector2i(int(rs[0]), int(rs[1]))
+	_fast(true)
 	await _wait_sim(0.5)
 	battle.ai = null
 	for u in battle.units: if u.team == 1: u.order_stop()
@@ -129,5 +147,5 @@ func _run() -> void:
 	await _wait_sim(3.0)
 	battle.camera.zoom = 200.0; battle.camera._apply(); battle.camera.focus(t3)
 	await _shot("b3_strike_package_zagros_impacts")
-	print("BOMBERSHOTS DONE")
+	printerr("BOMBERSHOTS DONE")
 	get_tree().quit()
