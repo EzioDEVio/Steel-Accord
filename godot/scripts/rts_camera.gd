@@ -8,7 +8,7 @@ extends Node3D
 
 var cam: Camera3D
 var zoom := 70.0
-var zoom_min := 9.0    # close-up limit (see CLOSE_START)
+var zoom_min := 5.0    # close-up limit (see CLOSE_START): a soldier fills about a third of the screen
 const CLOSE_START := 44.0   # above this the classic RTS view; below it the close-up blend
 const CLOSE_PITCH := 14.0   # pitch at the closest zoom
 var zoom_goal := 70.0   # the wheel moves the goal; zoom eases toward it

@@ -56,11 +56,12 @@ func _run() -> void:
 	await _wait(3.0)
 	for s in shots:
 		var u: Unit = s[0]
-		var close: float = 11.0 if u.def.get("visual", "") == "infantry" else (24.0 if u is Building else 15.0)
+		var close: float = 5.5 if u.def.get("visual", "") == "infantry" else (24.0 if u is Building else 12.0)
 		cam.yaw = deg_to_rad(35.0)
 		cam.zoom = close; cam.zoom_goal = close
 		cam.focus(u.position)
 		cam._apply()
+		if u.is_air(): cam.position.y = u.body.global_position.y - 1.0   # frame the aircraft, not its shadow
 		await _wait(0.4)
 		await _shot("close_" + s[1])
 	cam.zoom = 70.0; cam.zoom_goal = 70.0; cam.focus(Vector3(-40, 0, 90)); cam._apply()
