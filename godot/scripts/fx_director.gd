@@ -577,6 +577,7 @@ func crash(node: Node3D, pos: Vector3) -> void:
 	if is_instance_valid(node):
 		for c in node.get_children():
 			if c.has_meta("fx_burn"): (c as CPUParticles3D).emitting = false
+	_log("crash")
 	explosion(pos, "large", 1.0)
 	if is_instance_valid(node): wreck_fire(node, 1.0, 40.0, Vector3(0, 1.0, 0))
 

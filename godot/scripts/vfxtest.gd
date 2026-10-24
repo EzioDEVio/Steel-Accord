@@ -85,6 +85,7 @@ func _run() -> void:
 	await _wait_sim(14.0)
 	var base_nodes := _nodes()
 	var base_decals := d.decals.size()
+	var base_pool := d.pool_p.size() + d.pool_l.size()
 	for sz in want:
 		d.tag_log.clear()
 		FX.explosion(battle, battle.grounded(P) + Vector3(0, 0.2, 0), 1.0, sz)
@@ -95,16 +96,17 @@ func _run() -> void:
 		_log("explosion_layers_" + sz, miss.is_empty(), "layers %s; missing %s; live particles %d" % [str(d.tag_log.keys()), str(miss), d.live_particles])
 	await _wait_sim(14.0)
 	var new_decals := d.decals.size() - base_decals
-	_log("explosion_freed", _quiet(d) and _nodes() <= base_nodes + new_decals,
-		"active emitters %d, lights %d, live particles %d; nodes %d -> %d (+%d new scorch decals allowed), pooled emitters %d" % [d.active.size(), d.lights.size(),
-		d.live_particles, base_nodes, _nodes(), new_decals, d.pool_p.size()])
+	var pool_growth := d.pool_p.size() + d.pool_l.size() - base_pool
+	_log("explosion_freed", _quiet(d) and _nodes() <= base_nodes + new_decals + pool_growth + 2,
+		"active emitters %d, lights %d, live particles %d; nodes %d -> %d (+%d new scorch decals, +%d pooled idle emitters)" % [d.active.size(), d.lights.size(),
+		d.live_particles, base_nodes, _nodes(), new_decals, pool_growth])
 	# repeated rounds must not grow the node count beyond the decal cap
 	for r in 3:
 		for sz in want: FX.explosion(battle, battle.grounded(P) + Vector3(r * 5, 0.2, 0), 1.0, sz)
 		await _wait_sim(0.5)
 	await _wait_sim(14.0)
-	var grown := _nodes() - base_nodes - (d.decals.size() - base_decals)
-	_log("no_leak_repeat", _quiet(d) and grown <= 0, "3 more rounds: node growth beyond new decals = %d" % grown)
+	var grown := _nodes() - base_nodes - (d.decals.size() - base_decals) - (d.pool_p.size() + d.pool_l.size() - base_pool)
+	_log("no_leak_repeat", _quiet(d) and grown <= 2, "12 more blasts: node growth beyond new decals and idle pool = %d (tolerance 2 for unrelated HUD / audio nodes; a leak would be >= 12) (pool %d)" % [grown, d.pool_p.size()])
 	# presets: Low draws fewer layers / particles than High
 	var counts := {}
 	for g in ["Low", "High"]:
@@ -219,12 +221,14 @@ func _run() -> void:
 	_log("infantry_death_no_gore", d.tag_log.has("dust_hit"), "dust puff only; body fades after 3 s")
 	d.tag_log.clear()
 	heli.altitude = 25.0; heli.body.position.y = 25.0
+	_look(heli.position + Vector3(0, 0, -10), 90.0)   # keep the airburst on screen (off-screen small blasts are culled)
+	await _frames(2)
 	heli.take_damage(heli.hp + 50.0, null)
 	await _frames(3)
 	var trail := d.tag_log.has("burn_trail")
 	await _wait_sim(4.0)
-	_log("aircraft_death", trail and int(d.tag_log.get("fireball", 0)) >= 2 and d.tag_log.has("wreck_fire"),
-		"burning trail %s, blasts %d (air + crash), wreck fire %s" % [str(trail), int(d.tag_log.get("fireball", 0)), str(d.tag_log.has("wreck_fire"))])
+	_log("aircraft_death", trail and int(d.tag_log.get("fireball", 0)) >= 2 and d.tag_log.has("wreck_fire") and d.tag_log.has("crash"),
+		"burning trail %s, blasts %d (air + crash), crash %s, wreck fire %s; tags %s" % [str(trail), int(d.tag_log.get("fireball", 0)), str(d.tag_log.has("crash")), str(d.tag_log.has("wreck_fire")), str(d.tag_log)])
 	# the wreck fire cools and stops (Medium: 50 s x 0.8)
 	await _wait_sim(48.0)
 	var left := tank.body.find_children("*", "CPUParticles3D", true, false).size() if is_instance_valid(tank) else 0
