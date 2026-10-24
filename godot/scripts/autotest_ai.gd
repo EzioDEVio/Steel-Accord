@@ -138,8 +138,10 @@ func _rec_wave(ai) -> void:
 	_tl("T%d   wave value %d, vehicles %d (%.0f%%)" % [ai.team, int(tot), int(veh), 100.0 * veh / maxf(1.0, tot)])
 
 
+var next_snap := 0.0
+
+
 func _play(until_t: float, stop_on_end := true) -> void:
-	var next_snap: float = floor(battle.sim_time / 60.0) * 60.0
 	while battle.sim_time < until_t and not (stop_on_end and battle.game_over):
 		if battle.sim_time >= next_snap:
 			_snapshot(); next_snap += 60.0
@@ -214,20 +216,21 @@ func _run_passive() -> void:
 
 ## A raid arrives at the AI base after it has built up; the AI must respond and beat it.
 func _run_defend() -> void:
-	await _play(330.0)
+	# the raid comes before the AI's first wave leaves (Normal: 200 s), so the match is still on and the army is home
+	await _play(170.0)
 	var ai = battle.base_ai
 	var d0: int = ai.stats.defend
 	var home: Vector3 = battle.start_pos[1]
 	var fwd: float = 1.0 if home.z < 0.0 else -1.0
 	var spawn_at: Vector3 = home + Vector3(110.0, 0, 150.0 * fwd)
 	var raid: Array = []
-	for i in 8:
-		var k: String = ["abrams", "abrams", "abrams", "bradley", "rifleman", "rifleman", "at4", "at4"][i]
+	for i in 7:
+		var k: String = ["abrams", "abrams", "bradley", "rifleman", "rifleman", "at4", "at4"][i]
 		raid.append(battle._spawn(k, 0, spawn_at + Vector3((i % 4) * 7.0, 0, (i / 4) * 7.0), 0.0))
 	await _wait_sim(0.3)
 	var ids: Array = raid.map(func(u): return u.uid)
 	battle.issue({"type": "attack_move", "team": 0, "ids": ids, "points": battle.spread(ids, home)})
-	_tl("T0 scripted raid: 3 Abrams, 1 Bradley, 2 riflemen, 2 AT4 attack-move on the AI Command Center")
+	_tl("T0 scripted raid: 2 Abrams, 1 Bradley, 2 riflemen, 2 AT4 attack-move on the AI Command Center")
 	var t0: float = battle.sim_time
 	var responded := false
 	while battle.sim_time < t0 + 150.0 and not raid.all(func(u): return u.dead):
@@ -239,8 +242,8 @@ func _run_defend() -> void:
 			_tl("T1 defence response: %d armed units engaging" % near)
 	var cc_alive: bool = not battle.structures(1, "command_center").is_empty()
 	var dead_n: int = raid.filter(func(u): return u.dead).size()
-	_log("ai_defends_base", ai.stats.defend > d0 and cc_alive and dead_n >= 6,
-		"defence responses %d, raid units destroyed %d/8 in %.0f s, AI Command Center alive %s" % [ai.stats.defend - d0, dead_n, battle.sim_time - t0, str(cc_alive)])
+	_log("ai_defends_base", ai.stats.defend > d0 and cc_alive and dead_n >= 6 and not battle.game_over,
+		"defence responses %d, raid units destroyed %d/7 in %.0f s, AI Command Center alive %s" % [ai.stats.defend - d0, dead_n, battle.sim_time - t0, str(cc_alive)])
 
 
 ## A strong scripted player: a large armoured army attacks the AI base early and keeps attacking what is left.
