@@ -17,7 +17,9 @@
 | `vfxtest` | 25/25 |
 | `aitest avsa` (12 min, after the Airfield fix) | 10/11. The one failure was a test that was too strict (a paradrop onto a derrick); the test is now fixed but this match has not been re-run |
 
-No script errors in any suite. Results from the exported Windows build under Wine are recorded at the end of this report.
+No script errors in any suite.
+
+**Exported Windows build under Wine:** map 39/39, QA 59/59, movement 11/11, with no script errors.
 
 ## Brief 12 items
 
