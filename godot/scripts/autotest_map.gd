@@ -16,6 +16,12 @@ func _run() -> void:
 		_finish(); return
 	var a: Vector3 = battle.start_pos[0]; var b: Vector3 = battle.start_pos[1]
 	_log("starts_from_map", a.distance_to(b) > 300.0, "A=%s B=%s" % [str(a), str(b)])
+	if "b3only" in battle.args and tm.data.has("rail"):   # quick iteration on the B3 infrastructure checks only
+		await _b3_checks(tm, a, b)
+		_finish(); return
+	if "civonly" in battle.args:                 # quick iteration on the civic-building checks only
+		await _civic_checks(tm)
+		_finish(); return
 
 	# ---- grounding: everything stands on the terrain
 	var worst := 0.0; var worst_name := ""
@@ -195,65 +201,7 @@ func _run() -> void:
 	_log("aircraft_clear_terrain", min_clear.ah64 > 4.0 and min_clear.f16 > 4.0 and peak > 20.0,
 		"lowest clearance above the ground: AH-64 %.1f m, F-16 %.1f m (highest ground overflown %.0f m)" % [min_clear.ah64, min_clear.f16, peak])
 	heli.take_damage(99999.0, null); jet.take_damage(99999.0, null)
-	# ---- civilian buildings: placed, grounded, neutral; infantry occupy them, fire from inside, heal in the hospital,
-	# get out when the building falls; an occupied building survives save / load
-	var civ: Array = battle.units.filter(func(u): return u is Building and (u as Building).is_civic() and not u.dead)
-	var civ_bad := 0
-	for c in civ:
-		var cst: Vector3 = tm.footprint_stats(c.position, (c as Building).half)
-		if absf(c.position.y - cst.z) > 0.3 or c.team != -1: civ_bad += 1
-	var hosp: Array = civ.filter(func(u): return u.bkind == "civ_hospital")
-	_log("civic_buildings_placed", civ.size() >= 18 and civ_bad == 0 and not hosp.is_empty(),
-		"%d civilian buildings (%s), off-ground or not neutral: %d" % [civ.size(), ", ".join(_kinds(civ)), civ_bad])
-	if not civ.is_empty():
-		var near: Array = civ.filter(func(u): return u.bkind.begins_with("civ_house"))
-		near.sort_custom(func(a1, b1): return a1.position.distance_to(battle.start_pos[0]) < b1.position.distance_to(battle.start_pos[0]))
-		var house: Building = near[0] if not near.is_empty() else civ[0]
-		var front := (house as Building).door_pos if (house as Building).door_pos != Vector3.INF else house.position + Vector3(0, 0, house.half.y + 4.0)
-		var sq: Array = []
-		for i in 3: sq.append(battle._spawn("rifleman", 0, front + Vector3(-4 + i * 4, 0, 6), 0.0))
-		await _wait_sim(0.2)
-		battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
-		var inside := await _until(func(): return house.passengers.size() == 3, 45.0)
-		_log("garrison_enter", inside and house.team == 0 and battle.alive_count(0) > 0, "occupants %d/%d, building side %d" % [house.passengers.size(), int(house.def.transport.capacity), house.team])
-		var foe: Unit = battle._spawn("rifleman", 1, house.position + Vector3(38, 0, 20), 0.0)
-		foe.order_stop()
-		var f_hp0: float = foe.hp
-		var shots0 := 0
-		for p in house.passengers: shots0 += int(battle.shots_by.get(p.uid, 0))
-		await _wait_sim(12.0)
-		var shots1 := 0
-		for p in house.passengers: shots1 += int(battle.shots_by.get(p.uid, 0))
-		var occ_ok: bool = house.passengers.all(func(p): return not p.dead)
-		_log("garrison_fires_from_inside", shots1 > shots0 and (foe.dead or foe.hp < f_hp0) and occ_ok, "rounds fired from the windows %d, enemy %s, occupants unharmed %s" % [
-			shots1 - shots0, "killed" if foe.dead else "hp %.0f -> %.0f" % [f_hp0, foe.hp], str(occ_ok)])
-		if not hosp.is_empty():
-			var hs: Building = hosp[0]
-			var pat: Unit = battle._spawn("rifleman", 0, (hs.door_pos if hs.door_pos != Vector3.INF else hs.position + Vector3(0, 0, hs.half.y + 4)) + Vector3(0, 0, 4), 0.0)
-			pat.hp = pat.def.hp * 0.3
-			var h0: float = pat.hp
-			battle.issue({"type": "board", "team": 0, "ids": [pat.uid], "target": hs.uid})
-			await _until(func(): return pat in hs.passengers, 40.0)
-			await _wait_sim(10.0)
-			_log("hospital_heals", pat in hs.passengers and pat.hp >= h0 + pat.def.hp * 0.25, "health %.0f -> %.0f of %.0f in 10 s" % [h0, pat.hp, pat.def.hp])
-			# save / load with the hospital occupied
-			var data: Dictionary = SaveGame.capture(battle)
-			var hs_id: int = hs.uid
-			var pat_id: int = pat.uid
-			var house_id: int = house.uid
-			SaveGame.restore(battle, data)
-			var hs2: Building = battle.by_id.get(hs_id)
-			var ok_load: bool = hs2 != null and hs2.team == 0 and hs2.passengers.size() == 1 and hs2.passengers[0].uid == pat_id
-			_log("garrison_survives_save_load", ok_load, "hospital side %s, occupants %s" % [str(hs2.team if hs2 else "-"), str(hs2.passengers.size() if hs2 else -1)])
-			await _frames(3)
-			house = battle.by_id.get(house_id)
-		var n_in: int = house.passengers.size()
-		var alive0: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
-		house.take_damage(999999.0, null)
-		await _wait_sim(0.5)
-		var alive1: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
-		_log("garrison_ejected_when_destroyed", house.dead and house.passengers.is_empty() and alive1 >= alive0 + 1 and house.team == -1,
-			"%d inside; outside afterwards %d -> %d, building side %d" % [n_in, alive0, alive1, house.team])
+	await _civic_checks(tm)
 	# ---- the computer opponent plays the map: builds on flat ground, earns, captures a derrick, trains its nation's units
 	if battle.base_ai:
 		await _until(func(): return battle.sim_time > 420.0, 600.0)
@@ -405,7 +353,11 @@ func _b3_checks(tm: TerrainMap, a: Vector3, b: Vector3) -> void:
 	var gmax := 0.0; var ball_bad := 0; var nb := 0; var gat := Vector2.ZERO
 	for ln in rail.lines:
 		var P := _samples(ln.points, 3.0)
-		for k in range(2, P.size() - 2):          # the first / last samples are inside the portals
+		for k in range(1, P.size()):
+			var inside := false                  # samples within 3 m of a portal face are in the recess / slot end
+			for pt in ln.portals:
+				if P[k].distance_to(_v2(pt.pos)) < 3.0 or P[k - 1].distance_to(_v2(pt.pos)) < 3.0: inside = true
+			if inside: continue
 			var g := absf(tm.height_at(P[k].x, P[k].y) - tm.height_at(P[k - 1].x, P[k - 1].y)) / maxf(P[k].distance_to(P[k - 1]), 0.1)
 			if g > gmax: gmax = g; gat = P[k]
 			nb += 1
@@ -512,6 +464,71 @@ func _drive_speed(kind: String, seg: Array) -> float:
 		if t0 >= 0.0 and s >= 85.0: t1 = battle.sim_time
 	u.take_damage(99999.0, null)
 	return 50.0 / (t1 - t0) if t1 > t0 and t0 >= 0.0 else 0.0
+
+
+## Civilian buildings: placed, grounded, neutral; garrison, firing from inside, hospital healing, save / load, ejection.
+func _civic_checks(tm: TerrainMap) -> void:
+	# ---- civilian buildings: placed, grounded, neutral; infantry occupy them, fire from inside, heal in the hospital,
+	# get out when the building falls; an occupied building survives save / load
+	var civ: Array = battle.units.filter(func(u): return u is Building and (u as Building).is_civic() and not u.dead)
+	var civ_bad := 0
+	for c in civ:
+		var cst: Vector3 = tm.footprint_stats(c.position, (c as Building).half)
+		if absf(c.position.y - cst.z) > 0.3 or c.team != -1: civ_bad += 1
+	var hosp: Array = civ.filter(func(u): return u.bkind == "civ_hospital")
+	_log("civic_buildings_placed", civ.size() >= 18 and civ_bad == 0 and not hosp.is_empty(),
+		"%d civilian buildings (%s), off-ground or not neutral: %d" % [civ.size(), ", ".join(_kinds(civ)), civ_bad])
+	if not civ.is_empty():
+		var near: Array = civ.filter(func(u): return u.bkind.begins_with("civ_house"))
+		near.sort_custom(func(a1, b1): return a1.position.distance_to(battle.start_pos[0]) < b1.position.distance_to(battle.start_pos[0]))
+		var house: Building = near[0] if not near.is_empty() else civ[0]
+		var front := (house as Building).door_pos if (house as Building).door_pos != Vector3.INF else house.position + Vector3(0, 0, house.half.y + 4.0)
+		var sq: Array = []
+		for i in 3: sq.append(battle._spawn("rifleman", 0, front + Vector3(-4 + i * 4, 0, 6), 0.0))
+		await _wait_sim(0.2)
+		battle.issue({"type": "board", "team": 0, "ids": sq.map(func(u): return u.uid), "target": house.uid})
+		var inside := await _until(func(): return house.passengers.size() == 3, 45.0)
+		_log("garrison_enter", inside and house.team == 0 and battle.alive_count(0) > 0, "%s at %s: occupants %d/%d, building side %d; squad at %s" % [house.bkind, str(Vector2i(house.position.x, house.position.z)),
+			house.passengers.size(), int(house.def.transport.capacity), house.team, str(sq.map(func(u): return Vector2i(u.position.x, u.position.z)))])
+		# enemy ~25 m beyond the footprint corner (in rifle range of the side windows whichever house is nearest)
+		var foe: Unit = battle._spawn("rifleman", 1, house.position + Vector3(house.half.x + 28.0, 0, house.half.y + 10.0), 0.0)
+		foe.order_stop()
+		var f_hp0: float = foe.hp
+		var shots0 := 0
+		for p in house.passengers: shots0 += int(battle.shots_by.get(p.uid, 0))
+		await _wait_sim(12.0)
+		var shots1 := 0
+		for p in house.passengers: shots1 += int(battle.shots_by.get(p.uid, 0))
+		var occ_ok: bool = house.passengers.all(func(p): return not p.dead)
+		_log("garrison_fires_from_inside", shots1 > shots0 and (foe.dead or foe.hp < f_hp0) and occ_ok, "rounds fired from the windows %d, enemy %s, occupants unharmed %s" % [
+			shots1 - shots0, "killed" if foe.dead else "hp %.0f -> %.0f" % [f_hp0, foe.hp], str(occ_ok)])
+		if not hosp.is_empty():
+			var hs: Building = hosp[0]
+			var pat: Unit = battle._spawn("rifleman", 0, (hs.door_pos if hs.door_pos != Vector3.INF else hs.position + Vector3(0, 0, hs.half.y + 4)) + Vector3(0, 0, 4), 0.0)
+			pat.hp = pat.def.hp * 0.3
+			var h0: float = pat.hp
+			battle.issue({"type": "board", "team": 0, "ids": [pat.uid], "target": hs.uid})
+			await _until(func(): return pat in hs.passengers, 40.0)
+			await _wait_sim(10.0)
+			_log("hospital_heals", pat in hs.passengers and pat.hp >= h0 + pat.def.hp * 0.25, "health %.0f -> %.0f of %.0f in 10 s" % [h0, pat.hp, pat.def.hp])
+			# save / load with the hospital occupied
+			var data: Dictionary = SaveGame.capture(battle)
+			var hs_id: int = hs.uid
+			var pat_id: int = pat.uid
+			var house_id: int = house.uid
+			SaveGame.restore(battle, data)
+			var hs2: Building = battle.by_id.get(hs_id)
+			var ok_load: bool = hs2 != null and hs2.team == 0 and hs2.passengers.size() == 1 and hs2.passengers[0].uid == pat_id
+			_log("garrison_survives_save_load", ok_load, "hospital side %s, occupants %s" % [str(hs2.team if hs2 else "-"), str(hs2.passengers.size() if hs2 else -1)])
+			await _frames(3)
+			house = battle.by_id.get(house_id)
+		var n_in: int = house.passengers.size()
+		var alive0: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
+		house.take_damage(999999.0, null)
+		await _wait_sim(0.5)
+		var alive1: int = battle.units.filter(func(u): return u.team == 0 and not u.dead and u.kind == "rifleman").size()
+		_log("garrison_ejected_when_destroyed", house.dead and house.passengers.is_empty() and alive1 >= alive0 + 1 and house.team == -1,
+			"%d inside; outside afterwards %d -> %d, building side %d" % [n_in, alive0, alive1, house.team])
 
 
 func _kinds(arr: Array) -> Array:

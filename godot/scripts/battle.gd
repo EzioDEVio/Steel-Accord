@@ -1651,7 +1651,9 @@ func _update_boarding() -> void:
 				u.board_target = null; continue
 			if u.state == Unit.S.IDLE and u.flat_dist(tr.position) > 6.0:
 				u.order_move(tr.position)             # transport moved: follow it
-			if u.flat_dist(tr.position) < tr.def.radius + 4.0 and tr.can_exchange():
+			# buildings: range to the footprint edge (a centre radius misses the long sides of big civic buildings)
+			var near_tr: bool = (tr as Building).footprint_dist(u.position) < 5.0 if tr is Building else u.flat_dist(tr.position) < tr.def.radius + 4.0
+			if near_tr and tr.can_exchange():
 				_board(u, tr)
 		if u.is_transport() and u.unload_pending and u.domain != "heli" and u.can_exchange():
 			u.unload_pending = false
