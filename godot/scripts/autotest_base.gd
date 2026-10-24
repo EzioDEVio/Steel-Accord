@@ -949,7 +949,7 @@ func _run_build() -> void:
 			prev = jet.position
 	var along: float = lift_dir.normalized().dot(rw_dir.normalized()) if lift_dir.length() > 0.01 and rw_dir.length() > 0.01 else 0.0
 	var turned := rw_dir.length() > 1.0 and absf(rw_dir.normalized().dot(rw_local.normalized())) < 0.2
-	_log("rotated_airfield_takeoff", jet != null and air_t > 0.0 and bad_ground.is_empty() and along > 0.8 and turned,
+	_log("rotated_airfield_takeoff", jet != null and air_t > 0.0 and bad_ground.is_empty() and along < -0.8 and turned,   # B3: take-off roll runs from the 27 end (RunwayEnd) toward 09
 		"airfield yaw 90: runway world dir (%.2f, %.2f) vs model dir (%.2f, %.2f) turned=%s, airborne after %.1f s, lift-off heading along runway %.2f, ground positions off the paving: %s" % [
 			rw_dir.normalized().x, rw_dir.normalized().z, rw_local.normalized().x, rw_local.normalized().z, str(turned), air_t, along, str(bad_ground.slice(0, 4))])
 	if jet:
