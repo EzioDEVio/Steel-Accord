@@ -49,6 +49,8 @@ var feint: Array = []          # uids of the feint group (Hard)
 var air_tasks := {}            # aircraft uid -> target uid (strike in progress)
 var next_power_t := 0.0
 var save_t := -1.0             # sim time we started saving cash for an expensive unit
+var build_save := 0            # cash held back from unit production for the next structure (Airfield etc.)
+var build_save_t := -1.0       # when that saving started (production resumes after 75 s if it never fills)
 var prod_n := 0                # production counter (deterministic rotation inside a role)
 var bombarded := false         # artillery has opened up on the current objective
 var defending := false
@@ -247,7 +249,14 @@ func _construct(anchor: Vector3) -> void:
 		var k: String = e[0]
 		if k == "airfield" and role_kinds.jet.is_empty() and role_kinds.heli.is_empty(): continue
 		if battle.sim_time < float(place_fail.get(k, -1.0)): continue      # no room found recently: build the next item
-		if battle.cash[team] < int(BuildingDefs.DEFS[k].cost) + int(P.reserve): return   # keep a small reserve for units
+		var need_cash: int = int(BuildingDefs.DEFS[k].cost) + int(P.reserve)
+		if battle.cash[team] < need_cash:
+			# once a War Factory stands, save for the next structure instead of letting unit production drain every
+			# dollar (this kept the Airfield from ever being built)
+			if not battle.structures(team, "war_factory").is_empty():
+				if build_save != need_cash: build_save = need_cash; build_save_t = battle.sim_time
+			return
+		build_save = 0; build_save_t = -1.0
 		if not battle.requirements_met(team, k): return
 		if not _place_near(dz, anchor, k, float(e[1]), float(e[2])): place_fail[k] = battle.sim_time + 30.0
 		return
@@ -310,6 +319,8 @@ func _shares() -> Dictionary:
 
 func _produce(cc: Node) -> void:
 	var cash: int = battle.cash[team]
+	if build_save > 0 and battle.sim_time - build_save_t < 75.0:
+		cash -= build_save    # leave the structure fund alone
 	var nat: String = battle.nation_of(team)
 	if cc and _mine(func(u): return u.def.get("builder", false)).is_empty() and cc.prod_queue.is_empty() and cash >= 1000:
 		battle.issue({"type": "produce", "team": team, "id": cc.uid, "kind": Nations.swap_unit(nat, "dozer")})
