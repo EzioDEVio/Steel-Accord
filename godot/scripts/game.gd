@@ -25,6 +25,7 @@ var settings := {
 	"game_speed": 1.0,
 	"graphics": "Medium",     # Low / Medium / High: shadows, ambient occlusion, anti-aliasing, 3D render scale
 	"show_fps": false,
+	"camera_shake": true,     # small camera shake on large explosions (never in automated tests)
 }
 
 ## Skirmish maps offered in the menu (id -> label). Heightfield maps live in res://maps/<id>/.

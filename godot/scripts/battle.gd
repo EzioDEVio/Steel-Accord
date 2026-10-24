@@ -734,20 +734,23 @@ func fire(shooter: Unit, w: Dictionary, tunit: Unit, tpos: Vector3) -> void:
 	_fire_sound(shooter, w, from)
 	_battle_cry(shooter)
 	var node: Node3D
+	var mk := FX.muzzle_kind(shooter, w)   # presentation only: weapon class for muzzle flash / tracer size
 	match w.proj:
 		"missile", "rocket":
 			node = FX.missile_node(w.proj == "missile")
-			FX.launch_puff(self, from)
+			FX.muzzle(self, from, dir, mk)
 		"bullet":
+			# tracers on a fraction of rounds (every Nth round of this shooter; deterministic, no rng)
+			node = FX.tracer_node(mk, int(shots_by[shooter.uid]) % FX.tracer_every(mk) == 0)
 			if shooter.is_air():
-				node = FX.tracer_mesh(0.22, 6.0)
-				FX.small_flash(self, from)
-			else:
-				node = FX.tracer_mesh(0.08, 2.4)
-				if rng.randf() < 0.5: FX.small_flash(self, from)
+				FX.muzzle(self, from, dir, mk)
+			elif rng.randf() < 0.5 or mk == "mg":   # (the rng draw is kept so the simulation sequence is unchanged)
+				FX.muzzle(self, from, dir, mk)
 		_:
-			node = FX.tracer_mesh(0.12, 4.0)
-			FX.muzzle_flash(self, from, dir)
+			node = FX.tracer_node(mk, true)
+			FX.muzzle(self, from, dir, mk)
+			if w.proj == "arty":
+				FX.incoming(self, aim, dist / float(w.speed) - 1.86)
 	add_child(node)
 	node.global_position = from
 	if dir.length() > 0.01: node.look_at(from + dir, Vector3.UP if absf(dir.y) < 0.99 else Vector3.RIGHT)
@@ -808,6 +811,7 @@ func _update_shots(dt: float) -> void:
 		if step >= s.left:
 			var p: Vector3 = s.pos + s.dir * s.left
 			_impact(s, p)
+			FX.detach_trails(s.node)
 			s.node.queue_free()
 			shots.erase(s)
 		else:
@@ -839,14 +843,21 @@ func _impact(s: Dictionary, p: Vector3) -> void:
 				o.take_damage(s.dmg * 0.5 * (1.0 - d / s.splash) * dealt_mult(s.shooter, o) * _armor_mult(s, o), s.shooter)
 	var gy := ground_h(p.x, p.z)
 	var ground := p.y < gy + 1.5
-	if s.kind == "arty":
-		FX.explosion(self, Vector3(p.x, gy + 0.2, p.z), 1.1)
-	elif s.kind == "bullet":
-		FX.bullet_hit(self, Vector3(p.x, maxf(p.y, gy + 0.1), p.z), direct, s.shooter != null and s.shooter.is_air())
-	elif direct or not ground:
-		FX.impact(self, p, true)
+	# presentation: impact effect by projectile and surface (FX.impact_kind)
+	var surf := "ground"
+	if direct:
+		if t is Building: surf = "structure"
+		elif t.def.get("visual") == "infantry": surf = "infantry"
+		elif t.is_air(): surf = "air"
+		else: surf = "armour"
+	elif not ground: surf = "air"
+	var heavy_bullet: bool = s.kind == "bullet" and s.shooter != null and is_instance_valid(s.shooter) and s.shooter.is_air()
+	var fx_kind: String = {"bullet": "cannon" if heavy_bullet else "bullet", "arty": "arty", "rocket": "rocket", "missile": "rocket"}.get(s.kind, "shell")
+	if fx_kind == "shell" and s.dmg < 60.0: fx_kind = "cannon"   # 25 mm autocannon
+	if s.kind == "arty" or (surf == "ground" and fx_kind != "bullet"):
+		FX.impact_kind(self, Vector3(p.x, gy + 0.2, p.z), fx_kind, surf)
 	else:
-		FX.impact(self, Vector3(p.x, gy + 0.1, p.z), false)
+		FX.impact_kind(self, Vector3(p.x, maxf(p.y, gy + 0.1), p.z), fx_kind, surf)
 
 
 func _armor_mult(s: Dictionary, o: Unit) -> float:
@@ -990,6 +1001,7 @@ func _update_bombs(dt: float) -> void:
 					var hb := o.hp
 					o.take_damage(b.dmg * (1.0 - 0.6 * d / b.splash), null)
 					if o.team != b.team: bomb_damage += hb - o.hp
+			FX.detach_trails(b.node)
 			b.node.queue_free()
 			bombs.erase(b)
 
@@ -1006,18 +1018,18 @@ func on_unit_died(u: Unit) -> void:
 	else: kills += 1
 	var vis_kind: String = u.def.get("visual", "model")
 	if u is Building:
-		FX.explosion(self, u.global_position + Vector3(0, 2, 0), 2.2)
-		FX.wreck_fire(u.body)
+		# built structures collapse into a ruin (add_rubble -> FX.collapse); sold ones are dismantled in a dust cloud
+		var bb := u as Building
+		if bb.sold: FX.impact_kind(self, u.global_position, "bullet", "structure")
+		elif not bb.built: FX.explosion(self, u.global_position + Vector3(0, 1, 0), 1.0, "large")
 	elif vis_kind == "infantry":
-		FX.impact(self, u.global_position, false)
+		FX.unit_death(self, u)
 		_fade_out(u, 3.0)
 	elif vis_kind == "vehicle_art":
-		FX.explosion(self, u.global_position, 1.0)
-		FX.wreck_fire(u.body)
+		FX.unit_death(self, u)
 		if u.card_sprite: u.card_sprite.modulate = Color(0.16, 0.14, 0.12)
 	elif u.domain == "ground":
-		FX.explosion(self, u.global_position, 1.0)
-		FX.wreck_fire(u.body)
+		FX.unit_death(self, u)
 		if u.turret:
 			var t := u.turret
 			var xf := t.global_transform
@@ -1028,8 +1040,8 @@ func on_unit_died(u: Unit) -> void:
 			debris.append({"node": t, "vel": Vector3(rng.randf_range(-3, 3), rng.randf_range(9, 13), rng.randf_range(-3, 3)),
 				"spin": Vector3(rng.randf_range(-3, 3), rng.randf_range(-4, 4), rng.randf_range(-3, 3)), "crash": false})
 	else:
-		FX.explosion(self, u.world_center(), 0.6)
-		# the airframe falls and burns on impact
+		FX.unit_death(self, u)
+		# the airframe falls (burning trail) and explodes where it hits the ground
 		debris.append({"node": u.body, "vel": u.vel * 0.6 + Vector3(0, -2, 0), "spin": Vector3(rng.randf_range(-1, 1), rng.randf_range(-2, 2), rng.randf_range(-1.5, 1.5)), "crash": true})
 		for r in u.rotors: r.visible = false
 	if u in commander.selected:
@@ -1053,10 +1065,9 @@ func _update_debris(dt: float) -> void:
 		if n.global_position.y <= dgy and d.vel.y < 0:
 			n.global_position.y = dgy
 			if d.crash:
-				FX.explosion(self, n.global_position, 0.9)
+				FX.crash(self, n, n.global_position)
 				var sp := n.find_child("Sprite", true, false) as Sprite3D
 				if sp: sp.modulate = Color(0.12, 0.11, 0.1)
-				FX.wreck_fire(n)
 			debris.erase(d)
 
 
@@ -1486,31 +1497,21 @@ var rubble: Array = []   # {"pos", "kind", "team", "half", "node"}
 ## A destroyed structure leaves rubble on its footprint (not an obstacle). A Dozer can rebuild the same structure
 ## there through the normal construction flow (normal cost, prerequisites and build time).
 func add_rubble(b: Building) -> void:
-	add_rubble_at(b.position, b.bkind, -2 if b.is_civic() else b.team, b.half, b.uid)
+	var yaw: float = float(b.get("yaw")) if b.get("yaw") != null else b.rotation.y
+	FX.collapse(self, b)   # destruction sequence (presentation): the model sinks and tilts into a dust cloud
+	add_rubble_at(b.position, b.bkind, -2 if b.is_civic() else b.team, b.half, b.uid, yaw)
 
 
-func add_rubble_at(pos: Vector3, bkind: String, bteam: int, bhalf: Vector2, seed_id: int) -> void:
+## The ruin (visual only, FXRuin) is built from the kind and seed, so a saved game restores the same look.
+## `half` is in the building's own frame, rotated by `yaw`; `age` = seconds since the destruction (loaded games).
+func add_rubble_at(pos: Vector3, bkind: String, bteam: int, bhalf: Vector2, seed_id: int, yaw := 0.0, age := 0.0) -> void:
 	var n := Node3D.new()
+	n.name = "Ruin_%d" % seed_id
 	n.position = pos
+	n.rotation.y = yaw
 	add_child(n)
-	var dark := StandardMaterial3D.new(); dark.albedo_color = Color(0.13, 0.12, 0.11); dark.roughness = 1.0
-	var conc := StandardMaterial3D.new(); conc.albedo_color = Color(0.36, 0.34, 0.31); conc.roughness = 0.95
-	var slab := MeshInstance3D.new()
-	var bm := BoxMesh.new(); bm.size = Vector3(bhalf.x * 2.0, 0.3, bhalf.y * 2.0); bm.material = dark
-	slab.mesh = bm; slab.position.y = 0.15
-	n.add_child(slab)
-	var r := RandomNumberGenerator.new(); r.seed = seed_id * 7919
-	for i in int(clampf(bhalf.x * bhalf.y / 6.0, 6, 40)):
-		var m := MeshInstance3D.new()
-		var cm := BoxMesh.new()
-		cm.size = Vector3(r.randf_range(0.8, 3.5), r.randf_range(0.4, 2.0), r.randf_range(0.8, 3.5))
-		cm.material = conc if i % 3 else dark
-		m.mesh = cm
-		m.position = Vector3(r.randf_range(-bhalf.x, bhalf.x) * 0.85, cm.size.y * 0.4, r.randf_range(-bhalf.y, bhalf.y) * 0.85)
-		m.rotation = Vector3(r.randf_range(-0.4, 0.4), r.randf() * TAU, r.randf_range(-0.4, 0.4))
-		n.add_child(m)
-	FX.wreck_fire(n)
-	rubble.append({"pos": pos, "kind": bkind, "team": bteam, "half": bhalf, "node": n, "seed": seed_id})
+	FX.ruin(self, n, bkind, bhalf, seed_id, age)
+	rubble.append({"pos": pos, "kind": bkind, "team": bteam, "half": bhalf, "node": n, "seed": seed_id, "yaw": yaw, "t": sim_time - age})
 
 
 func _clear_rubble(pos: Vector3, h: Vector2) -> void:

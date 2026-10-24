@@ -51,7 +51,22 @@ func _pivot_h(x: float, z: float) -> float:
 	return h / 5.0
 
 
+## Camera shake from large blasts (FX). Decays quickly; purely visual (Options: "Camera shake").
+var shake := 0.0
+
+
+func add_shake(amount: float) -> void:
+	shake = minf(1.2, shake + amount)
+
+
 func _process(dt: float) -> void:
+	if shake > 0.0:
+		shake = move_toward(shake, 0.0, dt * 2.2)
+		var a := shake * shake * 1.4
+		cam.h_offset = randf_range(-a, a)
+		cam.v_offset = randf_range(-a, a) * 0.7
+	elif cam.h_offset != 0.0 or cam.v_offset != 0.0:
+		cam.h_offset = 0.0; cam.v_offset = 0.0
 	var mv := Vector2.ZERO
 	if Input.is_key_pressed(KEY_LEFT): mv.x -= 1
 	if Input.is_key_pressed(KEY_RIGHT): mv.x += 1

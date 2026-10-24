@@ -69,7 +69,8 @@ static func capture(b: Node) -> Dictionary:
 		"derrick_income": b.derrick_income.duplicate(), "drop_income": b.drop_income.duplicate(), "kills": b.kills, "losses": b.losses,
 		"promotions": b.promotions, "cry_t": b.cry_t.duplicate(), "flatten_log": b.flatten_log.duplicate(true),
 		"derricks": b.derricks.map(func(e): return _enc(e)), "piles": b.piles.map(func(p): return int(p.cash)),
-		"rubble": b.rubble.map(func(r): return {"pos": r.pos, "kind": r.kind, "team": r.team, "half": r.half, "seed": r.get("seed", 1)})}
+		"rubble": b.rubble.map(func(r): return {"pos": r.pos, "kind": r.kind, "team": r.team, "half": r.half, "seed": r.get("seed", 1),
+			"yaw": r.get("yaw", 0.0), "t": r.get("t", 0.0)})}
 	var us: Array = []
 	for u in b.units:
 		if u.dead or not is_instance_valid(u): continue
@@ -205,7 +206,8 @@ static func restore(b: Node, data: Dictionary) -> void:
 			b.terrain.flatten(e[0], e[1], e[0].y, 8.0)
 	b.flatten_log = bt.get("flatten_log", []).duplicate(true)
 	for r in bt.get("rubble", []):
-		b.add_rubble_at(r.pos, r.kind, int(r.team), r.half, int(r.seed))
+		b.add_rubble_at(r.pos, r.kind, int(r.team), r.half, int(r.seed), float(r.get("yaw", 0.0)),
+			maxf(0.0, float(bt.get("sim_time", 0.0)) - float(r.get("t", 0.0))))
 	var recs: Array = data.units.duplicate()
 	recs.sort_custom(func(a, c): return int(a.uid) < int(c.uid))
 	var made := {}      # uid -> [Unit, record]
