@@ -8,7 +8,7 @@ class_name Nations
 
 const DEFS := {
 	"usa": {"name": "United States", "short": "USA", "flag": "res://assets/units3d/props/flag_usa.glb", "produces": {},
-		"powers": ["carpet", "supersonic", "stealth", "paradrop", "recon", "gunship", "airborne_armor", "airlift"]},
+		"powers": ["carpet", "supersonic", "stealth", "stealth_squadron", "stealth_squadron_heavy", "strike_package", "paradrop", "recon", "gunship", "airborne_armor", "airlift"]},
 	"iran": {
 		"name": "Iran", "short": "IRN", "flag": "res://assets/units3d/props/flag_iran.glb",
 		"produces": {

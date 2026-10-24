@@ -1,0 +1,102 @@
+{
+  "pack": "B3 HD strategic bombers, generic air-dropped weapons and squadron power icons",
+  "generator": "tools/art/air_b52_hd.py, tools/art/air_b1_hd.py, tools/art/air_b2_hd.py, tools/art/wpn_bombs_hd.py, tools/art/icons_bomber_powers.py",
+  "pipeline": "tools/art/airkit_hd.py (new shared HD kit) on top of tools/art/airkit.py + tools/art/veh_m88_3d.py (library halves, unchanged); measured outline frames imported read-only from tools/art/air_b52_3d.py, air_b1_3d.py, air_b2_3d.py",
+  "command": "python3 -I tools/art/air_b52_hd.py --no-sheet; python3 -I tools/art/air_b1_hd.py --no-sheet; python3 -I tools/art/air_b2_hd.py --no-sheet; python3 -I tools/art/wpn_bombs_hd.py; python3 -I tools/art/icons_bomber_powers.py; python3 -I tools/art/sheet_bombers_hd.py",
+  "method": "Code-placed lofts and primitives in Blender 5.2 (bpy module). Outer lines (fuselage side/top profiles, wing / tail planforms, B-2 planform and centre-body profile) re-lofted at higher density from the M3 measured frames; all detail geometry (bay cut-outs, bay interiors, clamshell doors, B-1 pivoting outer wings, glazing, intakes, nozzles, pylons, racks, tanks, antennas) is new procedural code. One Smart-UV atlas per aircraft packed with concave island packing. Textures are fully procedural numpy paint evaluated per texel from its 3D position and normal (base paint, per-panel tone, panel lines, rivet rows, control-surface gaps, flow streaks, exhaust soot, leading-edge wear, low-visibility insignia) with a Cycles CPU AO bake (2048 px) multiplied into the albedo. Normal map derived from a procedural height field in UV space; roughness / metal packed as glTF metallicRoughness (G = roughness, B = metallic, R = AO for reference only). No concept-image projection, no photo or scan textures, no AI image generation.",
+  "tools": "Blender 5.2 (bpy), numpy, scipy, Pillow",
+  "license": "original work, project-owned (code-generated geometry and textures)",
+  "status": "DEV - release review required",
+  "content_notes": "Fictional game equipment. The three bombers depict the general configuration of real aircraft types (eight-engine swept-wing bomber, swing-wing bomber, flying wing) and carry a low-visibility star-and-bar style roundel painted procedurally; real type names appear in the game UI. Same release-review flag as the M3 aircraft (docs/ASSET_MANIFEST_AIRCRAFT.md): confirm names / insignia / likeness before publication. Bombs are generic shapes with no markings or text.",
+  "conventions": "1 unit = 1 m, real size (UnitDefs.SCALE.bomber = 1.0); forward = Godot -Z; origin under the fuselage midpoint at gear-retracted belly level. Nodes: mesh 'Body' (atlas material + SA_Team + SA_Glass), doors 'Door<bay>L' / 'Door<bay>R' (origin on the hinge line; open by rotating about local Z: L negative, R positive), B-1 'WingL' / 'WingR' (origin on the pivot; sweep about local Y: L positive, R negative), B-52 'StoresL' / 'StoresR' (modelled pylon-rack bombs, hidden when the game stages individual bombs), empties 'Exhaust<n>', 'Bay<i>a' / 'Bay<i>b' (fore / aft end of bay i's stowed-weapon line), 'PB<n>' (B-52 pylon bomb stations).",
+  "review": "docs/screens/b3_bombers_hd_sheet.png",
+  "items": [
+    {
+      "id": "b52_hd",
+      "path": "res://assets/units3d/b52_hd/b52_hd.glb",
+      "generator": "tools/art/air_b52_hd.py",
+      "tris": 28076,
+      "textures": {
+        "albedo": "res://assets/units3d/b52_hd/b52_hd_albedo.jpg (4096 px JPEG q92, AO multiplied in)",
+        "normal": "res://assets/units3d/b52_hd/b52_hd_normal.png (2048 px)",
+        "orm": "res://assets/units3d/b52_hd/b52_hd_orm.png (2048 px; G roughness, B metallic)"
+      },
+      "texel_m": 0.014,
+      "used_by": "POWERS carpet, strike_package",
+      "nodes": "Body, Door0L/R, StoresL/R, Exhaust0..7, Bay0a/b, PB0..PB11",
+      "description": "Eight-engine swept-wing bomber, real size (48.5 m x 56.4 m): one bay with frames and weapons beam, clamshell doors, two pylon racks of six 500-lb-class bombs, external tanks, outrigger fairings, glazing, intakes with spinners, exhaust cones, blade antennas"
+    },
+    {
+      "id": "b1_hd",
+      "path": "res://assets/units3d/b1_hd/b1_hd.glb",
+      "generator": "tools/art/air_b1_hd.py",
+      "tris": 20848,
+      "textures": {
+        "albedo": "res://assets/units3d/b1_hd/b1_hd_albedo.jpg (4096 px JPEG q92, AO multiplied in)",
+        "normal": "res://assets/units3d/b1_hd/b1_hd_normal.png (2048 px)",
+        "orm": "res://assets/units3d/b1_hd/b1_hd_orm.png (2048 px; G roughness, B metallic)"
+      },
+      "texel_m": 0.0123,
+      "used_by": "POWERS supersonic, strike_package",
+      "nodes": "Body, WingL/R, Door0..2L/R, Exhaust0..3, Bay0..2a/b",
+      "description": "Swing-wing bomber, real size (44.5 m, 41.8 m span at cruise sweep): pivoting outer wings (+38 deg for the run), three bays with doors, nose vanes, glazing, intakes with splitters, four nozzles"
+    },
+    {
+      "id": "b2_hd",
+      "path": "res://assets/units3d/b2_hd/b2_hd.glb",
+      "generator": "tools/art/air_b2_hd.py",
+      "tris": 12716,
+      "textures": {
+        "albedo": "res://assets/units3d/b2_hd/b2_hd_albedo.jpg (4096 px JPEG q92, AO multiplied in)",
+        "normal": "res://assets/units3d/b2_hd/b2_hd_normal.png (2048 px)",
+        "orm": "res://assets/units3d/b2_hd/b2_hd_orm.png (2048 px; G roughness, B metallic)"
+      },
+      "texel_m": 0.013,
+      "used_by": "POWERS stealth, stealth_squadron, stealth_squadron_heavy, strike_package",
+      "nodes": "Body, Door0L/R, Door1L/R, Exhaust0..3, Bay0a/b, Bay1a/b",
+      "description": "Flying wing, real size (21 m x 52.4 m): saw-tooth trailing edge, upper intakes, exhaust troughs with heat tiles, two side-by-side bays with doors, glazing"
+    },
+    {
+      "id": "gp_bomb",
+      "path": "res://assets/units3d/hd_bombs/gp_bomb.glb",
+      "generator": "tools/art/wpn_bombs_hd.py",
+      "tris": 952,
+      "textures": "flat PBR materials",
+      "description": "Generic low-drag GP bomb (2000-lb class proportions; drawn at 0.6 / 0.8 scale by B-52 / B-1)"
+    },
+    {
+      "id": "penetrator",
+      "path": "res://assets/units3d/hd_bombs/penetrator.glb",
+      "generator": "tools/art/wpn_bombs_hd.py",
+      "tris": 668,
+      "textures": "flat PBR materials",
+      "description": "Generic guided penetrator with tail kit and strakes (B-2)"
+    }
+  ],
+  "icons": [
+    {
+      "id": "stealth_squadron",
+      "path": "res://assets/ui/powers/stealth_squadron.png",
+      "size": "256x160 RGBA",
+      "generator": "tools/art/icons_bomber_powers.py",
+      "method": "Cycles render of the HD GLBs composited with Pillow"
+    },
+    {
+      "id": "stealth_squadron_heavy",
+      "path": "res://assets/ui/powers/stealth_squadron_heavy.png",
+      "size": "256x160 RGBA",
+      "generator": "tools/art/icons_bomber_powers.py",
+      "method": "Cycles render of the HD GLBs composited with Pillow"
+    },
+    {
+      "id": "strike_package",
+      "path": "res://assets/ui/powers/strike_package.png",
+      "size": "256x160 RGBA",
+      "generator": "tools/art/icons_bomber_powers.py",
+      "method": "Cycles render of the HD GLBs composited with Pillow"
+    }
+  ],
+  "edit_history": [
+    "2026-10-23 created (B3 bomber ticket): HD remodel, bay doors, B-1 pivoting wings, procedural PBR maps; B-52 pylon beams moved onto Body so only rack bombs hide; B-2 exhaust slots made flush (ray-cast top surface)"
+  ]
+}

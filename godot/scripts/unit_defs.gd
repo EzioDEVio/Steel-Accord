@@ -131,7 +131,7 @@ const ARMOR_MULT := {
 
 
 ## World-scale guide: factor applied to the drawn size of each class (art is authored at real size). See docs/SCALE_GUIDE.md.
-const SCALE := {"structure": 1.0, "vehicle": 0.8, "aircraft": 0.6, "infantry": 1.3}
+const SCALE := {"structure": 1.0, "vehicle": 0.8, "aircraft": 0.6, "infantry": 1.3, "bomber": 1.0}   # bomber: support-power strategic bombers (real size)
 
 
 static func scale_for(d: Dictionary) -> float:
@@ -377,15 +377,41 @@ const BASE_UNITS := {
 # (kept below the closest camera height so aircraft stay visible), not real flight levels. In the full game these are
 # unlocked by rank (experience) - see docs/MECHANICS_REFERENCE_AUDIT.md; here they are available on cooldown.
 const POWERS := {
-	"carpet": {"name": "Carpet Bombing", "model3d": "res://assets/units3d/b52/b52.glb", "aircraft": "b52", "sprite": "res://assets/aircraft/b52/b52_top.png",
-		"icon": "res://assets/aircraft/b52/b52_icon.png", "length": 48.5, "cooldown": 90.0, "speed": 70.0, "altitude": 30.0,
-		"bombs": 10, "spacing": 7.0, "damage": 150.0, "splash": 9.0},
-	"supersonic": {"name": "Supersonic Strike", "model3d": "res://assets/units3d/b1/b1.glb", "aircraft": "b1", "sprite": "res://assets/aircraft/b1/b1_top.png",
-		"icon": "res://assets/aircraft/b1/b1_icon.png", "length": 44.5, "cooldown": 75.0, "speed": 120.0, "altitude": 26.0,
+	"carpet": {"name": "Carpet Bombing", "model3d": "res://assets/units3d/b52_hd/b52_hd.glb", "aircraft": "b52", "sprite": "res://assets/aircraft/b52/b52_top.png",
+		"icon": "res://assets/aircraft/b52/b52_icon.png", "length": 48.5, "cooldown": 90.0, "speed": 70.0, "altitude": 46.0,
+		"bombs": 22, "spacing": 4.0, "damage": 70.0, "splash": 8.0},
+	"supersonic": {"name": "Supersonic Strike", "model3d": "res://assets/units3d/b1_hd/b1_hd.glb", "aircraft": "b1", "sprite": "res://assets/aircraft/b1/b1_top.png",
+		"icon": "res://assets/aircraft/b1/b1_icon.png", "length": 44.5, "cooldown": 75.0, "speed": 120.0, "altitude": 42.0,
 		"bombs": 6, "spacing": 8.0, "damage": 180.0, "splash": 8.0},
-	"stealth": {"name": "Stealth Precision Strike", "model3d": "res://assets/units3d/b2/b2.glb", "aircraft": "b2", "sprite": "res://assets/aircraft/b2/b2_top.png",
-		"icon": "res://assets/aircraft/b2/b2_icon.png", "length": 21.0, "cooldown": 120.0, "speed": 80.0, "altitude": 32.0,
-		"bombs": 1, "spacing": 0.0, "damage": 1100.0, "splash": 13.0},
+	"stealth": {"name": "Stealth Precision Strike", "model3d": "res://assets/units3d/b2_hd/b2_hd.glb", "aircraft": "b2", "sprite": "res://assets/aircraft/b2/b2_top.png",
+		"icon": "res://assets/aircraft/b2/b2_icon.png", "length": 21.0, "cooldown": 120.0, "speed": 80.0, "altitude": 50.0,
+		"bombs": 2, "spacing": 3.0, "damage": 550.0, "splash": 13.0},
+	# Squadrons (B3): separate long-cooldown powers, available a few minutes into a skirmish ("first_ready", s of game
+	# time) and from an Airfield in the base game. Formation offsets are in the flight frame: "lat" metres to the right
+	# of the run, "back" metres behind the lead, "up" metres above the type's cruise altitude; "aim" shifts the aim point
+	# along the run. Each aircraft bombs along its own track.
+	"stealth_squadron": {"name": "Stealth Squadron", "model3d": "res://assets/units3d/b2_hd/b2_hd.glb", "aircraft": "b2",
+		"icon": "res://assets/ui/powers/stealth_squadron.png", "cooldown": 240.0, "first_ready": 300.0, "speed": 80.0, "requires": "airfield",
+		"wing": [
+			{"type": "b2", "lat": -22.0, "back": 0.0, "up": 0.0, "aim": -18.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0},
+			{"type": "b2", "lat": 0.0, "back": 46.0, "up": 5.0, "aim": 0.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0},
+			{"type": "b2", "lat": 22.0, "back": 92.0, "up": 10.0, "aim": 18.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0}]},
+	"stealth_squadron_heavy": {"name": "Heavy Stealth Squadron", "model3d": "res://assets/units3d/b2_hd/b2_hd.glb", "aircraft": "b2",
+		"icon": "res://assets/ui/powers/stealth_squadron_heavy.png", "cooldown": 420.0, "first_ready": 540.0, "speed": 80.0, "requires": "airfield",
+		"wing": [
+			{"type": "b2", "lat": -44.0, "back": 0.0, "up": 0.0, "aim": -36.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0},
+			{"type": "b2", "lat": -22.0, "back": 46.0, "up": 5.0, "aim": -18.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0},
+			{"type": "b2", "lat": 0.0, "back": 92.0, "up": 10.0, "aim": 0.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0},
+			{"type": "b2", "lat": 22.0, "back": 138.0, "up": 15.0, "aim": 18.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0},
+			{"type": "b2", "lat": 44.0, "back": 184.0, "up": 20.0, "aim": 36.0, "bombs": 1, "damage": 900.0, "splash": 13.0, "spacing": 0.0}]},
+	"strike_package": {"name": "Strategic Strike Package", "model3d": "res://assets/units3d/b52_hd/b52_hd.glb", "aircraft": "b2",
+		"icon": "res://assets/ui/powers/strike_package.png", "cooldown": 480.0, "first_ready": 600.0, "speed": 80.0, "requires": "airfield",
+		"wing": [
+			{"type": "b2", "lat": 0.0, "back": 0.0, "up": 0.0, "aim": 0.0, "bombs": 2, "damage": 550.0, "splash": 13.0, "spacing": 3.0},
+			{"type": "b1", "lat": -38.0, "back": 75.0, "up": 0.0, "aim": 0.0, "bombs": 6, "damage": 150.0, "splash": 8.0, "spacing": 12.0},
+			{"type": "b1", "lat": 38.0, "back": 75.0, "up": 0.0, "aim": 0.0, "bombs": 6, "damage": 150.0, "splash": 8.0, "spacing": 12.0},
+			{"type": "b52", "lat": -34.0, "back": 165.0, "up": 0.0, "aim": 0.0, "bombs": 22, "damage": 60.0, "splash": 8.0, "spacing": 4.0},
+			{"type": "b52", "lat": 34.0, "back": 165.0, "up": 0.0, "aim": 0.0, "bombs": 22, "damage": 60.0, "splash": 8.0, "spacing": 4.0}]},
 	"paradrop": {"name": "Paratroopers", "model3d": "res://assets/units3d/c130/c130.glb", "aircraft": "c130", "sprite": "res://assets/aircraft/c130/c130_top.png",
 		"icon": "res://assets/aircraft/c130/c130_top.png", "length": 40.4, "cooldown": 150.0, "speed": 60.0, "altitude": 36.0,
 		"troops": 6, "unit": "paratrooper", "requires": "airfield"},
@@ -408,4 +434,17 @@ const POWERS := {
 	"recon": {"name": "Recon Overflight", "model3d": "res://assets/units3d/sr71/sr71.glb", "aircraft": "sr71", "sprite": "res://assets/aircraft/sr71/sr71_top.png",
 		"icon": "res://assets/aircraft/sr71/sr71_icon.png", "length": 32.7, "cooldown": 60.0, "speed": 160.0, "altitude": 36.0,
 		"reveal_width": 70.0, "reveal_time": 25.0},
+}
+
+## Strategic bombers flown by the support powers (strikes.gd). Real-size HD models (SCALE.bomber) with bomb-bay doors
+## Door<i>L/R, stow lines Bay<i>a/b, pylon stations PB<n> (B-52) and B-1 wings WingL/R. Altitudes are above the local
+## ground and above every other aircraft (jets cruise at <= 36 m). stow = [columns, tiers, column spacing, tier spacing].
+const BOMBERS := {
+	"b52": {"name": "B-52", "model3d": "res://assets/units3d/b52_hd/b52_hd.glb", "length": 48.5, "span": 56.4, "speed": 70.0,
+		"altitude": 46.0, "bays": 1, "bay_cap": 10, "stow": [2, 2, 0.36, 0.42], "bomb": "gp", "bomb_scale": 0.6, "door_deg": 95.0},
+	"b1": {"name": "B-1", "model3d": "res://assets/units3d/b1_hd/b1_hd.glb", "length": 44.5, "span": 41.8, "speed": 120.0,
+		"altitude": 42.0, "bays": 3, "bay_cap": 6, "stow": [2, 1, 0.5, 0.0], "bomb": "gp", "bomb_scale": 0.8, "door_deg": 90.0,
+		"sweep_deg": 30.0},
+	"b2": {"name": "B-2", "model3d": "res://assets/units3d/b2_hd/b2_hd.glb", "length": 21.0, "span": 52.4, "speed": 80.0,
+		"altitude": 50.0, "bays": 2, "bay_cap": 2, "stow": [1, 1, 0.0, 0.0], "bomb": "pen", "bomb_scale": 1.0, "door_deg": 100.0},
 }

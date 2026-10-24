@@ -139,6 +139,12 @@ static func options_box(on_change: Callable = Callable()) -> VBoxContainer:
 		notify.call()))
 	v.add_child(row5)
 	v.add_child(label("Low: smaller shadows, no ambient occlusion or glow, 3D drawn at 77% and upscaled (FSR).\nHigh: largest soft shadows and 2x anti-aliasing (needs a strong graphics card).\nEffects: Low draws the fewest particle layers, lights and scorch marks; High the full set.", 12, Color(0.6, 0.66, 0.63)))
+	var row6 := HBoxContainer.new()
+	row6.add_child(label("Strike camera  ", 15))
+	row6.add_child(option(["Off", "Picture-in-picture", "Full screen"], str(Game.settings.get("strike_cam", "Picture-in-picture")), func(x):
+		Game.settings["strike_cam"] = x
+		notify.call()))
+	v.add_child(row6)
 	v.add_child(check("Show frame rate (FPS)", bool(Game.settings.get("show_fps", false)), func(on):
 		Game.settings["show_fps"] = on
 		notify.call()))

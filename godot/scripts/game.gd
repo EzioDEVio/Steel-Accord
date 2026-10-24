@@ -26,6 +26,7 @@ var settings := {
 	"graphics": "Medium",     # Low / Medium / High: shadows, ambient occlusion, anti-aliasing, 3D render scale
 	"show_fps": false,
 	"camera_shake": true,     # small camera shake on large explosions (never in automated tests)
+	"strike_cam": "Picture-in-picture",   # Off / Picture-in-picture / Full screen: cinematic view of the player's bomber strikes
 }
 
 ## Skirmish maps offered in the menu (id -> label). Heightfield maps live in res://maps/<id>/.
