@@ -7,6 +7,8 @@ class_name FXDirector
 extends Node3D
 
 const POOL_MAX := 160
+## Sprite size gain per material: the flipbook puffs / flames fill only part of their quad (look-dev tuned).
+const SIZE_GAIN := {"smoke": 1.5, "dust": 1.5, "fire": 1.6, "spark": 1.0, "flash": 1.0}
 
 static var _cur: FXDirector = null
 
@@ -228,7 +230,7 @@ func emit(pos: Vector3, s: Dictionary, prio := 1, l := -1, tag := "") -> CPUPart
 	p.gravity = s.get("grav", Vector3(0, 1.0, 0))
 	var dm: Vector2 = s.get("damp", Vector2(1, 2))
 	p.damping_min = dm.x; p.damping_max = dm.y
-	var sz: float = s.size
+	var sz: float = float(s.size) * float(SIZE_GAIN.get(s.mat, 1.0))
 	p.scale_amount_min = sz * 0.7; p.scale_amount_max = sz * 1.3
 	p.scale_amount_curve = s.get("curve", null)
 	p.color_ramp = s.ramp

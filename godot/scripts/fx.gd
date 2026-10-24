@@ -71,9 +71,9 @@ const MUZZLE := {
 const QUALITY := {
 	"Low": {"density": 0.45, "particles": 1600, "lights": 4, "decals": 24, "ops": 24, "detail": false, "lit_smoke": false,
 		"soft": false, "near": 120.0, "far": 220.0, "linger": 0.5, "decal_life": 45.0},
-	"Medium": {"density": 0.75, "particles": 4000, "lights": 10, "decals": 60, "ops": 48, "detail": true, "lit_smoke": true,
+	"Medium": {"density": 0.75, "particles": 4000, "lights": 10, "decals": 60, "ops": 48, "detail": true, "lit_smoke": false,
 		"soft": false, "near": 150.0, "far": 300.0, "linger": 0.8, "decal_life": 90.0},
-	"High": {"density": 1.0, "particles": 8000, "lights": 20, "decals": 120, "ops": 80, "detail": true, "lit_smoke": true,
+	"High": {"density": 1.0, "particles": 8000, "lights": 20, "decals": 120, "ops": 80, "detail": true, "lit_smoke": false,
 		"soft": true, "near": 180.0, "far": 380.0, "linger": 1.0, "decal_life": 150.0},
 }
 
@@ -152,6 +152,7 @@ static func mat(kind: String) -> Material:
 	m.disable_receive_shadows = true
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.billboard_keep_scale = true   # without it particle scale_amount / scale curves are ignored by the billboard
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	match kind:
 		"smoke", "dust":
