@@ -46,7 +46,7 @@ func _run() -> void:
 		var x := -100.0
 		for k in KINDS:
 			var kind: String = Nations.swap_unit(battle.nation_of(t), k)
-			if not UnitDefs.DEFS.has(kind): continue
+			if UnitDefs.def_of(kind).is_empty(): continue
 			var u: Unit = battle._spawn(kind, t, Vector3(x, 0, z), 0.6)
 			shots.append([u, "%d_%s" % [t, kind]])
 			x += 22.0
