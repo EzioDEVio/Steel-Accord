@@ -22,6 +22,7 @@ var shots: Array = []          # projectiles in flight
 var debris: Array = []
 var flights: Array = []        # support-power aircraft
 var bombs: Array = []
+var strikes: StrikeDirector = null   # bomber strikes and squadrons (strikes.gd); created on the first strike
 var reveal_zones: Array = []
 var power_ready := [{}, {}]    # per team: power id -> sim time when available
 var seen := {}
@@ -104,9 +105,9 @@ func _ready() -> void:
 		civic_spawns.clear()
 	_spawn_forces()
 	print("LOAD forces %d ms" % (Time.get_ticks_msec() - _t0))
-	for id in UnitDefs.POWERS:
-		power_ready[0][id] = 0.0
-		power_ready[1][id] = 0.0
+	for id in UnitDefs.POWERS:   # heavy squadrons only become available some minutes into a match
+		power_ready[0][id] = 0.0 if _automated() else float(UnitDefs.POWERS[id].get("first_ready", 0.0))
+		power_ready[1][id] = power_ready[0][id]
 	camera = RTSCamera.new()
 	camera.bounds = map_bounds.grow(-10)
 	camera.terrain = terrain
@@ -178,6 +179,10 @@ func _ready() -> void:
 		var bs: Node = load("res://scripts/baseshots.gd").new()
 		bs.battle = self
 		add_child(bs)
+	elif "bombershots" in args:
+		var bsh: Node = load("res://scripts/bombershots.gd").new()
+		bsh.battle = self
+		add_child(bsh)
 	elif "mapshots" in args:
 		var ms: Node = load("res://scripts/mapshots.gd").new()
 		ms.battle = self
@@ -249,7 +254,7 @@ func grounded(p: Vector3) -> Vector3:
 
 
 func _automated() -> bool:
-	return "test" in args or "maptest" in args or "mapshots" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args
+	return "test" in args or "maptest" in args or "mapshots" in args or "airdiag" in args or "evidence" in args or "vischeck" in args or "basetest" in args or "baseshots" in args or "pilotshots" in args or "m1shots" in args or "bombershots" in args
 
 
 ## Player options from the menus (mouse scheme, edge scrolling, camera speed).
@@ -545,6 +550,7 @@ func sim_tick(dt: float) -> void:
 	_update_shots(dt)
 	_update_flights(dt)
 	_update_bombs(dt)
+	if strikes: strikes.tick(dt)
 	_update_drones(dt)
 	_update_supply_drops(dt)
 	if p: _pmark("shots/air")
@@ -887,6 +893,14 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 	if p.has("drones"):
 		_launch_drones(team, id, target)
 		return
+	if StrikeDirector.is_strike(p):
+		if strikes == null:
+			strikes = StrikeDirector.new()
+			strikes.name = "Strikes"
+			strikes.battle = self
+			add_child(strikes)
+		strikes.launch(team, id, target)
+		return
 	var edge_z := map_bounds.end.y + 120.0 if team == 0 else map_bounds.position.y - 120.0
 	var start := Vector3(target.x * 0.7, ground_h(target.x, target.z), edge_z)
 	var dir := Vector3(target.x - start.x, 0, target.z - start.z).normalized()
@@ -924,6 +938,7 @@ func launch_power(team: int, id: String, target: Vector3) -> void:
 
 func _update_flights(dt: float) -> void:
 	for f in flights.duplicate():
+		if f.has("strike"): continue   # bombers: StrikeDirector.tick
 		var p: Dictionary = f.def
 		for pr in f.node.find_children("Prop*", "Node3D", true, false): (pr as Node3D).rotate_object_local(Vector3.BACK, dt * 30.0)
 		f.pos += f.dir * float(p.speed) * dt
@@ -970,24 +985,29 @@ var bomb_damage := 0.0   # damage bombs have dealt to the other side (diagnostic
 
 func _update_bombs(dt: float) -> void:
 	for b in bombs.duplicate():
+		if b.has("strike"): continue   # bomber strikes: StrikeDirector.tick
 		b.vel.y -= 25.0 * dt
 		b.pos += b.vel * dt
 		b.node.global_position = b.pos
 		if b.vel.length() > 0.1: b.node.look_at(b.pos + b.vel, Vector3.RIGHT)
 		var bgy := ground_h(b.pos.x, b.pos.z)
 		if b.pos.y <= bgy + 0.3:
-			var p := Vector3(b.pos.x, bgy + 0.2, b.pos.z)
-			bomb_log.append(p)
-			FX.explosion(self, p, clampf(b.splash / 7.0, 0.8, 2.2))
-			for o in units:
-				if o.dead or o.domain == "jet": continue
-				var d := o.world_center().distance_to(p)
-				if d < b.splash:
-					var hb := o.hp
-					o.take_damage(b.dmg * (1.0 - 0.6 * d / b.splash), null)
-					if o.team != b.team: bomb_damage += hb - o.hp
+			bomb_impact(Vector3(b.pos.x, bgy + 0.2, b.pos.z), b.dmg, b.splash, b.team)
 			b.node.queue_free()
 			bombs.erase(b)
+
+
+## One bomb hitting the ground at p: explosion and splash damage (falls off to 40% at the edge; jets are immune).
+func bomb_impact(p: Vector3, dmg: float, splash: float, team: int) -> void:
+	bomb_log.append(p)
+	FX.explosion(self, p, clampf(splash / 7.0, 0.8, 2.2))
+	for o in units:
+		if o.dead or o.domain == "jet": continue
+		var d := o.world_center().distance_to(p)
+		if d < splash:
+			var hb := o.hp
+			o.take_damage(dmg * (1.0 - 0.6 * d / splash), null)
+			if o.team != team: bomb_damage += hb - o.hp
 
 
 # ------------------------------------------------------------------ deaths and visibility
